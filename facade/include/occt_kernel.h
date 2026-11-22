@@ -15,6 +15,16 @@
 #include <TopoDS_Shape.hxx>
 #include <UnitsMethods_LengthUnit.hxx>
 
+#include <TopAbs_ShapeEnum.hxx>
+
+class gp_Pnt;
+
+TopoDS_Shape readStepShape(const std::string& data);
+
+TopAbs_ShapeEnum parseShapeType(const std::string& type);
+std::vector<double> tessellateTriangleCoordinates(const TopoDS_Shape& shape, double linearDeflection, double angularDeflection);
+std::vector<double> signedFaceVolumeIntegrals(const TopoDS_Shape& shape, const gp_Pnt& reference, double epsilon);
+
 class BRepOffsetAPI_ThruSections;
 class Bnd_Box;
 class BRepTools_History;
@@ -462,6 +472,8 @@ class OcctKernel {
     // --- Topology query ---
     std::string getShapeType(uint32_t id);
     std::vector<uint32_t> getSubShapes(uint32_t id, const std::string& shapeType);
+    std::vector<uint32_t> getSubShapeOccurrences(uint32_t id, const std::string& shapeType);
+    int subShapeOccurrenceCount(uint32_t id, const std::string& shapeType);
     int subShapeCount(uint32_t id, const std::string& shapeType);
     std::vector<int> subShapeHashes(uint32_t id, const std::string& shapeType, int hashUpperBound);
     uint32_t downcast(uint32_t id, const std::string& targetType);
@@ -477,6 +489,8 @@ class OcctKernel {
     std::vector<int> edgeToFaceMap(uint32_t id, int hashUpperBound);
 
     // --- Tessellation / Mesh ---
+    // Exact triangle coordinates (nine f64 scalars per triangle, in world space).
+    std::vector<double> tessellateTriangles64(uint32_t id, double linearDeflection, double angularDeflection);
     MeshData tessellate(uint32_t id, double linearDeflection, double angularDeflection);
     MeshData tessellateRelative(uint32_t id, double linearDeflection, double angularDeflection);
     EdgeData wireframe(uint32_t id, double deflection, int source);
@@ -487,6 +501,7 @@ class OcctKernel {
 
     // --- I/O ---
     uint32_t importStep(const std::string& data);
+    uint32_t importStepBytes(const std::string& data);
     std::string exportStep(uint32_t id);
     std::string exportStepWithUnit(uint32_t id, const std::string& unit);
     std::string exportStepWithOptions(uint32_t id, const std::string& unit,
@@ -505,6 +520,11 @@ class OcctKernel {
     // --- Query / Measure ---
     BBoxData getBoundingBox(uint32_t id, bool useTriangulation);
     BBoxData getBoundingBoxLoose(uint32_t id, bool useTriangulation);
+    BBoxData getOptimalBounds(uint32_t id, bool useTriangulation, bool useShapeTolerance);
+    // Alternating signed face mass and achieved relative integration error.
+    std::vector<double> getSignedFaceVolumeIntegrals(uint32_t id, double x, double y, double z, double epsilon);
+    // 0=outside, 1=inside, 2=boundary, 3=unknown.
+    int classifySolidPoint(uint32_t id, double x, double y, double z, double tolerance);
     double getVolume(uint32_t id);
     double getSurfaceArea(uint32_t id);
     double getLength(uint32_t id);
