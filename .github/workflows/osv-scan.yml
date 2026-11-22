@@ -22,7 +22,7 @@ concurrency:
   # here: the guard is on main's current exposure, and the surviving run scans
   # the lockfiles as they stand at its own commit. A dependency state that
   # existed only in a skipped commit goes unscanned.
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   scan-pr:

@@ -18,21 +18,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
-        with:
-          toolchain: "1.95"
-          components: rustfmt, clippy
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
-
-      - name: cargo fmt
-        run: cargo fmt --all -- --check
-
-      - name: cargo clippy
-        run: cargo clippy --all-targets -- -D warnings
-
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -61,18 +46,17 @@ jobs:
       - name: ESLint
         run: cd ts && npx eslint src/
 
-      - name: Codegen drift check
-        run: |
-          cargo xtask codegen
-          cargo fmt --all
-          if ! git diff --exit-code facade/generated/ crate/src/kernel_generated.rs; then
-            echo "::error::Generated code is out of date. Run 'cargo xtask codegen && cargo fmt --all' and commit."
-            exit 1
-          fi
-          if [ -n "$(git ls-files --others --exclude-standard facade/generated/)" ]; then
-            echo "::error::Codegen produced untracked files in facade/generated/. Commit them."
-            exit 1
-          fi
+  codegen:
+    name: Generated-code consistency
+    uses: codeandsolder/ci-workflows/.github/workflows/rust-sccache.yml@6461397f9c7b2e283677906fdf2fe2b573001789 # main
+    with:
+      rust-components: rustfmt
+      command: |
+        cargo test --locked -p xtask
+        cargo xtask codegen
+        cargo fmt --all
+        git diff --exit-code -- facade/generated/ crate/src/kernel_generated.rs
+        test -z "$(git ls-files --others --exclude-standard facade/generated/)"
 
   build-test:
     uses: ./.github/workflows/build-wasm.yml

@@ -8,7 +8,6 @@ rust-version.workspace = true
 description = "OpenCascade CAD kernel via WebAssembly — no C++ toolchain required"
 readme = "README.md"
 documentation = "https://docs.rs/occt-wasm"
-homepage = "https://github.com/andymai/occt-wasm"
 keywords = ["cad", "opencascade", "wasm", "brep", "geometry"]
 categories = ["graphics", "science", "wasm"]
 

@@ -17,6 +17,8 @@ on:
       - crate/src/occt-wasm.wasm.br
       - .gitmodules
       - occt
+      - rust-toolchain.toml
+      - Cargo.lock
       - .github/workflows/build-wasi.yml
   push:
     branches: [main]
@@ -27,6 +29,8 @@ on:
       - crate/src/occt-wasm.wasm.br
       - .gitmodules
       - occt
+      - rust-toolchain.toml
+      - Cargo.lock
       - .github/workflows/build-wasi.yml
   workflow_dispatch:
 
@@ -52,6 +56,25 @@ jobs:
         run: |
           cp -r /workspace/occt/build occt/build
           cp -r /workspace/3rdparty 3rdparty
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+
+      - name: Resolve fleet compiler
+        id: compiler
+        uses: codeandsolder/ci-workflows/.github/actions/resolve-rust-toolchain@6461397f9c7b2e283677906fdf2fe2b573001789 # main
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
+        with:
+          toolchain: ${{ steps.compiler.outputs.channel }}
+
+      - name: Setup canonical sccache
+        uses: codeandsolder/ci-workflows/.github/actions/setup-sccache@6461397f9c7b2e283677906fdf2fe2b573001789 # main
+        with:
+          rust-toolchain: ${{ steps.compiler.outputs.channel }}
 
       - name: Snapshot committed crate WASM
         # Snapshot before the build overwrites the file. cmp works without
@@ -85,3 +108,7 @@ jobs:
       - name: Fail when stale
         if: steps.stale.outputs.stale == 'true'
         run: exit 1
+
+      - name: Finalize canonical sccache
+        if: always()
+        uses: codeandsolder/ci-workflows/.github/actions/finalize-sccache@6461397f9c7b2e283677906fdf2fe2b573001789 # main
