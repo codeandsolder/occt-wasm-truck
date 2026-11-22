@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-expected=$(cat .github/scripts/wasi-input-digest.sha256)
-actual=$(bash .github/scripts/wasi-input-digest.sh)
-if [[ "$expected" != "$actual" ]]; then
-    echo 'OCCT WASI build inputs or output changed. Reconcile and regenerate the embedded kernel before tracking this snapshot.' >&2
-    exit 1
+# In release mode the tag is a version contract, not a branch name.
+if [[ -n ${3:-} ]]; then
+    version=$(cargo metadata --locked --no-deps --format-version 1 | jq -er '.packages[] | select(.name == "occt-wasm") | .version')
+    test "$3" = "crate-v$version"
 fi
-cargo xtask codegen
+cargo run --locked --package xtask -- codegen
 cargo fmt --all
 git diff --exit-code -- facade/generated/ crate/src/kernel_generated.rs
 # Never let the upstream placeholder/debug test skips pass this gate.

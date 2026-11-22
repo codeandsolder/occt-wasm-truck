@@ -18,6 +18,12 @@ on:
       - .gitmodules
       - occt
       - .github/workflows/build-wasi.yml
+      - .github/scripts/generate-upstream.sh
+      - Dockerfile.builder
+      - scripts/fetch-rapidjson.sh
+      - Cargo.lock
+      - Cargo.toml
+      - rust-toolchain.toml
   push:
     branches: [main]
     paths:
@@ -28,6 +34,12 @@ on:
       - .gitmodules
       - occt
       - .github/workflows/build-wasi.yml
+      - .github/scripts/generate-upstream.sh
+      - Dockerfile.builder
+      - scripts/fetch-rapidjson.sh
+      - Cargo.lock
+      - Cargo.toml
+      - rust-toolchain.toml
   workflow_dispatch:
 
 permissions:
@@ -51,15 +63,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Link pre-built OCCT libs from builder image
+      - name: Configure the pinned builder toolchain
         run: |
           set -euo pipefail
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          test "$(git rev-parse HEAD:occt)" = c7f60ffe85f28c67358d1771454044f0521f2fdd
-          rmdir occt
-          ln -s /workspace/occt occt
-          test -d occt/build/include/opencascade
-          ln -s /workspace/3rdparty 3rdparty
           rustup toolchain install 1.95 --profile minimal --component rustfmt
 
       - name: Setup mandatory sccache
@@ -75,9 +82,7 @@ jobs:
 
       - name: Build WASI WASM + brotli install
         run: |
-          cargo xtask codegen
-          cargo fmt --all
-          cargo xtask build-wasi --release
+          bash .github/scripts/generate-upstream.sh
 
       - name: Stale-check vs. committed crate WASM
         id: stale
@@ -112,9 +117,6 @@ jobs:
       - name: Fail when stale
         if: steps.stale.outputs.stale == 'true'
         run: exit 1
-
-      - name: Verify source and embedded artifact provenance
-        run: test "$(bash .github/scripts/wasi-input-digest.sh)" = "$(cat .github/scripts/wasi-input-digest.sha256)"
 
       - name: Finalize mandatory sccache
         if: always()

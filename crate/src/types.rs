@@ -21,7 +21,7 @@ impl ShapeHandle {
 /// Result of importing a STEP byte stream with OCCT transfer diagnostics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StepImport {
-    /// Arena handle to the imported OneShape result; release when finished.
+    /// Arena handle to the imported `OneShape` result; release when finished.
     pub shape: ShapeHandle,
     /// Number of roots eligible for transfer.
     pub roots: u32,
@@ -29,7 +29,7 @@ pub struct StepImport {
     pub transferred: u32,
 }
 
-/// Native BRepGProp properties using OCCT's default integration routines.
+/// Native `BRepGProp` properties using OCCT's default integration routines.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BRepProperties {
     /// Signed material volume.
