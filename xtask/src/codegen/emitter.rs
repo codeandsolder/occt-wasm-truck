@@ -390,7 +390,9 @@ fn collect_includes(methods: &[&MethodSpec]) -> BTreeSet<String> {
 }
 
 /// Group methods by category, preserving insertion order within each group.
-fn group_by_category<'a>(methods: &[&'a MethodSpec]) -> Vec<(&'a str, Vec<&'a MethodSpec>)> {
+pub(super) fn group_by_category<'a>(
+    methods: &[&'a MethodSpec],
+) -> Vec<(&'a str, Vec<&'a MethodSpec>)> {
     let mut groups: Vec<(&str, Vec<&MethodSpec>)> = Vec::new();
     for spec in methods {
         if matches!(spec.kind, MethodKind::Skip) {

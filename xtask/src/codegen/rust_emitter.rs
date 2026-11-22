@@ -4,25 +4,96 @@
 //! into the WASM module via wasmtime. Each `MethodSpec` produces one
 //! `pub fn method_name(&mut self, ...) -> OcctResult<T>` method on `OcctKernel`.
 
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
+use super::emitter::group_by_category;
 use super::types::{FacadeParam, MethodSpec, ReturnType};
 use super::wasi_emitter::camel_to_snake;
 
-/// Convert a `FacadeParam` to a Rust function parameter declaration.
-fn param_to_rust(param: &FacadeParam) -> String {
+/// Rust API representation of a facade parameter.
+const fn param_type(param: &FacadeParam) -> &'static str {
     match param {
-        FacadeParam::ShapeId(name) => format!("{}: ShapeHandle", rust_param_name(name)),
-        FacadeParam::DocId(name) => format!("{}: DocumentHandle", rust_param_name(name)),
-        FacadeParam::Double(name) => format!("{}: f64", rust_param_name(name)),
-        FacadeParam::Bool(name) => format!("{}: bool", rust_param_name(name)),
-        FacadeParam::Int(name) => format!("{}: i32", rust_param_name(name)),
-        FacadeParam::Uint32(name) => format!("{}: u32", rust_param_name(name)),
-        FacadeParam::String(name) => format!("{}: &str", rust_param_name(name)),
-        FacadeParam::Bytes(name) => format!("{}: &[u8]", rust_param_name(name)),
-        FacadeParam::VectorShapeIds(name) => format!("{}: &[ShapeHandle]", rust_param_name(name)),
-        FacadeParam::VectorDouble(name) => format!("{}: &[f64]", rust_param_name(name)),
-        FacadeParam::VectorInt(name) => format!("{}: &[i32]", rust_param_name(name)),
+        FacadeParam::ShapeId(_) => "ShapeHandle",
+        FacadeParam::DocId(_) => "DocumentHandle",
+        FacadeParam::Double(_) => "f64",
+        FacadeParam::Bool(_) => "bool",
+        FacadeParam::Int(_) => "i32",
+        FacadeParam::Uint32(_) => "u32",
+        FacadeParam::String(_) => "&str",
+        FacadeParam::Bytes(_) => "&[u8]",
+        FacadeParam::VectorShapeIds(_) => "&[ShapeHandle]",
+        FacadeParam::VectorDouble(_) => "&[f64]",
+        FacadeParam::VectorInt(_) => "&[i32]",
+    }
+}
+
+fn param_to_rust(param: &FacadeParam) -> String {
+    format!("{}: {}", rust_param_name(param.name()), param_type(param))
+}
+
+/// The Rust method name is independent from the guest symbol.
+fn method_name(spec: &MethodSpec) -> String {
+    match spec.name {
+        "toBrep" => "export_brep".to_owned(),
+        "fromBrep" => "import_brep".to_owned(),
+        "toBrepBinary" => "export_brep_binary".to_owned(),
+        "fromBrepBinary" => "import_brep_binary".to_owned(),
+        name => camel_to_snake(name),
+    }
+}
+
+/// Wide operations require named parameters: many of their scalars and arrays
+/// have the same physical type but different geometric meaning.
+fn request_name(spec: &MethodSpec) -> Option<String> {
+    (spec.params.len() > 6).then(|| format!("{}Request", type_name(&method_name(spec))))
+}
+
+fn request_borrows(spec: &MethodSpec) -> bool {
+    spec.params
+        .iter()
+        .any(|param| param_type(param).starts_with('&'))
+}
+
+fn emit_requests(buf: &mut String, methods: &[&MethodSpec]) {
+    for spec in methods {
+        if !spec.has_wasi_binding() {
+            continue;
+        }
+        let Some(name) = request_name(spec) else {
+            continue;
+        };
+        let lifetime = if request_borrows(spec) { "<'a>" } else { "" };
+        let _ = writeln!(
+            buf,
+            "/// Named arguments for the `{}` facade operation.",
+            spec.name
+        );
+        let _ = writeln!(buf, "#[derive(Debug, Clone, Copy)]");
+        let _ = writeln!(buf, "pub struct {name}{lifetime} {{");
+        for param in spec.params {
+            let field = rust_param_name(param.name());
+            let ty = param_type(param);
+            let ty = ty
+                .strip_prefix('&')
+                .map_or_else(|| ty.to_owned(), |target| format!("&'a {target}"));
+            let _ = writeln!(
+                buf,
+                "    /// Value of the facade parameter `{}`.",
+                param.name()
+            );
+            let _ = writeln!(buf, "    pub {field}: {ty},");
+        }
+        buf.push_str("}\n\n");
+    }
+}
+
+fn arg_expr(param: &FacadeParam, named: bool) -> String {
+    let name = rust_param_name(param.name());
+    if named {
+        format!("request.{name}")
+    } else {
+        name
     }
 }
 
@@ -82,95 +153,89 @@ const fn heap_element_width(param: &FacadeParam) -> Option<u32> {
     }
 }
 
-/// Validate each heap argument before any allocation occurs.
-fn emit_wasm_call_preflight(buf: &mut String, params: &[FacadeParam]) {
-    for param in params {
-        if let Some(width) = heap_element_width(param) {
-            let rname = rust_param_name(param.name());
-            let _ = writeln!(
-                buf,
-                "        let {rname}_len = checked_wasm_len({rname}.len(), {width})?;"
-            );
-        }
-    }
-}
-
-/// Emit guest allocations inside a scope which frees them on ordinary errors.
-fn emit_wasm_call_allocations(buf: &mut String, params: &[FacadeParam]) {
-    for param in params {
-        let rname = rust_param_name(param.name());
-        let data_expr = match param {
-            FacadeParam::String(_) => format!("{rname}.as_bytes()"),
-            FacadeParam::Bytes(_) => rname.clone(),
-            FacadeParam::VectorShapeIds(_)
-            | FacadeParam::VectorDouble(_)
-            | FacadeParam::VectorInt(_) => {
-                let value = if matches!(param, FacadeParam::VectorShapeIds(_)) {
-                    "v.0"
-                } else {
-                    "v"
-                };
-                let _ = writeln!(
-                    buf,
-                    "            let {rname}_bytes: Vec<u8> = {rname}.iter().flat_map(|v| {value}.to_le_bytes()).collect();"
-                );
-                format!("&{rname}_bytes")
-            }
-            _ => continue,
-        };
+/// Validate all heap lengths before allocating any guest memory.
+fn emit_wasm_call_preflight(buf: &mut String, params: &[FacadeParam], named: bool) {
+    let mut lengths = params
+        .iter()
+        .filter_map(|param| {
+            let width = heap_element_width(param)?;
+            let expr = arg_expr(param, named);
+            Some(format!("checked_wasm_len({expr}.len(), {width})?"))
+        })
+        .peekable();
+    if lengths.peek().is_some() {
         let _ = writeln!(
             buf,
-            "            let {rname}_ptr = buffers.write(kernel, {data_expr})?;"
+            "        let guest_lengths = [{}];",
+            lengths.collect::<Vec<_>>().join(", ")
         );
     }
 }
 
-/// Generate the WASM call expression arguments.
-fn emit_wasm_call_args(params: &[FacadeParam]) -> String {
-    if params.is_empty() {
-        return String::new();
-    }
-    let args: Vec<String> = params
+/// Allocate guest buffers inside a single cleanup scope. The two arrays
+/// share the ABI order of the heap-bearing parameters.
+fn emit_wasm_call_allocations(buf: &mut String, params: &[FacadeParam], named: bool) {
+    let allocations = params
         .iter()
-        .flat_map(|p| match p {
-            FacadeParam::ShapeId(name) | FacadeParam::DocId(name) => {
-                vec![format!("{}.0", rust_param_name(name))]
-            }
-            FacadeParam::Double(name) | FacadeParam::Int(name) | FacadeParam::Uint32(name) => {
-                vec![rust_param_name(name)]
-            }
-            FacadeParam::Bool(name) => vec![format!("i32::from({})", rust_param_name(name))],
-            FacadeParam::String(name)
-            | FacadeParam::Bytes(name)
-            | FacadeParam::VectorShapeIds(name)
-            | FacadeParam::VectorDouble(name)
-            | FacadeParam::VectorInt(name) => {
-                let rname = rust_param_name(name);
-                vec![format!("{rname}_ptr"), format!("{rname}_len")]
-            }
+        .filter_map(|param| {
+            let expr = arg_expr(param, named);
+            let data = match param {
+                FacadeParam::String(_) => format!("{expr}.as_bytes()"),
+                FacadeParam::Bytes(_) => expr,
+                FacadeParam::VectorShapeIds(_)
+                | FacadeParam::VectorDouble(_)
+                | FacadeParam::VectorInt(_) => {
+                    let value = if matches!(param, FacadeParam::VectorShapeIds(_)) {
+                        "v.0"
+                    } else {
+                        "v"
+                    };
+                    format!(
+                        "&{expr}.iter().flat_map(|v| {value}.to_le_bytes()).collect::<Vec<_>>()"
+                    )
+                }
+                _ => return None,
+            };
+            Some(format!("buffers.write(kernel, {data})?"))
         })
-        .collect();
-    args.join(", ")
+        .collect::<Vec<_>>();
+    if !allocations.is_empty() {
+        let _ = writeln!(
+            buf,
+            "            let guest_ptrs = [{}];",
+            allocations.join(", ")
+        );
+    }
 }
 
-/// Count the number of WASM-level parameters (strings/vectors expand to 2).
-fn wasm_param_count(params: &[FacadeParam]) -> usize {
+/// Generate ABI scalars in the original facade order.
+fn emit_wasm_call_args(params: &[FacadeParam], named: bool) -> String {
+    let mut heap_index = 0;
     params
         .iter()
-        .map(|p| match p {
-            FacadeParam::String(_)
-            | FacadeParam::Bytes(_)
-            | FacadeParam::VectorShapeIds(_)
-            | FacadeParam::VectorDouble(_)
-            | FacadeParam::VectorInt(_) => 2,
-            _ => 1,
+        .flat_map(|param| {
+            let expr = arg_expr(param, named);
+            match param {
+                FacadeParam::ShapeId(_) | FacadeParam::DocId(_) => vec![format!("{expr}.0")],
+                FacadeParam::Double(_) | FacadeParam::Int(_) | FacadeParam::Uint32(_) => vec![expr],
+                FacadeParam::Bool(_) => vec![format!("i32::from({expr})")],
+                _ => {
+                    let index = heap_index;
+                    heap_index += 1;
+                    vec![
+                        format!("guest_ptrs[{index}]"),
+                        format!("guest_lengths[{index}]"),
+                    ]
+                }
+            }
         })
-        .sum()
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Generate the wasmtime `TypedFunc` type for a method's parameters.
 fn wasm_typed_func_type(spec: &MethodSpec) -> String {
-    let param_count = wasm_param_count(spec.params);
+    let param_count = spec.flattened_param_count();
 
     // Build param types tuple
     let param_types: Vec<&str> = spec
@@ -260,9 +325,17 @@ const fn result_binding(rt: ReturnType) -> (&'static str, ResultCheck, &'static 
 
 /// Emit a single method implementation.
 fn emit_rust_method(buf: &mut String, spec: &MethodSpec) {
-    let snake_name = camel_to_snake(spec.name);
+    let snake_name = method_name(spec);
+    let guest_name = camel_to_snake(spec.name);
+    let request = request_name(spec);
+    let named = request.is_some();
     let rust_ret = rust_return_type(spec.return_type);
-    let rust_params = rust_param_list(spec.params);
+    let rust_params = if let Some(request) = request {
+        let lifetime = if request_borrows(spec) { "<'_>" } else { "" };
+        format!("request: {request}{lifetime}")
+    } else {
+        rust_param_list(spec.params)
+    };
 
     let params_str = if rust_params.is_empty() {
         String::from("&mut self")
@@ -287,19 +360,19 @@ fn emit_rust_method(buf: &mut String, spec: &MethodSpec) {
         "    pub fn {snake_name}({params_str}) -> {rust_ret} {{"
     );
 
-    emit_wasm_call_preflight(buf, spec.params);
+    emit_wasm_call_preflight(buf, spec.params, named);
 
     // Build the call arguments
-    let call_args = emit_wasm_call_args(spec.params);
-    let call_tuple = if wasm_param_count(spec.params) == 0 {
+    let call_args = emit_wasm_call_args(spec.params, named);
+    let call_tuple = if spec.flattened_param_count() == 0 {
         "()".to_owned()
-    } else if wasm_param_count(spec.params) == 1 {
+    } else if spec.flattened_param_count() == 1 {
         format!("({call_args},)")
     } else {
         format!("({call_args})")
     };
 
-    let fn_field = format!("generated.fn_{snake_name}");
+    let fn_field = format!("generated.{}.{guest_name}", spec.category);
     let heap_count = spec
         .params
         .iter()
@@ -317,7 +390,7 @@ fn emit_rust_method(buf: &mut String, spec: &MethodSpec) {
             buf,
             "        let {name} = self.with_guest_buffers::<{heap_count}, _>(|kernel, buffers| {{"
         );
-        emit_wasm_call_allocations(buf, spec.params);
+        emit_wasm_call_allocations(buf, spec.params, named);
         let _ = writeln!(
             buf,
             "            Ok(kernel.{fn_field}.call(&mut kernel.store, {call_tuple})?)"
@@ -345,30 +418,91 @@ fn emit_rust_method(buf: &mut String, spec: &MethodSpec) {
     let _ = writeln!(buf, "    }}");
 }
 
-/// Generate the typed function field declarations for the struct.
-fn emit_func_fields(buf: &mut String, methods: &[&MethodSpec]) {
-    for spec in methods {
-        if !spec.has_wasi_binding() {
-            continue;
-        }
-        let snake_name = camel_to_snake(spec.name);
-        let func_type = wasm_typed_func_type(spec);
-        let _ = writeln!(buf, "    fn_{snake_name}: {func_type},");
-    }
+/// Convert a generated snake-case identifier to a Rust type name.
+fn type_name(name: &str) -> String {
+    name.split('_')
+        .filter_map(|part| {
+            let mut chars = part.chars();
+            let first = chars.next()?;
+            Some(first.to_ascii_uppercase().to_string() + chars.as_str())
+        })
+        .collect()
 }
 
-/// Generate the function lookup code for initialization.
-fn emit_func_lookups(buf: &mut String, methods: &[&MethodSpec]) {
+fn export_group(category: &str) -> String {
+    format!("{}Exports", type_name(category))
+}
+
+/// Intern long ABI signatures. The Wasmtime call shape is unchanged, and
+/// identical physical signatures share one alias rather than repeating tuples.
+fn signature_aliases(methods: &[&MethodSpec]) -> BTreeMap<String, String> {
+    let mut aliases = BTreeMap::new();
     for spec in methods {
-        if !spec.has_wasi_binding() {
-            continue;
+        if spec.has_wasi_binding() && spec.flattened_param_count() >= 7 {
+            let signature = wasm_typed_func_type(spec);
+            aliases
+                .entry(signature)
+                .or_insert_with(|| format!("{}Abi", type_name(&camel_to_snake(spec.name))));
         }
-        let snake_name = camel_to_snake(spec.name);
+    }
+    aliases
+}
+
+fn emit_export_groups(buf: &mut String, methods: &[&MethodSpec]) {
+    let aliases = signature_aliases(methods);
+    for (signature, name) in &aliases {
+        // The alias describes the exact guest ABI, not a second wrapper type.
+        let _ = writeln!(buf, "type {name} = {signature};");
+    }
+    let _ = writeln!(buf);
+    let generable = methods
+        .iter()
+        .copied()
+        .filter(|spec| spec.has_wasi_binding())
+        .collect::<Vec<_>>();
+    let groups = group_by_category(&generable);
+    for (category, specs) in &groups {
+        let name = export_group(category);
+        let _ = writeln!(buf, "struct {name} {{");
+        for spec in specs {
+            if !spec.has_wasi_binding() {
+                continue;
+            }
+            let field = camel_to_snake(spec.name);
+            let signature = wasm_typed_func_type(spec);
+            let ty = aliases.get(&signature).unwrap_or(&signature);
+            let _ = writeln!(buf, "    {field}: {ty},");
+        }
+        let _ = writeln!(buf, "}}");
+        let _ = writeln!(buf, "impl {name} {{");
+        buf.push_str(
+            "    fn resolve<T: 'static>(instance: &wasmtime::Instance, store: &mut wasmtime::Store<T>) -> OcctResult<Self> {\n        Ok(Self {\n",
+        );
+        for spec in specs {
+            if spec.has_wasi_binding() {
+                let field = camel_to_snake(spec.name);
+                let _ = writeln!(
+                    buf,
+                    "            {field}: instance.get_typed_func(&mut *store, \"occt_{field}\")?,"
+                );
+            }
+        }
+        buf.push_str("        })\n    }\n}\n\n");
+    }
+    buf.push_str("/// Cached typed WASM exports, grouped by facade domain.\npub(super) struct GeneratedFuncs {\n");
+    for (category, _) in &groups {
+        let name = export_group(category);
+        let _ = writeln!(buf, "    {category}: {name},");
+    }
+    buf.push_str("}\n\nimpl GeneratedFuncs {\n    pub(super) fn resolve<T: 'static>(instance: &wasmtime::Instance, store: &mut wasmtime::Store<T>) -> OcctResult<Self> {\n        Ok(Self {\n");
+    for (category, _) in &groups {
+        let name = export_group(category);
         let _ = writeln!(
             buf,
-            "            fn_{snake_name}: instance.get_typed_func(&mut *store, \"occt_{snake_name}\")?,",
+            "            {category}: {name}::resolve(instance, store)?,"
         );
     }
+    buf.push_str("        })\n    }\n}\n\n");
 }
 
 /// Generate the contents of `crate/src/kernel_generated.rs`.
@@ -396,45 +530,8 @@ use crate::types::{
 ",
     );
 
-    // Struct fields section (to be included in the kernel struct)
-    buf.push_str(
-        r"/// Cached WASM function handles for kernel methods.
-///
-/// Include this in the `OcctKernel` struct definition:
-/// ```ignore
-/// pub struct OcctKernel {
-///     // ... core fields ...
-///     #[doc(hidden)]
-///     generated: GeneratedFuncs,
-/// }
-/// ```
-#[allow(clippy::type_complexity, clippy::redundant_pub_crate, clippy::struct_field_names)]
-pub(crate) struct GeneratedFuncs {
-",
-    );
-    emit_func_fields(&mut buf, methods);
-    let _ = writeln!(buf, "}}");
-    let _ = writeln!(buf);
-
-    // Init function to resolve all typed funcs
-    buf.push_str(
-        r"impl GeneratedFuncs {
-    #[allow(clippy::too_many_lines)]
-    pub(crate) fn resolve<T: 'static>(
-        instance: &wasmtime::Instance,
-        store: &mut wasmtime::Store<T>,
-    ) -> OcctResult<Self> {
-        Ok(Self {
-",
-    );
-    emit_func_lookups(&mut buf, methods);
-    buf.push_str(
-        r"        })
-    }
-}
-
-",
-    );
+    emit_requests(&mut buf, methods);
+    emit_export_groups(&mut buf, methods);
 
     // Method implementations
     buf.push_str(
@@ -442,12 +539,6 @@ pub(crate) struct GeneratedFuncs {
 ///
 /// All facade methods wrapped as safe Rust functions.
 ",
-    );
-    // Each vector parameter adds a fixed block of marshalling, so a method with
-    // several of them outgrows the line limit without being complex.
-    let _ = writeln!(
-        buf,
-        "#[allow(clippy::too_many_arguments, clippy::too_many_lines)]"
     );
     let _ = writeln!(buf, "impl crate::kernel::OcctKernel {{");
 
@@ -543,7 +634,7 @@ mod tests {
         ));
         assert!(output.contains("/// Call the `makeBox` OCCT facade operation."));
         assert!(output.contains("/// # Errors"));
-        assert!(output.contains("fn_make_box"));
+        assert!(output.contains("generated.primitives.make_box"));
         assert!(output.contains("ShapeHandle(result)"));
     }
 
@@ -560,8 +651,8 @@ mod tests {
     #[test]
     fn generates_struct_fields() {
         let output = emit_rust_host(&[&MAKE_BOX, &FUSE]);
-        assert!(output.contains("fn_make_box: TypedFunc<(f64, f64, f64), u32>"));
-        assert!(output.contains("fn_fuse: TypedFunc<(u32, u32), u32>"));
+        assert!(output.contains("make_box: TypedFunc<(f64, f64, f64), u32>"));
+        assert!(output.contains("fuse: TypedFunc<(u32, u32), u32>"));
     }
 
     #[test]
@@ -625,7 +716,7 @@ mod tests {
         assert!(!output.contains("data.len() as u32"));
         assert!(!output.contains("data_ptr as i32"));
         assert!(output.contains("self.with_guest_buffers::<1, _>"));
-        assert!(output.contains("fn_import_stl_binary: TypedFunc<(u32, u32), u32>"));
+        assert!(output.contains("import_stl_binary: TypedFunc<(u32, u32), u32>"));
     }
 
     #[test]
@@ -637,18 +728,18 @@ mod tests {
             FacadeParam::VectorInt("indices"),
             FacadeParam::String("name"),
         ];
-        emit_wasm_call_preflight(&mut output, params);
-        emit_wasm_call_allocations(&mut output, params);
-        let preflight = concat!(
-            "        let shapes_len = checked_wasm_len(shapes.len(), 4)?;\n",
-            "        let values_len = checked_wasm_len(values.len(), 8)?;\n",
-            "        let indices_len = checked_wasm_len(indices.len(), 4)?;\n",
-            "        let name_len = checked_wasm_len(name.len(), 1)?;\n",
-        );
+        emit_wasm_call_preflight(&mut output, params, false);
+        emit_wasm_call_allocations(&mut output, params, false);
+        let preflight = "        let guest_lengths = [checked_wasm_len(shapes.len(), 4)?, checked_wasm_len(values.len(), 8)?, checked_wasm_len(indices.len(), 4)?, checked_wasm_len(name.len(), 1)?];";
         assert!(output.starts_with(preflight));
-        assert!(output.contains("buffers.write(kernel, &shapes_bytes)?"));
-        assert!(output.contains("buffers.write(kernel, &values_bytes)?"));
-        assert!(output.contains("buffers.write(kernel, &indices_bytes)?"));
+        assert!(output.contains("let guest_ptrs = ["));
+        assert!(output.contains("shapes.iter().flat_map(|v| v.0.to_le_bytes())"));
+        assert!(output.contains("values.iter().flat_map(|v| v.to_le_bytes())"));
+        assert!(output.contains("indices.iter().flat_map(|v| v.to_le_bytes())"));
+        assert_eq!(
+            emit_wasm_call_args(params, false),
+            "guest_ptrs[0], guest_lengths[0], guest_ptrs[1], guest_lengths[1], guest_ptrs[2], guest_lengths[2], guest_ptrs[3], guest_lengths[3]"
+        );
     }
 
     #[test]
@@ -696,7 +787,7 @@ mod tests {
         assert!(output.contains(
             "pub fn get_bounding_box(&mut self, id: ShapeHandle, use_tri: bool) -> OcctResult<BoundingBox>"
         ));
-        assert!(output.contains("let status = self.generated.fn_get_bounding_box.call"));
+        assert!(output.contains("let status = self.generated.query.get_bounding_box.call"));
         assert!(output.contains("if status < 0 {"));
         assert!(output.contains("self.read_bbox_result()"));
     }

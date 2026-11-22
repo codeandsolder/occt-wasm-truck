@@ -14,12 +14,12 @@ use crate::error::{MemoryLimitExceeded, OcctResult};
 
 /// The data a kernel's `Store` carries. wasmtime asks the limiter before every
 /// memory or table growth, and can only reach one stored here.
-pub(crate) struct HostState {
+pub(super) struct HostState {
     limiter: Box<dyn ResourceLimiter + Sync>,
 }
 
 impl HostState {
-    pub(crate) fn new(limiter: Box<dyn ResourceLimiter + Sync>) -> Self {
+    pub(super) fn new(limiter: Box<dyn ResourceLimiter + Sync>) -> Self {
         Self { limiter }
     }
 }
@@ -108,7 +108,7 @@ fn write_bytes(
     Ok(())
 }
 
-pub(crate) fn define_imports(linker: &mut Linker<HostState>) -> OcctResult<()> {
+pub(super) fn define_imports(linker: &mut Linker<HostState>) -> OcctResult<()> {
     define_wasi(linker)?;
     define_env(linker)?;
     Ok(())

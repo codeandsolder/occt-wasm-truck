@@ -268,10 +268,10 @@ fn step_roundtrip() {
 fn brep_binary_roundtrip() {
     let mut kernel = kernel();
     let shape = kernel.make_box(10.0, 20.0, 30.0).unwrap();
-    let bytes = kernel.to_brep_binary(shape).unwrap();
-    let restored = kernel.from_brep_binary(&bytes).unwrap();
+    let bytes = kernel.export_brep_binary(shape).unwrap();
+    let restored = kernel.import_brep_binary(&bytes).unwrap();
     assert!((kernel.get_volume(restored).unwrap() - 6000.0).abs() < 1e-6);
-    assert!(kernel.from_brep_binary(b"not a brep").is_err());
+    assert!(kernel.import_brep_binary(b"not a brep").is_err());
 }
 
 #[test]
@@ -449,9 +449,20 @@ fn sweep_oriented_auxiliary_keeps_planes_exact() {
     let guide = kernel.make_wire(&[guide_edge]).unwrap();
 
     let solid = kernel
-        .sweep_oriented(
-            profile, spine, 3, 0.0, 0.0, 1.0, guide, false, 0, 0.0, 0.0, 0.0,
-        )
+        .sweep_oriented(occt_wasm::SweepOrientedRequest {
+            profile_id: profile,
+            spine_id: spine,
+            mode: 3,
+            up_x: 0.0,
+            up_y: 0.0,
+            up_z: 1.0,
+            aux_spine_id: guide,
+            curvilinear_equivalence: false,
+            contact_mode: 0,
+            tol3d: 0.0,
+            bound_tol: 0.0,
+            tol_angular: 0.0,
+        })
         .unwrap();
     let vol = kernel.get_volume(solid).unwrap().abs();
     assert!((vol - 320.0).abs() < 1e-6, "expected 4*4*20=320, got {vol}");
@@ -467,7 +478,18 @@ fn helix_handedness_mirrors_across_the_axis_plane() {
     // One turn: pitch 5, height 5, radius 3 about +Z through the origin.
     let mut quarter_turn = |left_handed: bool| {
         let wire = kernel
-            .make_helix_wire_handed(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 5.0, 5.0, 3.0, left_handed)
+            .make_helix_wire_handed(occt_wasm::MakeHelixWireHandedRequest {
+                px: 0.0,
+                py: 0.0,
+                pz: 0.0,
+                dx: 0.0,
+                dy: 0.0,
+                dz: 1.0,
+                pitch: 5.0,
+                height: 5.0,
+                radius: 3.0,
+                left_handed,
+            })
             .unwrap();
         let range = kernel.curve_parameters(wire).unwrap();
         let param = range[0] + (range[1] - range[0]) / 4.0;
@@ -497,7 +519,17 @@ fn housing_with_gear(kernel: &mut OcctKernel) -> (DocumentHandle, i32, i32) {
     kernel.xcaf_set_name(doc, root, "housing").unwrap();
     kernel.xcaf_set_color(doc, root, 0.8, 0.2, 0.1).unwrap();
     let comp = kernel
-        .xcaf_add_component(doc, root, gear, 10.0, 0.0, 5.0, 0.0, 0.0, 0.0)
+        .xcaf_add_component(occt_wasm::XcafAddComponentRequest {
+            doc_id: doc,
+            parent_label_id: root,
+            shape_id: gear,
+            tx: 10.0,
+            ty: 0.0,
+            tz: 5.0,
+            rx: 0.0,
+            ry: 0.0,
+            rz: 0.0,
+        })
         .unwrap();
     kernel.xcaf_set_name(doc, comp, "gear-1").unwrap();
     (doc, root, comp)
@@ -725,7 +757,15 @@ fn history_join_variants_return_a_usable_result() {
 
     let top = top_face(&mut kernel, solid);
     let evo = kernel
-        .shell_with_history_and_join(solid, &[top], 2.0, 1e-6, &hashes, BOUND, INTERSECTION)
+        .shell_with_history_and_join(occt_wasm::ShellWithHistoryAndJoinRequest {
+            solid_id: solid,
+            face_ids: &[top],
+            thickness: 2.0,
+            tolerance: 1e-6,
+            input_face_hashes: &hashes,
+            hash_upper_bound: BOUND,
+            join_type: INTERSECTION,
+        })
         .unwrap();
     assert!(all_planar(&mut kernel, evo.result()));
     assert!(!evo.modified.is_empty());
@@ -837,7 +877,15 @@ fn chamfer_distances_and_angles_per_edge() {
         .map(|f| kernel.hash_code(f, BOUND).unwrap())
         .collect();
     let angled_history = kernel
-        .chamfer_dist_angles_with_history(cube, &edges, &[1.0; 4], &[45.0; 4], &[], &hashes, BOUND)
+        .chamfer_dist_angles_with_history(occt_wasm::ChamferDistAnglesWithHistoryRequest {
+            solid_id: cube,
+            edge_ids: &edges,
+            distances: &[1.0; 4],
+            angles_deg: &[45.0; 4],
+            reference_face_ids: &[],
+            input_face_hashes: &hashes,
+            hash_upper_bound: BOUND,
+        })
         .unwrap();
     assert!((kernel.get_volume(angled_history.result()).unwrap() - 980.0).abs() < 1e-6);
     assert!(!angled_history.modified.is_empty());
@@ -869,20 +917,20 @@ fn draft_faces_pivot_about_the_neutral_plane() {
     assert_eq!(sides.len(), 4);
     let angle = 5f64.to_radians();
     let drafted = kernel
-        .draft_faces(
-            cube,
-            &sides[..1],
-            &[angle],
-            0.0,
-            0.0,
-            1.0,
-            0.0,
-            0.0,
-            100.0,
-            0.0,
-            0.0,
-            1.0,
-        )
+        .draft_faces(occt_wasm::DraftFacesRequest {
+            shape_id: cube,
+            face_ids: &sides[..1],
+            angles_rad: &[angle],
+            dx: 0.0,
+            dy: 0.0,
+            dz: 1.0,
+            px: 0.0,
+            py: 0.0,
+            pz: 100.0,
+            nx: 0.0,
+            ny: 0.0,
+            nz: 1.0,
+        })
         .unwrap();
     let wedge = 500.0 * angle.tan();
     let expected = 1000.0 - wedge;
@@ -893,20 +941,20 @@ fn draft_faces_pivot_about_the_neutral_plane() {
     );
 
     let all = kernel
-        .draft_faces(
-            cube,
-            &sides,
-            &[angle; 4],
-            0.0,
-            0.0,
-            1.0,
-            0.0,
-            0.0,
-            100.0,
-            0.0,
-            0.0,
-            1.0,
-        )
+        .draft_faces(occt_wasm::DraftFacesRequest {
+            shape_id: cube,
+            face_ids: &sides,
+            angles_rad: &[angle; 4],
+            dx: 0.0,
+            dy: 0.0,
+            dz: 1.0,
+            px: 0.0,
+            py: 0.0,
+            pz: 100.0,
+            nx: 0.0,
+            ny: 0.0,
+            nz: 1.0,
+        })
         .unwrap();
     assert!(kernel.get_volume(all).unwrap() < volume);
 }
@@ -1053,13 +1101,31 @@ fn fill_surface_passes_through_boundary_and_point() {
         })
         .collect();
     let face = kernel
-        .fill_surface(&edges, &[], &[], &[], &[], &[5.0, 5.0, 2.0], 0, &[])
+        .fill_surface(occt_wasm::FillSurfaceRequest {
+            free_edge_ids: &edges,
+            supported_edge_ids: &[],
+            support_face_ids: &[],
+            support_orders: &[],
+            guide_edge_ids: &[],
+            flat_points: &[5.0, 5.0, 2.0],
+            init_face_id: 0,
+            params: &[],
+        })
         .unwrap();
     assert_eq!(kernel.get_shape_type(face).unwrap(), "face");
     let apex = kernel.make_vertex(5.0, 5.0, 2.0).unwrap();
     let gap = kernel.distance_between(face, apex).unwrap();
     assert!(gap < 1e-3, "filling misses its point by {gap}");
-    let bad = kernel.fill_surface(&edges, &[], &[], &[], &[], &[], 0, &[3.0]);
+    let bad = kernel.fill_surface(occt_wasm::FillSurfaceRequest {
+        free_edge_ids: &edges,
+        supported_edge_ids: &[],
+        support_face_ids: &[],
+        support_orders: &[],
+        guide_edge_ids: &[],
+        flat_points: &[],
+        init_face_id: 0,
+        params: &[3.0],
+    });
     assert!(bad.is_err(), "a short params vector must be rejected");
 }
 
@@ -1146,29 +1212,29 @@ fn nurbs_surface_is_the_surface_its_poles_describe() {
         10.0, 0.0, 4.0, 10.0, 10.0, 0.0,
     ];
     let face = kernel
-        .nurbs_surface(
-            &poles,
-            &[],
-            &[0.0, 1.0],
-            &[0.0, 1.0],
-            &[2, 2],
-            &[2, 2],
-            &[1, 1, 2, 2, 0, 0],
-        )
+        .nurbs_surface(occt_wasm::NurbsSurfaceRequest {
+            flat_poles: &poles,
+            weights: &[],
+            knots_u: &[0.0, 1.0],
+            knots_v: &[0.0, 1.0],
+            mults_u: &[2, 2],
+            mults_v: &[2, 2],
+            layout: &[1, 1, 2, 2, 0, 0],
+        })
         .unwrap();
     assert_eq!(kernel.surface_type(face).unwrap(), "bspline");
     let middle = kernel.make_vertex(5.0, 5.0, 1.5).unwrap();
     let gap = kernel.distance_between(face, middle).unwrap();
     assert!(gap < 1e-9, "the patch misses its middle by {gap}");
-    let bad = kernel.nurbs_surface(
-        &poles,
-        &[],
-        &[0.0, 1.0],
-        &[0.0, 1.0],
-        &[2, 1],
-        &[2, 2],
-        &[1, 1, 2, 2, 0, 0],
-    );
+    let bad = kernel.nurbs_surface(occt_wasm::NurbsSurfaceRequest {
+        flat_poles: &poles,
+        weights: &[],
+        knots_u: &[0.0, 1.0],
+        knots_v: &[0.0, 1.0],
+        mults_u: &[2, 1],
+        mults_v: &[2, 2],
+        layout: &[1, 1, 2, 2, 0, 0],
+    });
     assert!(
         bad.is_err(),
         "multiplicities short of the poles must be rejected"
@@ -1207,7 +1273,15 @@ fn curve_data_reads_exact_parameters() {
     assert_near(direction, [0.0, 0.0, 1.0]);
 
     let circle = kernel
-        .make_circle_edge(1.0, 2.0, 3.0, 0.0, 0.0, 1.0, 7.0)
+        .make_circle_edge(occt_wasm::MakeCircleEdgeRequest {
+            cx: 1.0,
+            cy: 2.0,
+            cz: 3.0,
+            nx: 0.0,
+            ny: 0.0,
+            nz: 1.0,
+            radius: 7.0,
+        })
         .unwrap();
     let CurveGeometry::Circle {
         center,
@@ -1269,15 +1343,15 @@ fn surface_data_reads_exact_parameters() {
         10.0, 0.0, 4.0, 10.0, 10.0, 0.0,
     ];
     let face = kernel
-        .nurbs_surface(
-            &poles,
-            &[],
-            &[0.0, 1.0],
-            &[0.0, 1.0],
-            &[2, 2],
-            &[2, 2],
-            &[1, 1, 2, 2, 0, 0],
-        )
+        .nurbs_surface(occt_wasm::NurbsSurfaceRequest {
+            flat_poles: &poles,
+            weights: &[],
+            knots_u: &[0.0, 1.0],
+            knots_v: &[0.0, 1.0],
+            mults_u: &[2, 2],
+            mults_v: &[2, 2],
+            layout: &[1, 1, 2, 2, 0, 0],
+        })
         .unwrap();
     let SurfaceData::BSpline(data) = kernel.surface_data(face).unwrap() else {
         panic!("expected a B-spline");
@@ -1332,7 +1406,18 @@ fn revolve_with_history_names_walls_and_caps() {
     let wire = kernel.make_wire(&edges).unwrap();
     let face = kernel.make_face(wire).unwrap();
     let evo = kernel
-        .revolve_with_history(face, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.5, &[], BOUND)
+        .revolve_with_history(occt_wasm::RevolveWithHistoryRequest {
+            shape_id: face,
+            px: 0.0,
+            py: 0.0,
+            pz: 0.0,
+            dx: 0.0,
+            dy: 0.0,
+            dz: 1.0,
+            angle_rad: 1.5,
+            input_face_hashes: &[],
+            hash_upper_bound: BOUND,
+        })
         .unwrap();
     assert_eq!(evo.first_shape.len(), 1);
     assert_eq!(evo.last_shape.len(), 1);
@@ -1356,18 +1441,18 @@ fn revolve_with_history_names_walls_and_caps() {
     }
 
     let full = kernel
-        .revolve_with_history(
-            face,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            1.0,
-            std::f64::consts::TAU,
-            &[],
-            BOUND,
-        )
+        .revolve_with_history(occt_wasm::RevolveWithHistoryRequest {
+            shape_id: face,
+            px: 0.0,
+            py: 0.0,
+            pz: 0.0,
+            dx: 0.0,
+            dy: 0.0,
+            dz: 1.0,
+            angle_rad: std::f64::consts::TAU,
+            input_face_hashes: &[],
+            hash_upper_bound: BOUND,
+        })
         .unwrap();
     assert!(full.first_shape.is_empty());
     assert!(full.last_shape.is_empty());
@@ -1401,7 +1486,15 @@ fn sweep_and_pipe_with_history_pair_spine_and_profile_edges() {
         .pipe_with_history(profile, spine, &[], BOUND)
         .unwrap();
     let swept = kernel
-        .sweep_with_history(profile, spine, 0, 0, &[], &[], BOUND)
+        .sweep_with_history(occt_wasm::SweepWithHistoryRequest {
+            profile_id: profile,
+            spine_id: spine,
+            aux_spine_id: 0,
+            support_id: 0,
+            options: &[],
+            input_face_hashes: &[],
+            hash_upper_bound: BOUND,
+        })
         .unwrap();
     // Read back from the wires: make_wire can copy an edge to share a vertex.
     let spine_hashes: Vec<i32> = kernel
@@ -1449,14 +1542,30 @@ fn sweep_and_pipe_with_history_pair_spine_and_profile_edges() {
         assert_eq!(pairs, expected);
     }
 
-    let short = kernel.sweep_with_history(profile, spine, 0, 0, &[1.0], &[], BOUND);
+    let short = kernel.sweep_with_history(occt_wasm::SweepWithHistoryRequest {
+        profile_id: profile,
+        spine_id: spine,
+        aux_spine_id: 0,
+        support_id: 0,
+        options: &[1.0],
+        input_face_hashes: &[],
+        hash_upper_bound: BOUND,
+    });
     assert!(short.is_err(), "a short options list must be rejected");
     let mut options = [0.0; 17];
     options[3] = 1.0;
     options[16] = 1.0;
     for bad in [f64::NAN, f64::INFINITY, 0.5, 3e10] {
         options[0] = bad;
-        let swept = kernel.sweep_with_history(profile, spine, 0, 0, &options, &[], BOUND);
+        let swept = kernel.sweep_with_history(occt_wasm::SweepWithHistoryRequest {
+            profile_id: profile,
+            spine_id: spine,
+            aux_spine_id: 0,
+            support_id: 0,
+            options: &options,
+            input_face_hashes: &[],
+            hash_upper_bound: BOUND,
+        });
         assert!(swept.is_err(), "a mode of {bad} must be rejected");
     }
 }
@@ -1469,17 +1578,41 @@ fn sweep_and_pipe_with_history_pair_spine_and_profile_edges() {
 fn loft_and_unify_with_history_report_their_inputs() {
     let mut kernel = kernel();
     let bottom = kernel
-        .make_circle_edge(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 5.0)
+        .make_circle_edge(occt_wasm::MakeCircleEdgeRequest {
+            cx: 0.0,
+            cy: 0.0,
+            cz: 0.0,
+            nx: 0.0,
+            ny: 0.0,
+            nz: 1.0,
+            radius: 5.0,
+        })
         .unwrap();
     let top = kernel
-        .make_circle_edge(0.0, 0.0, 10.0, 0.0, 0.0, 1.0, 3.0)
+        .make_circle_edge(occt_wasm::MakeCircleEdgeRequest {
+            cx: 0.0,
+            cy: 0.0,
+            cz: 10.0,
+            nx: 0.0,
+            ny: 0.0,
+            nz: 1.0,
+            radius: 3.0,
+        })
         .unwrap();
     let wires = [
         kernel.make_wire(&[bottom]).unwrap(),
         kernel.make_wire(&[top]).unwrap(),
     ];
     let evo = kernel
-        .loft_with_history(&wires, true, false, 0, 0, &[], BOUND)
+        .loft_with_history(occt_wasm::LoftWithHistoryRequest {
+            wire_ids: &wires,
+            is_solid: true,
+            ruled: false,
+            start_vertex_id: 0,
+            end_vertex_id: 0,
+            input_face_hashes: &[],
+            hash_upper_bound: BOUND,
+        })
         .unwrap();
     assert_eq!(evo.first_shape.len(), 1);
     assert_eq!(evo.last_shape.len(), 1);
@@ -1541,9 +1674,21 @@ fn thread_groove_is_a_valid_solid_of_the_exact_volume() {
         (area / 2.0).abs() * std::f64::consts::TAU * (moment / (3.0 * area)) * (length / pitch);
 
     let groove = kernel
-        .thread_groove(
-            0.0, 0.0, 0.0, 0.0, 0.0, 1.0, pitch, length, cover, root, cover_half, root_half, 0.137,
-        )
+        .thread_groove(occt_wasm::ThreadGrooveRequest {
+            px: 0.0,
+            py: 0.0,
+            pz: 0.0,
+            dx: 0.0,
+            dy: 0.0,
+            dz: 1.0,
+            pitch,
+            length,
+            cover_radius: cover,
+            root_radius: root,
+            cover_half_width: cover_half,
+            root_half_width: root_half,
+            phase: 0.137,
+        })
         .unwrap();
     assert!(kernel.is_valid(groove).unwrap());
     let volume = kernel.get_volume(groove).unwrap();

@@ -256,7 +256,7 @@ pub struct OcctKernel {
     fn_get_label_info_shape_id: TypedFunc<(), u32>,
 
     // Generated method handles
-    pub(crate) generated: GeneratedFuncs,
+    pub(super) generated: GeneratedFuncs,
 }
 
 impl OcctKernel {
