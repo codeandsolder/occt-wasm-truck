@@ -71,6 +71,10 @@ jobs:
         with:
           toolchain: ${{ steps.compiler.outputs.channel }}
 
+      - name: Trust checked-out workspace inside builder container
+        shell: bash
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Setup canonical sccache
         uses: codeandsolder/ci-workflows/.github/actions/setup-sccache@6461397f9c7b2e283677906fdf2fe2b573001789 # main
         with:
