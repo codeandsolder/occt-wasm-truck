@@ -34,12 +34,13 @@ fn param_to_rust(param: &FacadeParam) -> String {
 
 /// The Rust method name is independent from the guest symbol.
 fn method_name(spec: &MethodSpec) -> String {
-    match spec.name {
-        "toBrep" => "export_brep".to_owned(),
-        "fromBrep" => "import_brep".to_owned(),
-        "toBrepBinary" => "export_brep_binary".to_owned(),
-        "fromBrepBinary" => "import_brep_binary".to_owned(),
-        name => camel_to_snake(name),
+    let name = camel_to_snake(spec.name);
+    match name.as_str() {
+        "to_brep" => "export_brep".to_owned(),
+        "from_brep" => "import_brep".to_owned(),
+        "to_brep_binary" => "export_brep_binary".to_owned(),
+        "from_brep_binary" => "import_brep_binary".to_owned(),
+        _ => name,
     }
 }
 
@@ -56,6 +57,13 @@ fn request_borrows(spec: &MethodSpec) -> bool {
 }
 
 fn emit_requests(buf: &mut String, methods: &[&MethodSpec]) {
+    if !methods
+        .iter()
+        .any(|spec| spec.has_wasi_binding() && request_name(spec).is_some())
+    {
+        return;
+    }
+    buf.push_str("/// Named argument types for wide facade operations.\npub mod requests {\n    use crate::types::{DocumentHandle, ShapeHandle};\n");
     for spec in methods {
         if !spec.has_wasi_binding() {
             continue;
@@ -86,6 +94,7 @@ fn emit_requests(buf: &mut String, methods: &[&MethodSpec]) {
         }
         buf.push_str("}\n\n");
     }
+    buf.push_str("}\n\n");
 }
 
 fn arg_expr(param: &FacadeParam, named: bool) -> String {
@@ -326,7 +335,7 @@ const fn result_binding(rt: ReturnType) -> (&'static str, ResultCheck, &'static 
 /// Emit a single method implementation.
 fn emit_rust_method(buf: &mut String, spec: &MethodSpec) {
     let snake_name = method_name(spec);
-    let guest_name = camel_to_snake(spec.name);
+    let guest_name = export_field(spec);
     let request = request_name(spec);
     let named = request.is_some();
     let rust_ret = rust_return_type(spec.return_type);
@@ -334,7 +343,7 @@ fn emit_rust_method(buf: &mut String, spec: &MethodSpec) {
         || rust_param_list(spec.params),
         |request| {
             let lifetime = if request_borrows(spec) { "<'_>" } else { "" };
-            format!("request: {request}{lifetime}")
+            format!("request: requests::{request}{lifetime}")
         },
     );
 
@@ -430,6 +439,74 @@ fn type_name(name: &str) -> String {
         .collect()
 }
 
+/// The owning domain already identifies the prefix of the export.
+fn export_field(spec: &MethodSpec) -> String {
+    let symbol = camel_to_snake(spec.name);
+    let prefix = format!("{}_", spec.category);
+    let Some(field) = symbol.strip_prefix(&prefix) else {
+        return symbol;
+    };
+    // These identifiers cannot be raw identifiers. Retain the unambiguous
+    // guest symbol instead; other keywords can be escaped normally.
+    if matches!(field, "crate" | "self" | "Self" | "super" | "_") {
+        return symbol;
+    }
+    if matches!(
+        field,
+        "as" | "break"
+            | "const"
+            | "continue"
+            | "else"
+            | "enum"
+            | "extern"
+            | "false"
+            | "fn"
+            | "for"
+            | "if"
+            | "impl"
+            | "in"
+            | "let"
+            | "loop"
+            | "match"
+            | "mod"
+            | "move"
+            | "mut"
+            | "pub"
+            | "ref"
+            | "return"
+            | "static"
+            | "struct"
+            | "trait"
+            | "true"
+            | "type"
+            | "unsafe"
+            | "use"
+            | "where"
+            | "while"
+            | "async"
+            | "await"
+            | "dyn"
+            | "abstract"
+            | "become"
+            | "box"
+            | "do"
+            | "final"
+            | "gen"
+            | "macro"
+            | "override"
+            | "priv"
+            | "try"
+            | "typeof"
+            | "unsized"
+            | "virtual"
+            | "yield"
+    ) {
+        format!("r#{field}")
+    } else {
+        field.to_owned()
+    }
+}
+
 fn export_group(category: &str) -> String {
     format!("{}Exports", type_name(category))
 }
@@ -469,7 +546,7 @@ fn emit_export_groups(buf: &mut String, methods: &[&MethodSpec]) {
             if !spec.has_wasi_binding() {
                 continue;
             }
-            let field = camel_to_snake(spec.name);
+            let field = export_field(spec);
             let signature = wasm_typed_func_type(spec);
             let ty = aliases.get(&signature).unwrap_or(&signature);
             let _ = writeln!(buf, "    {field}: {ty},");
@@ -481,21 +558,24 @@ fn emit_export_groups(buf: &mut String, methods: &[&MethodSpec]) {
         );
         for spec in specs {
             if spec.has_wasi_binding() {
-                let field = camel_to_snake(spec.name);
+                let field = export_field(spec);
+                let symbol = camel_to_snake(spec.name);
                 let _ = writeln!(
                     buf,
-                    "            {field}: instance.get_typed_func(&mut *store, \"occt_{field}\")?,"
+                    "            {field}: instance.get_typed_func(&mut *store, \"occt_{symbol}\")?,"
                 );
             }
         }
         buf.push_str("        })\n    }\n}\n\n");
     }
-    buf.push_str("/// Cached typed WASM exports, grouped by facade domain.\npub(super) struct GeneratedFuncs {\n");
+    buf.push_str(
+        "/// Cached typed WASM exports, grouped by facade domain.\npub struct GeneratedFuncs {\n",
+    );
     for (category, _) in &groups {
         let name = export_group(category);
         let _ = writeln!(buf, "    {category}: {name},");
     }
-    buf.push_str("}\n\nimpl GeneratedFuncs {\n    pub(super) fn resolve<T: 'static>(instance: &wasmtime::Instance, store: &mut wasmtime::Store<T>) -> OcctResult<Self> {\n        Ok(Self {\n");
+    buf.push_str("}\n\nimpl GeneratedFuncs {\n    pub fn resolve<T: 'static>(instance: &wasmtime::Instance, store: &mut wasmtime::Store<T>) -> OcctResult<Self> {\n        Ok(Self {\n");
     for (category, _) in &groups {
         let name = export_group(category);
         let _ = writeln!(
@@ -585,6 +665,25 @@ mod tests {
         includes: &[],
         category: "xcaf",
     };
+
+    #[test]
+    fn brep_methods_use_import_export_names_without_changing_guest_symbols() {
+        let spec = MethodSpec {
+            name: "toBREP",
+            ..EXPORT_BYTES
+        };
+        let emitted = emit_rust_host(&[&spec]);
+        assert!(emitted.contains("pub fn export_brep("));
+        assert!(emitted.contains("occt_to_brep"));
+        assert!(!emitted.contains("pub fn to_brep("));
+        let spec = MethodSpec {
+            name: "fromBREPBinary",
+            ..IMPORT_BYTES
+        };
+        let emitted = emit_rust_host(&[&spec]);
+        assert!(emitted.contains("pub fn import_brep_binary("));
+        assert!(emitted.contains("occt_from_brep_binary"));
+    }
 
     #[test]
     fn document_ids_are_document_handles() {

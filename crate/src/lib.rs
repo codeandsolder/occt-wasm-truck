@@ -57,7 +57,7 @@ pub mod types;
 
 pub use error::{OcctError, OcctResult};
 pub use kernel::OcctKernel;
-pub use kernel_generated::*;
+pub use kernel_generated::requests::*;
 pub use types::*;
 pub use wasmtime;
 

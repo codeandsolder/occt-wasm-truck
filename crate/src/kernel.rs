@@ -55,6 +55,25 @@ impl<C: wasmtime::WasmResults + TryInto<u32>> BufferExport<C> {
     }
 }
 
+/// Runtime services shared by every generated facade call.
+struct RuntimeExports {
+    has_error: TypedFunc<(), i32>,
+    error: BufferExport<u32>,
+    alloc: TypedFunc<u32, u32>,
+    free: TypedFunc<u32, ()>,
+}
+
+impl RuntimeExports {
+    fn resolve(instance: &Instance, store: &mut Store<HostState>) -> OcctResult<Self> {
+        Ok(Self {
+            has_error: instance.get_typed_func(&mut *store, "occt_has_error")?,
+            error: BufferExport::resolve(instance, store, "occt_get_error")?,
+            alloc: instance.get_typed_func(&mut *store, "occt_alloc")?,
+            free: instance.get_typed_func(&mut *store, "occt_free")?,
+        })
+    }
+}
+
 /// Scalars that can be decoded from the little-endian WASM result buffers.
 trait GuestElement: Sized {
     fn decode(
@@ -110,7 +129,8 @@ impl<const N: usize> GuestBuffers<N> {
             .get_mut(self.used)
             .ok_or_else(|| OcctError::Memory("too many guest allocations".to_owned()))?;
         let ptr = kernel
-            .fn_alloc
+            .runtime
+            .alloc
             .call(&mut kernel.store, checked_wasm_len(data.len(), 1)?)?;
         if ptr == 0 {
             core::hint::cold_path();
@@ -152,13 +172,7 @@ pub struct OcctKernel {
     instance: Instance,
     memory: Memory,
 
-    // Lifecycle + error functions
-    fn_has_error: TypedFunc<(), i32>,
-    buffer_error: BufferExport<u32>,
-
-    // Memory management
-    fn_alloc: TypedFunc<u32, u32>,
-    fn_free: TypedFunc<u32, ()>,
+    runtime: RuntimeExports,
 
     // Result buffer accessors
     buffer_string_result: BufferExport<u32>,
@@ -368,9 +382,6 @@ impl OcctKernel {
             ($name:expr => $ret:ty) => {
                 instance.get_typed_func::<(), $ret>(&mut store, $name)?
             };
-            ($name:expr, $param:ty => $ret:ty) => {
-                instance.get_typed_func::<$param, $ret>(&mut store, $name)?
-            };
         }
 
         macro_rules! get_buffer {
@@ -385,10 +396,7 @@ impl OcctKernel {
             memory,
             instance,
 
-            fn_has_error: get_fn!("occt_has_error" => i32),
-            buffer_error: get_buffer!("occt_get_error"),
-            fn_alloc: get_fn!("occt_alloc", u32 => u32),
-            fn_free: get_fn!("occt_free", u32 => ()),
+            runtime: RuntimeExports::resolve(&instance, &mut store)?,
 
             buffer_string_result: get_buffer!("occt_get_string_result"),
             buffer_vec_u32_result: get_buffer!("occt_get_vec_u32_result"),
@@ -502,7 +510,7 @@ impl OcctKernel {
             Err(OcctError::Runtime(_) | OcctError::MemoryLimit { .. })
         ) {
             for ptr in buffers.pointers.into_iter().take(buffers.used) {
-                self.fn_free.call(&mut self.store, ptr)?;
+                self.runtime.free.call(&mut self.store, ptr)?;
             }
         }
         result
@@ -517,7 +525,7 @@ impl OcctKernel {
 
     /// Check if the WASM module has a pending error and return it.
     pub(crate) fn check_error(&mut self, operation: &str) -> OcctResult<()> {
-        let has_error = self.fn_has_error.call(&mut self.store, ())?;
+        let has_error = self.runtime.has_error.call(&mut self.store, ())?;
         if has_error != 0 {
             // Errors are the exception, not the norm — this branch runs after
             // every facade call. Hint to LLVM that it's cold so the happy path
@@ -531,7 +539,7 @@ impl OcctKernel {
     /// Read the last error message from the WASM module.
     #[cold]
     pub(crate) fn read_last_error(&mut self, operation: &str) -> OcctError {
-        let (ptr, len) = self.buffer_error.query(&mut self.store).unwrap_or((0, 0));
+        let (ptr, len) = self.runtime.error.query(&mut self.store).unwrap_or((0, 0));
         let message = if ptr != 0 && len > 0 {
             self.read_bytes(ptr, len)
                 .ok()
@@ -862,8 +870,11 @@ fn read_array<const N: usize, T>(
 ) -> OcctResult<Vec<T>> {
     let width = checked_wasm_len(N, 1)?;
     let len = checked_wasm_product(count, width)?;
-    let (chunks, remainder) = read_slice(memory, store, ptr, len)?.as_chunks::<N>();
-    debug_assert!(remainder.is_empty());
+    let (chunks, []) = read_slice(memory, store, ptr, len)?.as_chunks::<N>() else {
+        return Err(OcctError::Memory(
+            "incomplete guest result element".to_owned(),
+        ));
+    };
     Ok(chunks.iter().copied().map(decode).collect())
 }
 

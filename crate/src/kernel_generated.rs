@@ -10,830 +10,834 @@ use crate::types::{
     NurbsCurveData, ProjectionData, ShapeHandle, SurfaceData,
 };
 
-/// Named arguments for the `sectionPlane` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct SectionPlaneRequest {
-    /// Value of the facade parameter `shapeId`.
-    pub shape_id: ShapeHandle,
-    /// Value of the facade parameter `ox`.
-    pub ox: f64,
-    /// Value of the facade parameter `oy`.
-    pub oy: f64,
-    /// Value of the facade parameter `oz`.
-    pub oz: f64,
-    /// Value of the facade parameter `nx`.
-    pub nx: f64,
-    /// Value of the facade parameter `ny`.
-    pub ny: f64,
-    /// Value of the facade parameter `nz`.
-    pub nz: f64,
-}
+/// Named argument types for wide facade operations.
+pub mod requests {
+    use crate::types::{DocumentHandle, ShapeHandle};
+    /// Named arguments for the `sectionPlane` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct SectionPlaneRequest {
+        /// Value of the facade parameter `shapeId`.
+        pub shape_id: ShapeHandle,
+        /// Value of the facade parameter `ox`.
+        pub ox: f64,
+        /// Value of the facade parameter `oy`.
+        pub oy: f64,
+        /// Value of the facade parameter `oz`.
+        pub oz: f64,
+        /// Value of the facade parameter `nx`.
+        pub nx: f64,
+        /// Value of the facade parameter `ny`.
+        pub ny: f64,
+        /// Value of the facade parameter `nz`.
+        pub nz: f64,
+    }
 
-/// Named arguments for the `booleanOp` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct BooleanOpRequest<'a> {
-    /// Value of the facade parameter `opCode`.
-    pub op_code: i32,
-    /// Value of the facade parameter `argIds`.
-    pub arg_ids: &'a [ShapeHandle],
-    /// Value of the facade parameter `toolIds`.
-    pub tool_ids: &'a [ShapeHandle],
-    /// Value of the facade parameter `glue`.
-    pub glue: i32,
-    /// Value of the facade parameter `fuzzyValue`.
-    pub fuzzy_value: f64,
-    /// Value of the facade parameter `simplifyAngularTolerance`.
-    pub simplify_angular_tolerance: f64,
-    /// Value of the facade parameter `inputFaceHashes`.
-    pub input_face_hashes: &'a [i32],
-    /// Value of the facade parameter `hashUpperBound`.
-    pub hash_upper_bound: i32,
-}
+    /// Named arguments for the `booleanOp` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct BooleanOpRequest<'a> {
+        /// Value of the facade parameter `opCode`.
+        pub op_code: i32,
+        /// Value of the facade parameter `argIds`.
+        pub arg_ids: &'a [ShapeHandle],
+        /// Value of the facade parameter `toolIds`.
+        pub tool_ids: &'a [ShapeHandle],
+        /// Value of the facade parameter `glue`.
+        pub glue: i32,
+        /// Value of the facade parameter `fuzzyValue`.
+        pub fuzzy_value: f64,
+        /// Value of the facade parameter `simplifyAngularTolerance`.
+        pub simplify_angular_tolerance: f64,
+        /// Value of the facade parameter `inputFaceHashes`.
+        pub input_face_hashes: &'a [i32],
+        /// Value of the facade parameter `hashUpperBound`.
+        pub hash_upper_bound: i32,
+    }
 
-/// Named arguments for the `revolve` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct RevolveRequest {
-    /// Value of the facade parameter `shapeId`.
-    pub shape_id: ShapeHandle,
-    /// Value of the facade parameter `px`.
-    pub px: f64,
-    /// Value of the facade parameter `py`.
-    pub py: f64,
-    /// Value of the facade parameter `pz`.
-    pub pz: f64,
-    /// Value of the facade parameter `dx`.
-    pub dx: f64,
-    /// Value of the facade parameter `dy`.
-    pub dy: f64,
-    /// Value of the facade parameter `dz`.
-    pub dz: f64,
-    /// Value of the facade parameter `angleRad`.
-    pub angle_rad: f64,
-}
+    /// Named arguments for the `revolve` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct RevolveRequest {
+        /// Value of the facade parameter `shapeId`.
+        pub shape_id: ShapeHandle,
+        /// Value of the facade parameter `px`.
+        pub px: f64,
+        /// Value of the facade parameter `py`.
+        pub py: f64,
+        /// Value of the facade parameter `pz`.
+        pub pz: f64,
+        /// Value of the facade parameter `dx`.
+        pub dx: f64,
+        /// Value of the facade parameter `dy`.
+        pub dy: f64,
+        /// Value of the facade parameter `dz`.
+        pub dz: f64,
+        /// Value of the facade parameter `angleRad`.
+        pub angle_rad: f64,
+    }
 
-/// Named arguments for the `draftFaces` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct DraftFacesRequest<'a> {
-    /// Value of the facade parameter `shapeId`.
-    pub shape_id: ShapeHandle,
-    /// Value of the facade parameter `faceIds`.
-    pub face_ids: &'a [ShapeHandle],
-    /// Value of the facade parameter `anglesRad`.
-    pub angles_rad: &'a [f64],
-    /// Value of the facade parameter `dx`.
-    pub dx: f64,
-    /// Value of the facade parameter `dy`.
-    pub dy: f64,
-    /// Value of the facade parameter `dz`.
-    pub dz: f64,
-    /// Value of the facade parameter `px`.
-    pub px: f64,
-    /// Value of the facade parameter `py`.
-    pub py: f64,
-    /// Value of the facade parameter `pz`.
-    pub pz: f64,
-    /// Value of the facade parameter `nx`.
-    pub nx: f64,
-    /// Value of the facade parameter `ny`.
-    pub ny: f64,
-    /// Value of the facade parameter `nz`.
-    pub nz: f64,
-}
+    /// Named arguments for the `draftFaces` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct DraftFacesRequest<'a> {
+        /// Value of the facade parameter `shapeId`.
+        pub shape_id: ShapeHandle,
+        /// Value of the facade parameter `faceIds`.
+        pub face_ids: &'a [ShapeHandle],
+        /// Value of the facade parameter `anglesRad`.
+        pub angles_rad: &'a [f64],
+        /// Value of the facade parameter `dx`.
+        pub dx: f64,
+        /// Value of the facade parameter `dy`.
+        pub dy: f64,
+        /// Value of the facade parameter `dz`.
+        pub dz: f64,
+        /// Value of the facade parameter `px`.
+        pub px: f64,
+        /// Value of the facade parameter `py`.
+        pub py: f64,
+        /// Value of the facade parameter `pz`.
+        pub pz: f64,
+        /// Value of the facade parameter `nx`.
+        pub nx: f64,
+        /// Value of the facade parameter `ny`.
+        pub ny: f64,
+        /// Value of the facade parameter `nz`.
+        pub nz: f64,
+    }
 
-/// Named arguments for the `rotate` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct RotateRequest {
-    /// Value of the facade parameter `id`.
-    pub id: ShapeHandle,
-    /// Value of the facade parameter `px`.
-    pub px: f64,
-    /// Value of the facade parameter `py`.
-    pub py: f64,
-    /// Value of the facade parameter `pz`.
-    pub pz: f64,
-    /// Value of the facade parameter `dx`.
-    pub dx: f64,
-    /// Value of the facade parameter `dy`.
-    pub dy: f64,
-    /// Value of the facade parameter `dz`.
-    pub dz: f64,
-    /// Value of the facade parameter `angleRad`.
-    pub angle_rad: f64,
-}
+    /// Named arguments for the `rotate` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct RotateRequest {
+        /// Value of the facade parameter `id`.
+        pub id: ShapeHandle,
+        /// Value of the facade parameter `px`.
+        pub px: f64,
+        /// Value of the facade parameter `py`.
+        pub py: f64,
+        /// Value of the facade parameter `pz`.
+        pub pz: f64,
+        /// Value of the facade parameter `dx`.
+        pub dx: f64,
+        /// Value of the facade parameter `dy`.
+        pub dy: f64,
+        /// Value of the facade parameter `dz`.
+        pub dz: f64,
+        /// Value of the facade parameter `angleRad`.
+        pub angle_rad: f64,
+    }
 
-/// Named arguments for the `mirror` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct MirrorRequest {
-    /// Value of the facade parameter `id`.
-    pub id: ShapeHandle,
-    /// Value of the facade parameter `px`.
-    pub px: f64,
-    /// Value of the facade parameter `py`.
-    pub py: f64,
-    /// Value of the facade parameter `pz`.
-    pub pz: f64,
-    /// Value of the facade parameter `nx`.
-    pub nx: f64,
-    /// Value of the facade parameter `ny`.
-    pub ny: f64,
-    /// Value of the facade parameter `nz`.
-    pub nz: f64,
-}
+    /// Named arguments for the `mirror` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct MirrorRequest {
+        /// Value of the facade parameter `id`.
+        pub id: ShapeHandle,
+        /// Value of the facade parameter `px`.
+        pub px: f64,
+        /// Value of the facade parameter `py`.
+        pub py: f64,
+        /// Value of the facade parameter `pz`.
+        pub pz: f64,
+        /// Value of the facade parameter `nx`.
+        pub nx: f64,
+        /// Value of the facade parameter `ny`.
+        pub ny: f64,
+        /// Value of the facade parameter `nz`.
+        pub nz: f64,
+    }
 
-/// Named arguments for the `circularPattern` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct CircularPatternRequest {
-    /// Value of the facade parameter `id`.
-    pub id: ShapeHandle,
-    /// Value of the facade parameter `cx`.
-    pub cx: f64,
-    /// Value of the facade parameter `cy`.
-    pub cy: f64,
-    /// Value of the facade parameter `cz`.
-    pub cz: f64,
-    /// Value of the facade parameter `ax`.
-    pub ax: f64,
-    /// Value of the facade parameter `ay`.
-    pub ay: f64,
-    /// Value of the facade parameter `az`.
-    pub az: f64,
-    /// Value of the facade parameter `angle`.
-    pub angle: f64,
-    /// Value of the facade parameter `count`.
-    pub count: i32,
-}
+    /// Named arguments for the `circularPattern` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct CircularPatternRequest {
+        /// Value of the facade parameter `id`.
+        pub id: ShapeHandle,
+        /// Value of the facade parameter `cx`.
+        pub cx: f64,
+        /// Value of the facade parameter `cy`.
+        pub cy: f64,
+        /// Value of the facade parameter `cz`.
+        pub cz: f64,
+        /// Value of the facade parameter `ax`.
+        pub ax: f64,
+        /// Value of the facade parameter `ay`.
+        pub ay: f64,
+        /// Value of the facade parameter `az`.
+        pub az: f64,
+        /// Value of the facade parameter `angle`.
+        pub angle: f64,
+        /// Value of the facade parameter `count`.
+        pub count: i32,
+    }
 
-/// Named arguments for the `makeCircleEdge` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct MakeCircleEdgeRequest {
-    /// Value of the facade parameter `cx`.
-    pub cx: f64,
-    /// Value of the facade parameter `cy`.
-    pub cy: f64,
-    /// Value of the facade parameter `cz`.
-    pub cz: f64,
-    /// Value of the facade parameter `nx`.
-    pub nx: f64,
-    /// Value of the facade parameter `ny`.
-    pub ny: f64,
-    /// Value of the facade parameter `nz`.
-    pub nz: f64,
-    /// Value of the facade parameter `radius`.
-    pub radius: f64,
-}
+    /// Named arguments for the `makeCircleEdge` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct MakeCircleEdgeRequest {
+        /// Value of the facade parameter `cx`.
+        pub cx: f64,
+        /// Value of the facade parameter `cy`.
+        pub cy: f64,
+        /// Value of the facade parameter `cz`.
+        pub cz: f64,
+        /// Value of the facade parameter `nx`.
+        pub nx: f64,
+        /// Value of the facade parameter `ny`.
+        pub ny: f64,
+        /// Value of the facade parameter `nz`.
+        pub nz: f64,
+        /// Value of the facade parameter `radius`.
+        pub radius: f64,
+    }
 
-/// Named arguments for the `makeCircleArc` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct MakeCircleArcRequest {
-    /// Value of the facade parameter `cx`.
-    pub cx: f64,
-    /// Value of the facade parameter `cy`.
-    pub cy: f64,
-    /// Value of the facade parameter `cz`.
-    pub cz: f64,
-    /// Value of the facade parameter `nx`.
-    pub nx: f64,
-    /// Value of the facade parameter `ny`.
-    pub ny: f64,
-    /// Value of the facade parameter `nz`.
-    pub nz: f64,
-    /// Value of the facade parameter `radius`.
-    pub radius: f64,
-    /// Value of the facade parameter `startAngle`.
-    pub start_angle: f64,
-    /// Value of the facade parameter `endAngle`.
-    pub end_angle: f64,
-}
+    /// Named arguments for the `makeCircleArc` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct MakeCircleArcRequest {
+        /// Value of the facade parameter `cx`.
+        pub cx: f64,
+        /// Value of the facade parameter `cy`.
+        pub cy: f64,
+        /// Value of the facade parameter `cz`.
+        pub cz: f64,
+        /// Value of the facade parameter `nx`.
+        pub nx: f64,
+        /// Value of the facade parameter `ny`.
+        pub ny: f64,
+        /// Value of the facade parameter `nz`.
+        pub nz: f64,
+        /// Value of the facade parameter `radius`.
+        pub radius: f64,
+        /// Value of the facade parameter `startAngle`.
+        pub start_angle: f64,
+        /// Value of the facade parameter `endAngle`.
+        pub end_angle: f64,
+    }
 
-/// Named arguments for the `makeArcEdge` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct MakeArcEdgeRequest {
-    /// Value of the facade parameter `x1`.
-    pub x1: f64,
-    /// Value of the facade parameter `y1`.
-    pub y1: f64,
-    /// Value of the facade parameter `z1`.
-    pub z1: f64,
-    /// Value of the facade parameter `x2`.
-    pub x2: f64,
-    /// Value of the facade parameter `y2`.
-    pub y2: f64,
-    /// Value of the facade parameter `z2`.
-    pub z2: f64,
-    /// Value of the facade parameter `x3`.
-    pub x3: f64,
-    /// Value of the facade parameter `y3`.
-    pub y3: f64,
-    /// Value of the facade parameter `z3`.
-    pub z3: f64,
-}
+    /// Named arguments for the `makeArcEdge` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct MakeArcEdgeRequest {
+        /// Value of the facade parameter `x1`.
+        pub x1: f64,
+        /// Value of the facade parameter `y1`.
+        pub y1: f64,
+        /// Value of the facade parameter `z1`.
+        pub z1: f64,
+        /// Value of the facade parameter `x2`.
+        pub x2: f64,
+        /// Value of the facade parameter `y2`.
+        pub y2: f64,
+        /// Value of the facade parameter `z2`.
+        pub z2: f64,
+        /// Value of the facade parameter `x3`.
+        pub x3: f64,
+        /// Value of the facade parameter `y3`.
+        pub y3: f64,
+        /// Value of the facade parameter `z3`.
+        pub z3: f64,
+    }
 
-/// Named arguments for the `makeEllipseEdge` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct MakeEllipseEdgeRequest {
-    /// Value of the facade parameter `cx`.
-    pub cx: f64,
-    /// Value of the facade parameter `cy`.
-    pub cy: f64,
-    /// Value of the facade parameter `cz`.
-    pub cz: f64,
-    /// Value of the facade parameter `nx`.
-    pub nx: f64,
-    /// Value of the facade parameter `ny`.
-    pub ny: f64,
-    /// Value of the facade parameter `nz`.
-    pub nz: f64,
-    /// Value of the facade parameter `majorRadius`.
-    pub major_radius: f64,
-    /// Value of the facade parameter `minorRadius`.
-    pub minor_radius: f64,
-}
+    /// Named arguments for the `makeEllipseEdge` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct MakeEllipseEdgeRequest {
+        /// Value of the facade parameter `cx`.
+        pub cx: f64,
+        /// Value of the facade parameter `cy`.
+        pub cy: f64,
+        /// Value of the facade parameter `cz`.
+        pub cz: f64,
+        /// Value of the facade parameter `nx`.
+        pub nx: f64,
+        /// Value of the facade parameter `ny`.
+        pub ny: f64,
+        /// Value of the facade parameter `nz`.
+        pub nz: f64,
+        /// Value of the facade parameter `majorRadius`.
+        pub major_radius: f64,
+        /// Value of the facade parameter `minorRadius`.
+        pub minor_radius: f64,
+    }
 
-/// Named arguments for the `makeEllipseArc` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct MakeEllipseArcRequest {
-    /// Value of the facade parameter `cx`.
-    pub cx: f64,
-    /// Value of the facade parameter `cy`.
-    pub cy: f64,
-    /// Value of the facade parameter `cz`.
-    pub cz: f64,
-    /// Value of the facade parameter `nx`.
-    pub nx: f64,
-    /// Value of the facade parameter `ny`.
-    pub ny: f64,
-    /// Value of the facade parameter `nz`.
-    pub nz: f64,
-    /// Value of the facade parameter `majorRadius`.
-    pub major_radius: f64,
-    /// Value of the facade parameter `minorRadius`.
-    pub minor_radius: f64,
-    /// Value of the facade parameter `startAngle`.
-    pub start_angle: f64,
-    /// Value of the facade parameter `endAngle`.
-    pub end_angle: f64,
-}
+    /// Named arguments for the `makeEllipseArc` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct MakeEllipseArcRequest {
+        /// Value of the facade parameter `cx`.
+        pub cx: f64,
+        /// Value of the facade parameter `cy`.
+        pub cy: f64,
+        /// Value of the facade parameter `cz`.
+        pub cz: f64,
+        /// Value of the facade parameter `nx`.
+        pub nx: f64,
+        /// Value of the facade parameter `ny`.
+        pub ny: f64,
+        /// Value of the facade parameter `nz`.
+        pub nz: f64,
+        /// Value of the facade parameter `majorRadius`.
+        pub major_radius: f64,
+        /// Value of the facade parameter `minorRadius`.
+        pub minor_radius: f64,
+        /// Value of the facade parameter `startAngle`.
+        pub start_angle: f64,
+        /// Value of the facade parameter `endAngle`.
+        pub end_angle: f64,
+    }
 
-/// Named arguments for the `makeEllipseArcOriented` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct MakeEllipseArcOrientedRequest {
-    /// Value of the facade parameter `cx`.
-    pub cx: f64,
-    /// Value of the facade parameter `cy`.
-    pub cy: f64,
-    /// Value of the facade parameter `cz`.
-    pub cz: f64,
-    /// Value of the facade parameter `nx`.
-    pub nx: f64,
-    /// Value of the facade parameter `ny`.
-    pub ny: f64,
-    /// Value of the facade parameter `nz`.
-    pub nz: f64,
-    /// Value of the facade parameter `xx`.
-    pub xx: f64,
-    /// Value of the facade parameter `xy`.
-    pub xy: f64,
-    /// Value of the facade parameter `xz`.
-    pub xz: f64,
-    /// Value of the facade parameter `majorRadius`.
-    pub major_radius: f64,
-    /// Value of the facade parameter `minorRadius`.
-    pub minor_radius: f64,
-    /// Value of the facade parameter `startAngle`.
-    pub start_angle: f64,
-    /// Value of the facade parameter `endAngle`.
-    pub end_angle: f64,
-}
+    /// Named arguments for the `makeEllipseArcOriented` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct MakeEllipseArcOrientedRequest {
+        /// Value of the facade parameter `cx`.
+        pub cx: f64,
+        /// Value of the facade parameter `cy`.
+        pub cy: f64,
+        /// Value of the facade parameter `cz`.
+        pub cz: f64,
+        /// Value of the facade parameter `nx`.
+        pub nx: f64,
+        /// Value of the facade parameter `ny`.
+        pub ny: f64,
+        /// Value of the facade parameter `nz`.
+        pub nz: f64,
+        /// Value of the facade parameter `xx`.
+        pub xx: f64,
+        /// Value of the facade parameter `xy`.
+        pub xy: f64,
+        /// Value of the facade parameter `xz`.
+        pub xz: f64,
+        /// Value of the facade parameter `majorRadius`.
+        pub major_radius: f64,
+        /// Value of the facade parameter `minorRadius`.
+        pub minor_radius: f64,
+        /// Value of the facade parameter `startAngle`.
+        pub start_angle: f64,
+        /// Value of the facade parameter `endAngle`.
+        pub end_angle: f64,
+    }
 
-/// Named arguments for the `makeHelixWire` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct MakeHelixWireRequest {
-    /// Value of the facade parameter `px`.
-    pub px: f64,
-    /// Value of the facade parameter `py`.
-    pub py: f64,
-    /// Value of the facade parameter `pz`.
-    pub pz: f64,
-    /// Value of the facade parameter `dx`.
-    pub dx: f64,
-    /// Value of the facade parameter `dy`.
-    pub dy: f64,
-    /// Value of the facade parameter `dz`.
-    pub dz: f64,
-    /// Value of the facade parameter `pitch`.
-    pub pitch: f64,
-    /// Value of the facade parameter `height`.
-    pub height: f64,
-    /// Value of the facade parameter `radius`.
-    pub radius: f64,
-}
+    /// Named arguments for the `makeHelixWire` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct MakeHelixWireRequest {
+        /// Value of the facade parameter `px`.
+        pub px: f64,
+        /// Value of the facade parameter `py`.
+        pub py: f64,
+        /// Value of the facade parameter `pz`.
+        pub pz: f64,
+        /// Value of the facade parameter `dx`.
+        pub dx: f64,
+        /// Value of the facade parameter `dy`.
+        pub dy: f64,
+        /// Value of the facade parameter `dz`.
+        pub dz: f64,
+        /// Value of the facade parameter `pitch`.
+        pub pitch: f64,
+        /// Value of the facade parameter `height`.
+        pub height: f64,
+        /// Value of the facade parameter `radius`.
+        pub radius: f64,
+    }
 
-/// Named arguments for the `makeHelixWireHanded` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct MakeHelixWireHandedRequest {
-    /// Value of the facade parameter `px`.
-    pub px: f64,
-    /// Value of the facade parameter `py`.
-    pub py: f64,
-    /// Value of the facade parameter `pz`.
-    pub pz: f64,
-    /// Value of the facade parameter `dx`.
-    pub dx: f64,
-    /// Value of the facade parameter `dy`.
-    pub dy: f64,
-    /// Value of the facade parameter `dz`.
-    pub dz: f64,
-    /// Value of the facade parameter `pitch`.
-    pub pitch: f64,
-    /// Value of the facade parameter `height`.
-    pub height: f64,
-    /// Value of the facade parameter `radius`.
-    pub radius: f64,
-    /// Value of the facade parameter `leftHanded`.
-    pub left_handed: bool,
-}
+    /// Named arguments for the `makeHelixWireHanded` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct MakeHelixWireHandedRequest {
+        /// Value of the facade parameter `px`.
+        pub px: f64,
+        /// Value of the facade parameter `py`.
+        pub py: f64,
+        /// Value of the facade parameter `pz`.
+        pub pz: f64,
+        /// Value of the facade parameter `dx`.
+        pub dx: f64,
+        /// Value of the facade parameter `dy`.
+        pub dy: f64,
+        /// Value of the facade parameter `dz`.
+        pub dz: f64,
+        /// Value of the facade parameter `pitch`.
+        pub pitch: f64,
+        /// Value of the facade parameter `height`.
+        pub height: f64,
+        /// Value of the facade parameter `radius`.
+        pub radius: f64,
+        /// Value of the facade parameter `leftHanded`.
+        pub left_handed: bool,
+    }
 
-/// Named arguments for the `threadGroove` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct ThreadGrooveRequest {
-    /// Value of the facade parameter `px`.
-    pub px: f64,
-    /// Value of the facade parameter `py`.
-    pub py: f64,
-    /// Value of the facade parameter `pz`.
-    pub pz: f64,
-    /// Value of the facade parameter `dx`.
-    pub dx: f64,
-    /// Value of the facade parameter `dy`.
-    pub dy: f64,
-    /// Value of the facade parameter `dz`.
-    pub dz: f64,
-    /// Value of the facade parameter `pitch`.
-    pub pitch: f64,
-    /// Value of the facade parameter `length`.
-    pub length: f64,
-    /// Value of the facade parameter `coverRadius`.
-    pub cover_radius: f64,
-    /// Value of the facade parameter `rootRadius`.
-    pub root_radius: f64,
-    /// Value of the facade parameter `coverHalfWidth`.
-    pub cover_half_width: f64,
-    /// Value of the facade parameter `rootHalfWidth`.
-    pub root_half_width: f64,
-    /// Value of the facade parameter `phase`.
-    pub phase: f64,
-}
+    /// Named arguments for the `threadGroove` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct ThreadGrooveRequest {
+        /// Value of the facade parameter `px`.
+        pub px: f64,
+        /// Value of the facade parameter `py`.
+        pub py: f64,
+        /// Value of the facade parameter `pz`.
+        pub pz: f64,
+        /// Value of the facade parameter `dx`.
+        pub dx: f64,
+        /// Value of the facade parameter `dy`.
+        pub dy: f64,
+        /// Value of the facade parameter `dz`.
+        pub dz: f64,
+        /// Value of the facade parameter `pitch`.
+        pub pitch: f64,
+        /// Value of the facade parameter `length`.
+        pub length: f64,
+        /// Value of the facade parameter `coverRadius`.
+        pub cover_radius: f64,
+        /// Value of the facade parameter `rootRadius`.
+        pub root_radius: f64,
+        /// Value of the facade parameter `coverHalfWidth`.
+        pub cover_half_width: f64,
+        /// Value of the facade parameter `rootHalfWidth`.
+        pub root_half_width: f64,
+        /// Value of the facade parameter `phase`.
+        pub phase: f64,
+    }
 
-/// Named arguments for the `fillSurface` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct FillSurfaceRequest<'a> {
-    /// Value of the facade parameter `freeEdgeIds`.
-    pub free_edge_ids: &'a [ShapeHandle],
-    /// Value of the facade parameter `supportedEdgeIds`.
-    pub supported_edge_ids: &'a [ShapeHandle],
-    /// Value of the facade parameter `supportFaceIds`.
-    pub support_face_ids: &'a [ShapeHandle],
-    /// Value of the facade parameter `supportOrders`.
-    pub support_orders: &'a [i32],
-    /// Value of the facade parameter `guideEdgeIds`.
-    pub guide_edge_ids: &'a [ShapeHandle],
-    /// Value of the facade parameter `flatPoints`.
-    pub flat_points: &'a [f64],
-    /// Value of the facade parameter `initFaceId`.
-    pub init_face_id: u32,
-    /// Value of the facade parameter `params`.
-    pub params: &'a [f64],
-}
+    /// Named arguments for the `fillSurface` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct FillSurfaceRequest<'a> {
+        /// Value of the facade parameter `freeEdgeIds`.
+        pub free_edge_ids: &'a [ShapeHandle],
+        /// Value of the facade parameter `supportedEdgeIds`.
+        pub supported_edge_ids: &'a [ShapeHandle],
+        /// Value of the facade parameter `supportFaceIds`.
+        pub support_face_ids: &'a [ShapeHandle],
+        /// Value of the facade parameter `supportOrders`.
+        pub support_orders: &'a [i32],
+        /// Value of the facade parameter `guideEdgeIds`.
+        pub guide_edge_ids: &'a [ShapeHandle],
+        /// Value of the facade parameter `flatPoints`.
+        pub flat_points: &'a [f64],
+        /// Value of the facade parameter `initFaceId`.
+        pub init_face_id: u32,
+        /// Value of the facade parameter `params`.
+        pub params: &'a [f64],
+    }
 
-/// Named arguments for the `buildTriFace` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct BuildTriFaceRequest {
-    /// Value of the facade parameter `ax`.
-    pub ax: f64,
-    /// Value of the facade parameter `ay`.
-    pub ay: f64,
-    /// Value of the facade parameter `az`.
-    pub az: f64,
-    /// Value of the facade parameter `bx`.
-    pub bx: f64,
-    /// Value of the facade parameter `by`.
-    pub by: f64,
-    /// Value of the facade parameter `bz`.
-    pub bz: f64,
-    /// Value of the facade parameter `cx2`.
-    pub cx2: f64,
-    /// Value of the facade parameter `cy2`.
-    pub cy2: f64,
-    /// Value of the facade parameter `cz2`.
-    pub cz2: f64,
-}
+    /// Named arguments for the `buildTriFace` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct BuildTriFaceRequest {
+        /// Value of the facade parameter `ax`.
+        pub ax: f64,
+        /// Value of the facade parameter `ay`.
+        pub ay: f64,
+        /// Value of the facade parameter `az`.
+        pub az: f64,
+        /// Value of the facade parameter `bx`.
+        pub bx: f64,
+        /// Value of the facade parameter `by`.
+        pub by: f64,
+        /// Value of the facade parameter `bz`.
+        pub bz: f64,
+        /// Value of the facade parameter `cx2`.
+        pub cx2: f64,
+        /// Value of the facade parameter `cy2`.
+        pub cy2: f64,
+        /// Value of the facade parameter `cz2`.
+        pub cz2: f64,
+    }
 
-/// Named arguments for the `makeTangentArc` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct MakeTangentArcRequest {
-    /// Value of the facade parameter `x1`.
-    pub x1: f64,
-    /// Value of the facade parameter `y1`.
-    pub y1: f64,
-    /// Value of the facade parameter `z1`.
-    pub z1: f64,
-    /// Value of the facade parameter `tx`.
-    pub tx: f64,
-    /// Value of the facade parameter `ty`.
-    pub ty: f64,
-    /// Value of the facade parameter `tz`.
-    pub tz: f64,
-    /// Value of the facade parameter `x2`.
-    pub x2: f64,
-    /// Value of the facade parameter `y2`.
-    pub y2: f64,
-    /// Value of the facade parameter `z2`.
-    pub z2: f64,
-}
+    /// Named arguments for the `makeTangentArc` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct MakeTangentArcRequest {
+        /// Value of the facade parameter `x1`.
+        pub x1: f64,
+        /// Value of the facade parameter `y1`.
+        pub y1: f64,
+        /// Value of the facade parameter `z1`.
+        pub z1: f64,
+        /// Value of the facade parameter `tx`.
+        pub tx: f64,
+        /// Value of the facade parameter `ty`.
+        pub ty: f64,
+        /// Value of the facade parameter `tz`.
+        pub tz: f64,
+        /// Value of the facade parameter `x2`.
+        pub x2: f64,
+        /// Value of the facade parameter `y2`.
+        pub y2: f64,
+        /// Value of the facade parameter `z2`.
+        pub z2: f64,
+    }
 
-/// Named arguments for the `nurbsSurface` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct NurbsSurfaceRequest<'a> {
-    /// Value of the facade parameter `flatPoles`.
-    pub flat_poles: &'a [f64],
-    /// Value of the facade parameter `weights`.
-    pub weights: &'a [f64],
-    /// Value of the facade parameter `knotsU`.
-    pub knots_u: &'a [f64],
-    /// Value of the facade parameter `knotsV`.
-    pub knots_v: &'a [f64],
-    /// Value of the facade parameter `multsU`.
-    pub mults_u: &'a [i32],
-    /// Value of the facade parameter `multsV`.
-    pub mults_v: &'a [i32],
-    /// Value of the facade parameter `layout`.
-    pub layout: &'a [i32],
-}
+    /// Named arguments for the `nurbsSurface` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct NurbsSurfaceRequest<'a> {
+        /// Value of the facade parameter `flatPoles`.
+        pub flat_poles: &'a [f64],
+        /// Value of the facade parameter `weights`.
+        pub weights: &'a [f64],
+        /// Value of the facade parameter `knotsU`.
+        pub knots_u: &'a [f64],
+        /// Value of the facade parameter `knotsV`.
+        pub knots_v: &'a [f64],
+        /// Value of the facade parameter `multsU`.
+        pub mults_u: &'a [i32],
+        /// Value of the facade parameter `multsV`.
+        pub mults_v: &'a [i32],
+        /// Value of the facade parameter `layout`.
+        pub layout: &'a [i32],
+    }
 
-/// Named arguments for the `interpolatePointsWithTangents` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct InterpolatePointsWithTangentsRequest<'a> {
-    /// Value of the facade parameter `flatPoints`.
-    pub flat_points: &'a [f64],
-    /// Value of the facade parameter `startTanX`.
-    pub start_tan_x: f64,
-    /// Value of the facade parameter `startTanY`.
-    pub start_tan_y: f64,
-    /// Value of the facade parameter `startTanZ`.
-    pub start_tan_z: f64,
-    /// Value of the facade parameter `endTanX`.
-    pub end_tan_x: f64,
-    /// Value of the facade parameter `endTanY`.
-    pub end_tan_y: f64,
-    /// Value of the facade parameter `endTanZ`.
-    pub end_tan_z: f64,
-}
+    /// Named arguments for the `interpolatePointsWithTangents` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct InterpolatePointsWithTangentsRequest<'a> {
+        /// Value of the facade parameter `flatPoints`.
+        pub flat_points: &'a [f64],
+        /// Value of the facade parameter `startTanX`.
+        pub start_tan_x: f64,
+        /// Value of the facade parameter `startTanY`.
+        pub start_tan_y: f64,
+        /// Value of the facade parameter `startTanZ`.
+        pub start_tan_z: f64,
+        /// Value of the facade parameter `endTanX`.
+        pub end_tan_x: f64,
+        /// Value of the facade parameter `endTanY`.
+        pub end_tan_y: f64,
+        /// Value of the facade parameter `endTanZ`.
+        pub end_tan_z: f64,
+    }
 
-/// Named arguments for the `liftCurve2dToPlane` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct LiftCurve2dToPlaneRequest<'a> {
-    /// Value of the facade parameter `flatPoints2d`.
-    pub flat_points2d: &'a [f64],
-    /// Value of the facade parameter `planeOx`.
-    pub plane_ox: f64,
-    /// Value of the facade parameter `planeOy`.
-    pub plane_oy: f64,
-    /// Value of the facade parameter `planeOz`.
-    pub plane_oz: f64,
-    /// Value of the facade parameter `planeZx`.
-    pub plane_zx: f64,
-    /// Value of the facade parameter `planeZy`.
-    pub plane_zy: f64,
-    /// Value of the facade parameter `planeZz`.
-    pub plane_zz: f64,
-    /// Value of the facade parameter `planeXx`.
-    pub plane_xx: f64,
-    /// Value of the facade parameter `planeXy`.
-    pub plane_xy: f64,
-    /// Value of the facade parameter `planeXz`.
-    pub plane_xz: f64,
-}
+    /// Named arguments for the `liftCurve2dToPlane` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct LiftCurve2dToPlaneRequest<'a> {
+        /// Value of the facade parameter `flatPoints2d`.
+        pub flat_points2d: &'a [f64],
+        /// Value of the facade parameter `planeOx`.
+        pub plane_ox: f64,
+        /// Value of the facade parameter `planeOy`.
+        pub plane_oy: f64,
+        /// Value of the facade parameter `planeOz`.
+        pub plane_oz: f64,
+        /// Value of the facade parameter `planeZx`.
+        pub plane_zx: f64,
+        /// Value of the facade parameter `planeZy`.
+        pub plane_zy: f64,
+        /// Value of the facade parameter `planeZz`.
+        pub plane_zz: f64,
+        /// Value of the facade parameter `planeXx`.
+        pub plane_xx: f64,
+        /// Value of the facade parameter `planeXy`.
+        pub plane_xy: f64,
+        /// Value of the facade parameter `planeXz`.
+        pub plane_xz: f64,
+    }
 
-/// Named arguments for the `revolveVec` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct RevolveVecRequest {
-    /// Value of the facade parameter `shapeId`.
-    pub shape_id: ShapeHandle,
-    /// Value of the facade parameter `cx`.
-    pub cx: f64,
-    /// Value of the facade parameter `cy`.
-    pub cy: f64,
-    /// Value of the facade parameter `cz`.
-    pub cz: f64,
-    /// Value of the facade parameter `dx`.
-    pub dx: f64,
-    /// Value of the facade parameter `dy`.
-    pub dy: f64,
-    /// Value of the facade parameter `dz`.
-    pub dz: f64,
-    /// Value of the facade parameter `angle`.
-    pub angle: f64,
-}
+    /// Named arguments for the `revolveVec` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct RevolveVecRequest {
+        /// Value of the facade parameter `shapeId`.
+        pub shape_id: ShapeHandle,
+        /// Value of the facade parameter `cx`.
+        pub cx: f64,
+        /// Value of the facade parameter `cy`.
+        pub cy: f64,
+        /// Value of the facade parameter `cz`.
+        pub cz: f64,
+        /// Value of the facade parameter `dx`.
+        pub dx: f64,
+        /// Value of the facade parameter `dy`.
+        pub dy: f64,
+        /// Value of the facade parameter `dz`.
+        pub dz: f64,
+        /// Value of the facade parameter `angle`.
+        pub angle: f64,
+    }
 
-/// Named arguments for the `sweepOriented` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct SweepOrientedRequest {
-    /// Value of the facade parameter `profileId`.
-    pub profile_id: ShapeHandle,
-    /// Value of the facade parameter `spineId`.
-    pub spine_id: ShapeHandle,
-    /// Value of the facade parameter `mode`.
-    pub mode: i32,
-    /// Value of the facade parameter `upX`.
-    pub up_x: f64,
-    /// Value of the facade parameter `upY`.
-    pub up_y: f64,
-    /// Value of the facade parameter `upZ`.
-    pub up_z: f64,
-    /// Value of the facade parameter `auxSpineId`.
-    pub aux_spine_id: ShapeHandle,
-    /// Value of the facade parameter `curvilinearEquivalence`.
-    pub curvilinear_equivalence: bool,
-    /// Value of the facade parameter `contactMode`.
-    pub contact_mode: i32,
-    /// Value of the facade parameter `tol3d`.
-    pub tol3d: f64,
-    /// Value of the facade parameter `boundTol`.
-    pub bound_tol: f64,
-    /// Value of the facade parameter `tolAngular`.
-    pub tol_angular: f64,
-}
+    /// Named arguments for the `sweepOriented` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct SweepOrientedRequest {
+        /// Value of the facade parameter `profileId`.
+        pub profile_id: ShapeHandle,
+        /// Value of the facade parameter `spineId`.
+        pub spine_id: ShapeHandle,
+        /// Value of the facade parameter `mode`.
+        pub mode: i32,
+        /// Value of the facade parameter `upX`.
+        pub up_x: f64,
+        /// Value of the facade parameter `upY`.
+        pub up_y: f64,
+        /// Value of the facade parameter `upZ`.
+        pub up_z: f64,
+        /// Value of the facade parameter `auxSpineId`.
+        pub aux_spine_id: ShapeHandle,
+        /// Value of the facade parameter `curvilinearEquivalence`.
+        pub curvilinear_equivalence: bool,
+        /// Value of the facade parameter `contactMode`.
+        pub contact_mode: i32,
+        /// Value of the facade parameter `tol3d`.
+        pub tol3d: f64,
+        /// Value of the facade parameter `boundTol`.
+        pub bound_tol: f64,
+        /// Value of the facade parameter `tolAngular`.
+        pub tol_angular: f64,
+    }
 
-/// Named arguments for the `sweepAdvanced` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct SweepAdvancedRequest {
-    /// Value of the facade parameter `profileId`.
-    pub profile_id: ShapeHandle,
-    /// Value of the facade parameter `spineId`.
-    pub spine_id: ShapeHandle,
-    /// Value of the facade parameter `mode`.
-    pub mode: i32,
-    /// Value of the facade parameter `upX`.
-    pub up_x: f64,
-    /// Value of the facade parameter `upY`.
-    pub up_y: f64,
-    /// Value of the facade parameter `upZ`.
-    pub up_z: f64,
-    /// Value of the facade parameter `auxSpineId`.
-    pub aux_spine_id: ShapeHandle,
-    /// Value of the facade parameter `curvilinearEquivalence`.
-    pub curvilinear_equivalence: bool,
-    /// Value of the facade parameter `guideContact`.
-    pub guide_contact: i32,
-    /// Value of the facade parameter `transitionMode`.
-    pub transition_mode: i32,
-    /// Value of the facade parameter `withContact`.
-    pub with_contact: bool,
-    /// Value of the facade parameter `withCorrection`.
-    pub with_correction: bool,
-    /// Value of the facade parameter `tol3d`.
-    pub tol3d: f64,
-    /// Value of the facade parameter `boundTol`.
-    pub bound_tol: f64,
-    /// Value of the facade parameter `tolAngular`.
-    pub tol_angular: f64,
-}
+    /// Named arguments for the `sweepAdvanced` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct SweepAdvancedRequest {
+        /// Value of the facade parameter `profileId`.
+        pub profile_id: ShapeHandle,
+        /// Value of the facade parameter `spineId`.
+        pub spine_id: ShapeHandle,
+        /// Value of the facade parameter `mode`.
+        pub mode: i32,
+        /// Value of the facade parameter `upX`.
+        pub up_x: f64,
+        /// Value of the facade parameter `upY`.
+        pub up_y: f64,
+        /// Value of the facade parameter `upZ`.
+        pub up_z: f64,
+        /// Value of the facade parameter `auxSpineId`.
+        pub aux_spine_id: ShapeHandle,
+        /// Value of the facade parameter `curvilinearEquivalence`.
+        pub curvilinear_equivalence: bool,
+        /// Value of the facade parameter `guideContact`.
+        pub guide_contact: i32,
+        /// Value of the facade parameter `transitionMode`.
+        pub transition_mode: i32,
+        /// Value of the facade parameter `withContact`.
+        pub with_contact: bool,
+        /// Value of the facade parameter `withCorrection`.
+        pub with_correction: bool,
+        /// Value of the facade parameter `tol3d`.
+        pub tol3d: f64,
+        /// Value of the facade parameter `boundTol`.
+        pub bound_tol: f64,
+        /// Value of the facade parameter `tolAngular`.
+        pub tol_angular: f64,
+    }
 
-/// Named arguments for the `revolveWithHistory` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct RevolveWithHistoryRequest<'a> {
-    /// Value of the facade parameter `shapeId`.
-    pub shape_id: ShapeHandle,
-    /// Value of the facade parameter `px`.
-    pub px: f64,
-    /// Value of the facade parameter `py`.
-    pub py: f64,
-    /// Value of the facade parameter `pz`.
-    pub pz: f64,
-    /// Value of the facade parameter `dx`.
-    pub dx: f64,
-    /// Value of the facade parameter `dy`.
-    pub dy: f64,
-    /// Value of the facade parameter `dz`.
-    pub dz: f64,
-    /// Value of the facade parameter `angleRad`.
-    pub angle_rad: f64,
-    /// Value of the facade parameter `inputFaceHashes`.
-    pub input_face_hashes: &'a [i32],
-    /// Value of the facade parameter `hashUpperBound`.
-    pub hash_upper_bound: i32,
-}
+    /// Named arguments for the `revolveWithHistory` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct RevolveWithHistoryRequest<'a> {
+        /// Value of the facade parameter `shapeId`.
+        pub shape_id: ShapeHandle,
+        /// Value of the facade parameter `px`.
+        pub px: f64,
+        /// Value of the facade parameter `py`.
+        pub py: f64,
+        /// Value of the facade parameter `pz`.
+        pub pz: f64,
+        /// Value of the facade parameter `dx`.
+        pub dx: f64,
+        /// Value of the facade parameter `dy`.
+        pub dy: f64,
+        /// Value of the facade parameter `dz`.
+        pub dz: f64,
+        /// Value of the facade parameter `angleRad`.
+        pub angle_rad: f64,
+        /// Value of the facade parameter `inputFaceHashes`.
+        pub input_face_hashes: &'a [i32],
+        /// Value of the facade parameter `hashUpperBound`.
+        pub hash_upper_bound: i32,
+    }
 
-/// Named arguments for the `sweepWithHistory` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct SweepWithHistoryRequest<'a> {
-    /// Value of the facade parameter `profileId`.
-    pub profile_id: ShapeHandle,
-    /// Value of the facade parameter `spineId`.
-    pub spine_id: ShapeHandle,
-    /// Value of the facade parameter `auxSpineId`.
-    pub aux_spine_id: u32,
-    /// Value of the facade parameter `supportId`.
-    pub support_id: u32,
-    /// Value of the facade parameter `options`.
-    pub options: &'a [f64],
-    /// Value of the facade parameter `inputFaceHashes`.
-    pub input_face_hashes: &'a [i32],
-    /// Value of the facade parameter `hashUpperBound`.
-    pub hash_upper_bound: i32,
-}
+    /// Named arguments for the `sweepWithHistory` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct SweepWithHistoryRequest<'a> {
+        /// Value of the facade parameter `profileId`.
+        pub profile_id: ShapeHandle,
+        /// Value of the facade parameter `spineId`.
+        pub spine_id: ShapeHandle,
+        /// Value of the facade parameter `auxSpineId`.
+        pub aux_spine_id: u32,
+        /// Value of the facade parameter `supportId`.
+        pub support_id: u32,
+        /// Value of the facade parameter `options`.
+        pub options: &'a [f64],
+        /// Value of the facade parameter `inputFaceHashes`.
+        pub input_face_hashes: &'a [i32],
+        /// Value of the facade parameter `hashUpperBound`.
+        pub hash_upper_bound: i32,
+    }
 
-/// Named arguments for the `loftWithHistory` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct LoftWithHistoryRequest<'a> {
-    /// Value of the facade parameter `wireIds`.
-    pub wire_ids: &'a [ShapeHandle],
-    /// Value of the facade parameter `isSolid`.
-    pub is_solid: bool,
-    /// Value of the facade parameter `ruled`.
-    pub ruled: bool,
-    /// Value of the facade parameter `startVertexId`.
-    pub start_vertex_id: u32,
-    /// Value of the facade parameter `endVertexId`.
-    pub end_vertex_id: u32,
-    /// Value of the facade parameter `inputFaceHashes`.
-    pub input_face_hashes: &'a [i32],
-    /// Value of the facade parameter `hashUpperBound`.
-    pub hash_upper_bound: i32,
-}
+    /// Named arguments for the `loftWithHistory` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct LoftWithHistoryRequest<'a> {
+        /// Value of the facade parameter `wireIds`.
+        pub wire_ids: &'a [ShapeHandle],
+        /// Value of the facade parameter `isSolid`.
+        pub is_solid: bool,
+        /// Value of the facade parameter `ruled`.
+        pub ruled: bool,
+        /// Value of the facade parameter `startVertexId`.
+        pub start_vertex_id: u32,
+        /// Value of the facade parameter `endVertexId`.
+        pub end_vertex_id: u32,
+        /// Value of the facade parameter `inputFaceHashes`.
+        pub input_face_hashes: &'a [i32],
+        /// Value of the facade parameter `hashUpperBound`.
+        pub hash_upper_bound: i32,
+    }
 
-/// Named arguments for the `rotateWithHistory` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct RotateWithHistoryRequest<'a> {
-    /// Value of the facade parameter `id`.
-    pub id: ShapeHandle,
-    /// Value of the facade parameter `px`.
-    pub px: f64,
-    /// Value of the facade parameter `py`.
-    pub py: f64,
-    /// Value of the facade parameter `pz`.
-    pub pz: f64,
-    /// Value of the facade parameter `dx`.
-    pub dx: f64,
-    /// Value of the facade parameter `dy`.
-    pub dy: f64,
-    /// Value of the facade parameter `dz`.
-    pub dz: f64,
-    /// Value of the facade parameter `angle`.
-    pub angle: f64,
-    /// Value of the facade parameter `inputFaceHashes`.
-    pub input_face_hashes: &'a [i32],
-    /// Value of the facade parameter `hashUpperBound`.
-    pub hash_upper_bound: i32,
-}
+    /// Named arguments for the `rotateWithHistory` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct RotateWithHistoryRequest<'a> {
+        /// Value of the facade parameter `id`.
+        pub id: ShapeHandle,
+        /// Value of the facade parameter `px`.
+        pub px: f64,
+        /// Value of the facade parameter `py`.
+        pub py: f64,
+        /// Value of the facade parameter `pz`.
+        pub pz: f64,
+        /// Value of the facade parameter `dx`.
+        pub dx: f64,
+        /// Value of the facade parameter `dy`.
+        pub dy: f64,
+        /// Value of the facade parameter `dz`.
+        pub dz: f64,
+        /// Value of the facade parameter `angle`.
+        pub angle: f64,
+        /// Value of the facade parameter `inputFaceHashes`.
+        pub input_face_hashes: &'a [i32],
+        /// Value of the facade parameter `hashUpperBound`.
+        pub hash_upper_bound: i32,
+    }
 
-/// Named arguments for the `mirrorWithHistory` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct MirrorWithHistoryRequest<'a> {
-    /// Value of the facade parameter `id`.
-    pub id: ShapeHandle,
-    /// Value of the facade parameter `px`.
-    pub px: f64,
-    /// Value of the facade parameter `py`.
-    pub py: f64,
-    /// Value of the facade parameter `pz`.
-    pub pz: f64,
-    /// Value of the facade parameter `nx`.
-    pub nx: f64,
-    /// Value of the facade parameter `ny`.
-    pub ny: f64,
-    /// Value of the facade parameter `nz`.
-    pub nz: f64,
-    /// Value of the facade parameter `inputFaceHashes`.
-    pub input_face_hashes: &'a [i32],
-    /// Value of the facade parameter `hashUpperBound`.
-    pub hash_upper_bound: i32,
-}
+    /// Named arguments for the `mirrorWithHistory` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct MirrorWithHistoryRequest<'a> {
+        /// Value of the facade parameter `id`.
+        pub id: ShapeHandle,
+        /// Value of the facade parameter `px`.
+        pub px: f64,
+        /// Value of the facade parameter `py`.
+        pub py: f64,
+        /// Value of the facade parameter `pz`.
+        pub pz: f64,
+        /// Value of the facade parameter `nx`.
+        pub nx: f64,
+        /// Value of the facade parameter `ny`.
+        pub ny: f64,
+        /// Value of the facade parameter `nz`.
+        pub nz: f64,
+        /// Value of the facade parameter `inputFaceHashes`.
+        pub input_face_hashes: &'a [i32],
+        /// Value of the facade parameter `hashUpperBound`.
+        pub hash_upper_bound: i32,
+    }
 
-/// Named arguments for the `scaleWithHistory` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct ScaleWithHistoryRequest<'a> {
-    /// Value of the facade parameter `id`.
-    pub id: ShapeHandle,
-    /// Value of the facade parameter `cx`.
-    pub cx: f64,
-    /// Value of the facade parameter `cy`.
-    pub cy: f64,
-    /// Value of the facade parameter `cz`.
-    pub cz: f64,
-    /// Value of the facade parameter `factor`.
-    pub factor: f64,
-    /// Value of the facade parameter `inputFaceHashes`.
-    pub input_face_hashes: &'a [i32],
-    /// Value of the facade parameter `hashUpperBound`.
-    pub hash_upper_bound: i32,
-}
+    /// Named arguments for the `scaleWithHistory` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct ScaleWithHistoryRequest<'a> {
+        /// Value of the facade parameter `id`.
+        pub id: ShapeHandle,
+        /// Value of the facade parameter `cx`.
+        pub cx: f64,
+        /// Value of the facade parameter `cy`.
+        pub cy: f64,
+        /// Value of the facade parameter `cz`.
+        pub cz: f64,
+        /// Value of the facade parameter `factor`.
+        pub factor: f64,
+        /// Value of the facade parameter `inputFaceHashes`.
+        pub input_face_hashes: &'a [i32],
+        /// Value of the facade parameter `hashUpperBound`.
+        pub hash_upper_bound: i32,
+    }
 
-/// Named arguments for the `chamferDistancesWithHistory` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct ChamferDistancesWithHistoryRequest<'a> {
-    /// Value of the facade parameter `solidId`.
-    pub solid_id: ShapeHandle,
-    /// Value of the facade parameter `edgeIds`.
-    pub edge_ids: &'a [ShapeHandle],
-    /// Value of the facade parameter `distances1`.
-    pub distances1: &'a [f64],
-    /// Value of the facade parameter `distances2`.
-    pub distances2: &'a [f64],
-    /// Value of the facade parameter `referenceFaceIds`.
-    pub reference_face_ids: &'a [ShapeHandle],
-    /// Value of the facade parameter `inputFaceHashes`.
-    pub input_face_hashes: &'a [i32],
-    /// Value of the facade parameter `hashUpperBound`.
-    pub hash_upper_bound: i32,
-}
+    /// Named arguments for the `chamferDistancesWithHistory` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct ChamferDistancesWithHistoryRequest<'a> {
+        /// Value of the facade parameter `solidId`.
+        pub solid_id: ShapeHandle,
+        /// Value of the facade parameter `edgeIds`.
+        pub edge_ids: &'a [ShapeHandle],
+        /// Value of the facade parameter `distances1`.
+        pub distances1: &'a [f64],
+        /// Value of the facade parameter `distances2`.
+        pub distances2: &'a [f64],
+        /// Value of the facade parameter `referenceFaceIds`.
+        pub reference_face_ids: &'a [ShapeHandle],
+        /// Value of the facade parameter `inputFaceHashes`.
+        pub input_face_hashes: &'a [i32],
+        /// Value of the facade parameter `hashUpperBound`.
+        pub hash_upper_bound: i32,
+    }
 
-/// Named arguments for the `chamferDistAnglesWithHistory` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct ChamferDistAnglesWithHistoryRequest<'a> {
-    /// Value of the facade parameter `solidId`.
-    pub solid_id: ShapeHandle,
-    /// Value of the facade parameter `edgeIds`.
-    pub edge_ids: &'a [ShapeHandle],
-    /// Value of the facade parameter `distances`.
-    pub distances: &'a [f64],
-    /// Value of the facade parameter `anglesDeg`.
-    pub angles_deg: &'a [f64],
-    /// Value of the facade parameter `referenceFaceIds`.
-    pub reference_face_ids: &'a [ShapeHandle],
-    /// Value of the facade parameter `inputFaceHashes`.
-    pub input_face_hashes: &'a [i32],
-    /// Value of the facade parameter `hashUpperBound`.
-    pub hash_upper_bound: i32,
-}
+    /// Named arguments for the `chamferDistAnglesWithHistory` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct ChamferDistAnglesWithHistoryRequest<'a> {
+        /// Value of the facade parameter `solidId`.
+        pub solid_id: ShapeHandle,
+        /// Value of the facade parameter `edgeIds`.
+        pub edge_ids: &'a [ShapeHandle],
+        /// Value of the facade parameter `distances`.
+        pub distances: &'a [f64],
+        /// Value of the facade parameter `anglesDeg`.
+        pub angles_deg: &'a [f64],
+        /// Value of the facade parameter `referenceFaceIds`.
+        pub reference_face_ids: &'a [ShapeHandle],
+        /// Value of the facade parameter `inputFaceHashes`.
+        pub input_face_hashes: &'a [i32],
+        /// Value of the facade parameter `hashUpperBound`.
+        pub hash_upper_bound: i32,
+    }
 
-/// Named arguments for the `shellWithHistoryAndJoin` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct ShellWithHistoryAndJoinRequest<'a> {
-    /// Value of the facade parameter `solidId`.
-    pub solid_id: ShapeHandle,
-    /// Value of the facade parameter `faceIds`.
-    pub face_ids: &'a [ShapeHandle],
-    /// Value of the facade parameter `thickness`.
-    pub thickness: f64,
-    /// Value of the facade parameter `tolerance`.
-    pub tolerance: f64,
-    /// Value of the facade parameter `inputFaceHashes`.
-    pub input_face_hashes: &'a [i32],
-    /// Value of the facade parameter `hashUpperBound`.
-    pub hash_upper_bound: i32,
-    /// Value of the facade parameter `joinType`.
-    pub join_type: i32,
-}
+    /// Named arguments for the `shellWithHistoryAndJoin` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct ShellWithHistoryAndJoinRequest<'a> {
+        /// Value of the facade parameter `solidId`.
+        pub solid_id: ShapeHandle,
+        /// Value of the facade parameter `faceIds`.
+        pub face_ids: &'a [ShapeHandle],
+        /// Value of the facade parameter `thickness`.
+        pub thickness: f64,
+        /// Value of the facade parameter `tolerance`.
+        pub tolerance: f64,
+        /// Value of the facade parameter `inputFaceHashes`.
+        pub input_face_hashes: &'a [i32],
+        /// Value of the facade parameter `hashUpperBound`.
+        pub hash_upper_bound: i32,
+        /// Value of the facade parameter `joinType`.
+        pub join_type: i32,
+    }
 
-/// Named arguments for the `projectEdges` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct ProjectEdgesRequest {
-    /// Value of the facade parameter `shapeId`.
-    pub shape_id: ShapeHandle,
-    /// Value of the facade parameter `ox`.
-    pub ox: f64,
-    /// Value of the facade parameter `oy`.
-    pub oy: f64,
-    /// Value of the facade parameter `oz`.
-    pub oz: f64,
-    /// Value of the facade parameter `dx`.
-    pub dx: f64,
-    /// Value of the facade parameter `dy`.
-    pub dy: f64,
-    /// Value of the facade parameter `dz`.
-    pub dz: f64,
-    /// Value of the facade parameter `xx`.
-    pub xx: f64,
-    /// Value of the facade parameter `xy`.
-    pub xy: f64,
-    /// Value of the facade parameter `xz`.
-    pub xz: f64,
-    /// Value of the facade parameter `hasXAxis`.
-    pub has_x_axis: bool,
-}
+    /// Named arguments for the `projectEdges` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct ProjectEdgesRequest {
+        /// Value of the facade parameter `shapeId`.
+        pub shape_id: ShapeHandle,
+        /// Value of the facade parameter `ox`.
+        pub ox: f64,
+        /// Value of the facade parameter `oy`.
+        pub oy: f64,
+        /// Value of the facade parameter `oz`.
+        pub oz: f64,
+        /// Value of the facade parameter `dx`.
+        pub dx: f64,
+        /// Value of the facade parameter `dy`.
+        pub dy: f64,
+        /// Value of the facade parameter `dz`.
+        pub dz: f64,
+        /// Value of the facade parameter `xx`.
+        pub xx: f64,
+        /// Value of the facade parameter `xy`.
+        pub xy: f64,
+        /// Value of the facade parameter `xz`.
+        pub xz: f64,
+        /// Value of the facade parameter `hasXAxis`.
+        pub has_x_axis: bool,
+    }
 
-/// Named arguments for the `xcafAddComponent` facade operation.
-#[derive(Debug, Clone, Copy)]
-pub struct XcafAddComponentRequest {
-    /// Value of the facade parameter `docId`.
-    pub doc_id: DocumentHandle,
-    /// Value of the facade parameter `parentLabelId`.
-    pub parent_label_id: i32,
-    /// Value of the facade parameter `shapeId`.
-    pub shape_id: ShapeHandle,
-    /// Value of the facade parameter `tx`.
-    pub tx: f64,
-    /// Value of the facade parameter `ty`.
-    pub ty: f64,
-    /// Value of the facade parameter `tz`.
-    pub tz: f64,
-    /// Value of the facade parameter `rx`.
-    pub rx: f64,
-    /// Value of the facade parameter `ry`.
-    pub ry: f64,
-    /// Value of the facade parameter `rz`.
-    pub rz: f64,
+    /// Named arguments for the `xcafAddComponent` facade operation.
+    #[derive(Debug, Clone, Copy)]
+    pub struct XcafAddComponentRequest {
+        /// Value of the facade parameter `docId`.
+        pub doc_id: DocumentHandle,
+        /// Value of the facade parameter `parentLabelId`.
+        pub parent_label_id: i32,
+        /// Value of the facade parameter `shapeId`.
+        pub shape_id: ShapeHandle,
+        /// Value of the facade parameter `tx`.
+        pub tx: f64,
+        /// Value of the facade parameter `ty`.
+        pub ty: f64,
+        /// Value of the facade parameter `tz`.
+        pub tz: f64,
+        /// Value of the facade parameter `rx`.
+        pub rx: f64,
+        /// Value of the facade parameter `ry`.
+        pub ry: f64,
+        /// Value of the facade parameter `rz`.
+        pub rz: f64,
+    }
 }
 
 type MakeCircleEdgeAbi = TypedFunc<(f64, f64, f64, f64, f64, f64, f64), u32>;
@@ -1287,7 +1291,7 @@ struct QueryExports {
     project_point_on_face: TypedFunc<(u32, f64, f64, f64), i32>,
     classify_point_on_face: TypedFunc<(u32, f64, f64), i32>,
     has_triangulation: TypedFunc<(u32,), i32>,
-    query_batch: TypedFunc<(u32, u32), i32>,
+    batch: TypedFunc<(u32, u32), i32>,
 }
 impl QueryExports {
     fn resolve<T: 'static>(
@@ -1324,30 +1328,30 @@ impl QueryExports {
             classify_point_on_face: instance
                 .get_typed_func(&mut *store, "occt_classify_point_on_face")?,
             has_triangulation: instance.get_typed_func(&mut *store, "occt_has_triangulation")?,
-            query_batch: instance.get_typed_func(&mut *store, "occt_query_batch")?,
+            batch: instance.get_typed_func(&mut *store, "occt_query_batch")?,
         })
     }
 }
 
 struct CurveExports {
-    curve_type: TypedFunc<(u32,), i32>,
-    curve_data: TypedFunc<(u32,), i32>,
-    curve_point_at_param: TypedFunc<(u32, f64), i32>,
-    curve_tangent: TypedFunc<(u32, f64), i32>,
-    curve_parameters: TypedFunc<(u32,), i32>,
-    curve_is_closed: TypedFunc<(u32,), i32>,
-    curve_length: TypedFunc<(u32,), f64>,
+    r#type: TypedFunc<(u32,), i32>,
+    data: TypedFunc<(u32,), i32>,
+    point_at_param: TypedFunc<(u32, f64), i32>,
+    tangent: TypedFunc<(u32, f64), i32>,
+    parameters: TypedFunc<(u32,), i32>,
+    is_closed: TypedFunc<(u32,), i32>,
+    length: TypedFunc<(u32,), f64>,
     interpolate_points: TypedFunc<(u32, u32, i32), u32>,
     interpolate_points_with_tangents: InterpolatePointsWithTangentsAbi,
     project_point_on_edge: TypedFunc<(u32, f64, f64, f64), i32>,
-    curve_is_periodic: TypedFunc<(u32,), i32>,
+    is_periodic: TypedFunc<(u32,), i32>,
     approximate_points: TypedFunc<(u32, u32, f64), u32>,
     lift_curve2d_to_plane: LiftCurve2dToPlaneAbi,
     get_nurbs_curve_data: TypedFunc<(u32,), i32>,
-    curve_degree_elevate: TypedFunc<(u32, i32), u32>,
-    curve_knot_insert: TypedFunc<(u32, f64, i32), u32>,
-    curve_knot_remove: TypedFunc<(u32, f64, f64), u32>,
-    curve_split: TypedFunc<(u32, f64), i32>,
+    degree_elevate: TypedFunc<(u32, i32), u32>,
+    knot_insert: TypedFunc<(u32, f64, i32), u32>,
+    knot_remove: TypedFunc<(u32, f64, f64), u32>,
+    split: TypedFunc<(u32, f64), i32>,
 }
 impl CurveExports {
     fn resolve<T: 'static>(
@@ -1355,30 +1359,28 @@ impl CurveExports {
         store: &mut wasmtime::Store<T>,
     ) -> OcctResult<Self> {
         Ok(Self {
-            curve_type: instance.get_typed_func(&mut *store, "occt_curve_type")?,
-            curve_data: instance.get_typed_func(&mut *store, "occt_curve_data")?,
-            curve_point_at_param: instance
-                .get_typed_func(&mut *store, "occt_curve_point_at_param")?,
-            curve_tangent: instance.get_typed_func(&mut *store, "occt_curve_tangent")?,
-            curve_parameters: instance.get_typed_func(&mut *store, "occt_curve_parameters")?,
-            curve_is_closed: instance.get_typed_func(&mut *store, "occt_curve_is_closed")?,
-            curve_length: instance.get_typed_func(&mut *store, "occt_curve_length")?,
+            r#type: instance.get_typed_func(&mut *store, "occt_curve_type")?,
+            data: instance.get_typed_func(&mut *store, "occt_curve_data")?,
+            point_at_param: instance.get_typed_func(&mut *store, "occt_curve_point_at_param")?,
+            tangent: instance.get_typed_func(&mut *store, "occt_curve_tangent")?,
+            parameters: instance.get_typed_func(&mut *store, "occt_curve_parameters")?,
+            is_closed: instance.get_typed_func(&mut *store, "occt_curve_is_closed")?,
+            length: instance.get_typed_func(&mut *store, "occt_curve_length")?,
             interpolate_points: instance.get_typed_func(&mut *store, "occt_interpolate_points")?,
             interpolate_points_with_tangents: instance
                 .get_typed_func(&mut *store, "occt_interpolate_points_with_tangents")?,
             project_point_on_edge: instance
                 .get_typed_func(&mut *store, "occt_project_point_on_edge")?,
-            curve_is_periodic: instance.get_typed_func(&mut *store, "occt_curve_is_periodic")?,
+            is_periodic: instance.get_typed_func(&mut *store, "occt_curve_is_periodic")?,
             approximate_points: instance.get_typed_func(&mut *store, "occt_approximate_points")?,
             lift_curve2d_to_plane: instance
                 .get_typed_func(&mut *store, "occt_lift_curve2d_to_plane")?,
             get_nurbs_curve_data: instance
                 .get_typed_func(&mut *store, "occt_get_nurbs_curve_data")?,
-            curve_degree_elevate: instance
-                .get_typed_func(&mut *store, "occt_curve_degree_elevate")?,
-            curve_knot_insert: instance.get_typed_func(&mut *store, "occt_curve_knot_insert")?,
-            curve_knot_remove: instance.get_typed_func(&mut *store, "occt_curve_knot_remove")?,
-            curve_split: instance.get_typed_func(&mut *store, "occt_curve_split")?,
+            degree_elevate: instance.get_typed_func(&mut *store, "occt_curve_degree_elevate")?,
+            knot_insert: instance.get_typed_func(&mut *store, "occt_curve_knot_insert")?,
+            knot_remove: instance.get_typed_func(&mut *store, "occt_curve_knot_remove")?,
+            split: instance.get_typed_func(&mut *store, "occt_curve_split")?,
         })
     }
 }
@@ -1390,9 +1392,9 @@ struct SweepExports {
     loft: TypedFunc<(u32, u32, i32, i32), u32>,
     loft_with_vertices: TypedFunc<(u32, u32, i32, i32, u32, u32), u32>,
     sweep: TypedFunc<(u32, u32, i32), u32>,
-    sweep_pipe_shell: TypedFunc<(u32, u32, i32, i32), u32>,
-    sweep_oriented: SweepOrientedAbi,
-    sweep_advanced: SweepAdvancedAbi,
+    pipe_shell: TypedFunc<(u32, u32, i32, i32), u32>,
+    oriented: SweepOrientedAbi,
+    advanced: SweepAdvancedAbi,
 }
 impl SweepExports {
     fn resolve<T: 'static>(
@@ -1406,9 +1408,9 @@ impl SweepExports {
             loft: instance.get_typed_func(&mut *store, "occt_loft")?,
             loft_with_vertices: instance.get_typed_func(&mut *store, "occt_loft_with_vertices")?,
             sweep: instance.get_typed_func(&mut *store, "occt_sweep")?,
-            sweep_pipe_shell: instance.get_typed_func(&mut *store, "occt_sweep_pipe_shell")?,
-            sweep_oriented: instance.get_typed_func(&mut *store, "occt_sweep_oriented")?,
-            sweep_advanced: instance.get_typed_func(&mut *store, "occt_sweep_advanced")?,
+            pipe_shell: instance.get_typed_func(&mut *store, "occt_sweep_pipe_shell")?,
+            oriented: instance.get_typed_func(&mut *store, "occt_sweep_oriented")?,
+            advanced: instance.get_typed_func(&mut *store, "occt_sweep_advanced")?,
         })
     }
 }
@@ -1567,7 +1569,7 @@ impl EvolutionExports {
 
 struct TessellateExports {
     tessellate: TypedFunc<(u32, f64, f64), i32>,
-    tessellate_relative: TypedFunc<(u32, f64, f64), i32>,
+    relative: TypedFunc<(u32, f64, f64), i32>,
     mesh_shape: TypedFunc<(u32, f64, f64), i32>,
     mesh_batch: TypedFunc<(u32, u32, f64, f64), i32>,
     wireframe: TypedFunc<(u32, f64, i32), i32>,
@@ -1579,8 +1581,7 @@ impl TessellateExports {
     ) -> OcctResult<Self> {
         Ok(Self {
             tessellate: instance.get_typed_func(&mut *store, "occt_tessellate")?,
-            tessellate_relative: instance
-                .get_typed_func(&mut *store, "occt_tessellate_relative")?,
+            relative: instance.get_typed_func(&mut *store, "occt_tessellate_relative")?,
             mesh_shape: instance.get_typed_func(&mut *store, "occt_mesh_shape")?,
             mesh_batch: instance.get_typed_func(&mut *store, "occt_mesh_batch")?,
             wireframe: instance.get_typed_func(&mut *store, "occt_wireframe")?,
@@ -1627,25 +1628,25 @@ impl KernelExports {
 }
 
 struct XcafExports {
-    xcaf_new_document: TypedFunc<(), u32>,
-    xcaf_close: TypedFunc<(u32,), i32>,
-    xcaf_add_shape: TypedFunc<(u32, u32), i32>,
-    xcaf_add_assembly: TypedFunc<(u32, u32), i32>,
-    xcaf_add_component: XcafAddComponentAbi,
-    xcaf_set_color: TypedFunc<(u32, i32, f64, f64, f64), i32>,
-    xcaf_set_name: TypedFunc<(u32, i32, u32, u32), i32>,
-    xcaf_get_label_info: TypedFunc<(u32, i32), i32>,
-    xcaf_get_child_labels: TypedFunc<(u32, i32), i32>,
-    xcaf_get_root_labels: TypedFunc<(u32,), i32>,
-    xcaf_get_referred_label: TypedFunc<(u32, i32), i32>,
-    xcaf_get_label_location: TypedFunc<(u32, i32), i32>,
-    xcaf_get_sub_shape_labels: TypedFunc<(u32, i32), i32>,
-    xcaf_add_sub_shape: TypedFunc<(u32, i32, u32), i32>,
-    xcaf_export_step: TypedFunc<(u32,), i32>,
-    xcaf_export_step_with_unit: TypedFunc<(u32, u32, u32), i32>,
-    xcaf_export_step_with_options: TypedFunc<(u32, u32, u32, u32, u32), i32>,
-    xcaf_import_step: TypedFunc<(u32, u32), u32>,
-    xcaf_export_glb: TypedFunc<(u32, f64, f64), i32>,
+    new_document: TypedFunc<(), u32>,
+    close: TypedFunc<(u32,), i32>,
+    add_shape: TypedFunc<(u32, u32), i32>,
+    add_assembly: TypedFunc<(u32, u32), i32>,
+    add_component: XcafAddComponentAbi,
+    set_color: TypedFunc<(u32, i32, f64, f64, f64), i32>,
+    set_name: TypedFunc<(u32, i32, u32, u32), i32>,
+    get_label_info: TypedFunc<(u32, i32), i32>,
+    get_child_labels: TypedFunc<(u32, i32), i32>,
+    get_root_labels: TypedFunc<(u32,), i32>,
+    get_referred_label: TypedFunc<(u32, i32), i32>,
+    get_label_location: TypedFunc<(u32, i32), i32>,
+    get_sub_shape_labels: TypedFunc<(u32, i32), i32>,
+    add_sub_shape: TypedFunc<(u32, i32, u32), i32>,
+    export_step: TypedFunc<(u32,), i32>,
+    export_step_with_unit: TypedFunc<(u32, u32, u32), i32>,
+    export_step_with_options: TypedFunc<(u32, u32, u32, u32, u32), i32>,
+    import_step: TypedFunc<(u32, u32), u32>,
+    export_glb: TypedFunc<(u32, f64, f64), i32>,
 }
 impl XcafExports {
     fn resolve<T: 'static>(
@@ -1653,39 +1654,36 @@ impl XcafExports {
         store: &mut wasmtime::Store<T>,
     ) -> OcctResult<Self> {
         Ok(Self {
-            xcaf_new_document: instance.get_typed_func(&mut *store, "occt_xcaf_new_document")?,
-            xcaf_close: instance.get_typed_func(&mut *store, "occt_xcaf_close")?,
-            xcaf_add_shape: instance.get_typed_func(&mut *store, "occt_xcaf_add_shape")?,
-            xcaf_add_assembly: instance.get_typed_func(&mut *store, "occt_xcaf_add_assembly")?,
-            xcaf_add_component: instance.get_typed_func(&mut *store, "occt_xcaf_add_component")?,
-            xcaf_set_color: instance.get_typed_func(&mut *store, "occt_xcaf_set_color")?,
-            xcaf_set_name: instance.get_typed_func(&mut *store, "occt_xcaf_set_name")?,
-            xcaf_get_label_info: instance
-                .get_typed_func(&mut *store, "occt_xcaf_get_label_info")?,
-            xcaf_get_child_labels: instance
-                .get_typed_func(&mut *store, "occt_xcaf_get_child_labels")?,
-            xcaf_get_root_labels: instance
-                .get_typed_func(&mut *store, "occt_xcaf_get_root_labels")?,
-            xcaf_get_referred_label: instance
+            new_document: instance.get_typed_func(&mut *store, "occt_xcaf_new_document")?,
+            close: instance.get_typed_func(&mut *store, "occt_xcaf_close")?,
+            add_shape: instance.get_typed_func(&mut *store, "occt_xcaf_add_shape")?,
+            add_assembly: instance.get_typed_func(&mut *store, "occt_xcaf_add_assembly")?,
+            add_component: instance.get_typed_func(&mut *store, "occt_xcaf_add_component")?,
+            set_color: instance.get_typed_func(&mut *store, "occt_xcaf_set_color")?,
+            set_name: instance.get_typed_func(&mut *store, "occt_xcaf_set_name")?,
+            get_label_info: instance.get_typed_func(&mut *store, "occt_xcaf_get_label_info")?,
+            get_child_labels: instance.get_typed_func(&mut *store, "occt_xcaf_get_child_labels")?,
+            get_root_labels: instance.get_typed_func(&mut *store, "occt_xcaf_get_root_labels")?,
+            get_referred_label: instance
                 .get_typed_func(&mut *store, "occt_xcaf_get_referred_label")?,
-            xcaf_get_label_location: instance
+            get_label_location: instance
                 .get_typed_func(&mut *store, "occt_xcaf_get_label_location")?,
-            xcaf_get_sub_shape_labels: instance
+            get_sub_shape_labels: instance
                 .get_typed_func(&mut *store, "occt_xcaf_get_sub_shape_labels")?,
-            xcaf_add_sub_shape: instance.get_typed_func(&mut *store, "occt_xcaf_add_sub_shape")?,
-            xcaf_export_step: instance.get_typed_func(&mut *store, "occt_xcaf_export_step")?,
-            xcaf_export_step_with_unit: instance
+            add_sub_shape: instance.get_typed_func(&mut *store, "occt_xcaf_add_sub_shape")?,
+            export_step: instance.get_typed_func(&mut *store, "occt_xcaf_export_step")?,
+            export_step_with_unit: instance
                 .get_typed_func(&mut *store, "occt_xcaf_export_step_with_unit")?,
-            xcaf_export_step_with_options: instance
+            export_step_with_options: instance
                 .get_typed_func(&mut *store, "occt_xcaf_export_step_with_options")?,
-            xcaf_import_step: instance.get_typed_func(&mut *store, "occt_xcaf_import_step")?,
-            xcaf_export_glb: instance.get_typed_func(&mut *store, "occt_xcaf_export_glb")?,
+            import_step: instance.get_typed_func(&mut *store, "occt_xcaf_import_step")?,
+            export_glb: instance.get_typed_func(&mut *store, "occt_xcaf_export_glb")?,
         })
     }
 }
 
 /// Cached typed WASM exports, grouped by facade domain.
-pub(super) struct GeneratedFuncs {
+pub struct GeneratedFuncs {
     primitives: PrimitivesExports,
     booleans: BooleansExports,
     modeling: ModelingExports,
@@ -1705,7 +1703,7 @@ pub(super) struct GeneratedFuncs {
 }
 
 impl GeneratedFuncs {
-    pub(super) fn resolve<T: 'static>(
+    pub fn resolve<T: 'static>(
         instance: &wasmtime::Instance,
         store: &mut wasmtime::Store<T>,
     ) -> OcctResult<Self> {
@@ -1989,7 +1987,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn section_plane(&mut self, request: SectionPlaneRequest) -> OcctResult<ShapeHandle> {
+    pub fn section_plane(
+        &mut self,
+        request: requests::SectionPlaneRequest,
+    ) -> OcctResult<ShapeHandle> {
         let result = self.generated.booleans.section_plane.call(
             &mut self.store,
             (
@@ -2119,7 +2120,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn boolean_op(&mut self, request: BooleanOpRequest<'_>) -> OcctResult<EvolutionData> {
+    pub fn boolean_op(
+        &mut self,
+        request: requests::BooleanOpRequest<'_>,
+    ) -> OcctResult<EvolutionData> {
         let guest_lengths = [
             checked_wasm_len(request.arg_ids.len(), 4)?,
             checked_wasm_len(request.tool_ids.len(), 4)?,
@@ -2285,7 +2289,7 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn revolve(&mut self, request: RevolveRequest) -> OcctResult<ShapeHandle> {
+    pub fn revolve(&mut self, request: requests::RevolveRequest) -> OcctResult<ShapeHandle> {
         let result = self.generated.modeling.revolve.call(
             &mut self.store,
             (
@@ -2800,7 +2804,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn draft_faces(&mut self, request: DraftFacesRequest<'_>) -> OcctResult<ShapeHandle> {
+    pub fn draft_faces(
+        &mut self,
+        request: requests::DraftFacesRequest<'_>,
+    ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [
             checked_wasm_len(request.face_ids.len(), 4)?,
             checked_wasm_len(request.angles_rad.len(), 8)?,
@@ -3086,7 +3093,7 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn rotate(&mut self, request: RotateRequest) -> OcctResult<ShapeHandle> {
+    pub fn rotate(&mut self, request: requests::RotateRequest) -> OcctResult<ShapeHandle> {
         let result = self.generated.transforms.rotate.call(
             &mut self.store,
             (
@@ -3137,7 +3144,7 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn mirror(&mut self, request: MirrorRequest) -> OcctResult<ShapeHandle> {
+    pub fn mirror(&mut self, request: requests::MirrorRequest) -> OcctResult<ShapeHandle> {
         let result = self.generated.transforms.mirror.call(
             &mut self.store,
             (
@@ -3206,7 +3213,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn circular_pattern(&mut self, request: CircularPatternRequest) -> OcctResult<ShapeHandle> {
+    pub fn circular_pattern(
+        &mut self,
+        request: requests::CircularPatternRequest,
+    ) -> OcctResult<ShapeHandle> {
         let result = self.generated.transforms.circular_pattern.call(
             &mut self.store,
             (
@@ -3791,7 +3801,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn make_circle_edge(&mut self, request: MakeCircleEdgeRequest) -> OcctResult<ShapeHandle> {
+    pub fn make_circle_edge(
+        &mut self,
+        request: requests::MakeCircleEdgeRequest,
+    ) -> OcctResult<ShapeHandle> {
         let result = self.generated.construction.make_circle_edge.call(
             &mut self.store,
             (
@@ -3816,7 +3829,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn make_circle_arc(&mut self, request: MakeCircleArcRequest) -> OcctResult<ShapeHandle> {
+    pub fn make_circle_arc(
+        &mut self,
+        request: requests::MakeCircleArcRequest,
+    ) -> OcctResult<ShapeHandle> {
         let result = self.generated.construction.make_circle_arc.call(
             &mut self.store,
             (
@@ -3843,7 +3859,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn make_arc_edge(&mut self, request: MakeArcEdgeRequest) -> OcctResult<ShapeHandle> {
+    pub fn make_arc_edge(
+        &mut self,
+        request: requests::MakeArcEdgeRequest,
+    ) -> OcctResult<ShapeHandle> {
         let result = self.generated.construction.make_arc_edge.call(
             &mut self.store,
             (
@@ -3865,7 +3884,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn make_ellipse_edge(
         &mut self,
-        request: MakeEllipseEdgeRequest,
+        request: requests::MakeEllipseEdgeRequest,
     ) -> OcctResult<ShapeHandle> {
         let result = self.generated.construction.make_ellipse_edge.call(
             &mut self.store,
@@ -3994,7 +4013,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn make_ellipse_arc(&mut self, request: MakeEllipseArcRequest) -> OcctResult<ShapeHandle> {
+    pub fn make_ellipse_arc(
+        &mut self,
+        request: requests::MakeEllipseArcRequest,
+    ) -> OcctResult<ShapeHandle> {
         let result = self.generated.construction.make_ellipse_arc.call(
             &mut self.store,
             (
@@ -4024,7 +4046,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn make_ellipse_arc_oriented(
         &mut self,
-        request: MakeEllipseArcOrientedRequest,
+        request: requests::MakeEllipseArcOrientedRequest,
     ) -> OcctResult<ShapeHandle> {
         let result = self.generated.construction.make_ellipse_arc_oriented.call(
             &mut self.store,
@@ -4056,7 +4078,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn make_helix_wire(&mut self, request: MakeHelixWireRequest) -> OcctResult<ShapeHandle> {
+    pub fn make_helix_wire(
+        &mut self,
+        request: requests::MakeHelixWireRequest,
+    ) -> OcctResult<ShapeHandle> {
         let result = self.generated.construction.make_helix_wire.call(
             &mut self.store,
             (
@@ -4085,7 +4110,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn make_helix_wire_handed(
         &mut self,
-        request: MakeHelixWireHandedRequest,
+        request: requests::MakeHelixWireHandedRequest,
     ) -> OcctResult<ShapeHandle> {
         let result = self.generated.construction.make_helix_wire_handed.call(
             &mut self.store,
@@ -4114,7 +4139,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn thread_groove(&mut self, request: ThreadGrooveRequest) -> OcctResult<ShapeHandle> {
+    pub fn thread_groove(
+        &mut self,
+        request: requests::ThreadGrooveRequest,
+    ) -> OcctResult<ShapeHandle> {
         let result = self.generated.construction.thread_groove.call(
             &mut self.store,
             (
@@ -4163,7 +4191,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn fill_surface(&mut self, request: FillSurfaceRequest<'_>) -> OcctResult<ShapeHandle> {
+    pub fn fill_surface(
+        &mut self,
+        request: requests::FillSurfaceRequest<'_>,
+    ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [
             checked_wasm_len(request.free_edge_ids.len(), 4)?,
             checked_wasm_len(request.supported_edge_ids.len(), 4)?,
@@ -4446,7 +4477,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn build_tri_face(&mut self, request: BuildTriFaceRequest) -> OcctResult<ShapeHandle> {
+    pub fn build_tri_face(
+        &mut self,
+        request: requests::BuildTriFaceRequest,
+    ) -> OcctResult<ShapeHandle> {
         let result = self.generated.construction.build_tri_face.call(
             &mut self.store,
             (
@@ -4473,7 +4507,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn make_tangent_arc(&mut self, request: MakeTangentArcRequest) -> OcctResult<ShapeHandle> {
+    pub fn make_tangent_arc(
+        &mut self,
+        request: requests::MakeTangentArcRequest,
+    ) -> OcctResult<ShapeHandle> {
         let result = self.generated.construction.make_tangent_arc.call(
             &mut self.store,
             (
@@ -4525,7 +4562,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn nurbs_surface(&mut self, request: NurbsSurfaceRequest<'_>) -> OcctResult<ShapeHandle> {
+    pub fn nurbs_surface(
+        &mut self,
+        request: requests::NurbsSurfaceRequest<'_>,
+    ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [
             checked_wasm_len(request.flat_poles.len(), 8)?,
             checked_wasm_len(request.weights.len(), 8)?,
@@ -5342,11 +5382,7 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn curve_type(&mut self, id: ShapeHandle) -> OcctResult<String> {
-        let len = self
-            .generated
-            .curve
-            .curve_type
-            .call(&mut self.store, (id.0,))?;
+        let len = self.generated.curve.r#type.call(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("curve_type"));
         }
@@ -5362,7 +5398,7 @@ impl crate::kernel::OcctKernel {
         let status = self
             .generated
             .curve
-            .curve_data
+            .data
             .call(&mut self.store, (edge_id.0,))?;
         if status < 0 {
             return Err(self.read_last_error("curve_data"));
@@ -5379,7 +5415,7 @@ impl crate::kernel::OcctKernel {
         let len = self
             .generated
             .curve
-            .curve_point_at_param
+            .point_at_param
             .call(&mut self.store, (id.0, param))?;
         if len < 0 {
             return Err(self.read_last_error("curve_point_at_param"));
@@ -5396,7 +5432,7 @@ impl crate::kernel::OcctKernel {
         let len = self
             .generated
             .curve
-            .curve_tangent
+            .tangent
             .call(&mut self.store, (id.0, param))?;
         if len < 0 {
             return Err(self.read_last_error("curve_tangent"));
@@ -5413,7 +5449,7 @@ impl crate::kernel::OcctKernel {
         let len = self
             .generated
             .curve
-            .curve_parameters
+            .parameters
             .call(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("curve_parameters"));
@@ -5430,7 +5466,7 @@ impl crate::kernel::OcctKernel {
         let result = self
             .generated
             .curve
-            .curve_is_closed
+            .is_closed
             .call(&mut self.store, (id.0,))?;
         if result < 0 {
             return Err(self.read_last_error("curve_is_closed"));
@@ -5444,11 +5480,7 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn curve_length(&mut self, id: ShapeHandle) -> OcctResult<f64> {
-        let result = self
-            .generated
-            .curve
-            .curve_length
-            .call(&mut self.store, (id.0,))?;
+        let result = self.generated.curve.length.call(&mut self.store, (id.0,))?;
         self.check_error("curve_length")?;
         Ok(result)
     }
@@ -5491,7 +5523,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn interpolate_points_with_tangents(
         &mut self,
-        request: InterpolatePointsWithTangentsRequest<'_>,
+        request: requests::InterpolatePointsWithTangentsRequest<'_>,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(request.flat_points.len(), 8)?];
         let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
@@ -5560,7 +5592,7 @@ impl crate::kernel::OcctKernel {
         let result = self
             .generated
             .curve
-            .curve_is_periodic
+            .is_periodic
             .call(&mut self.store, (id.0,))?;
         if result < 0 {
             return Err(self.read_last_error("curve_is_periodic"));
@@ -5606,7 +5638,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn lift_curve2d_to_plane(
         &mut self,
-        request: LiftCurve2dToPlaneRequest<'_>,
+        request: requests::LiftCurve2dToPlaneRequest<'_>,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(request.flat_points2d.len(), 8)?];
         let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
@@ -5672,7 +5704,7 @@ impl crate::kernel::OcctKernel {
         let result = self
             .generated
             .curve
-            .curve_degree_elevate
+            .degree_elevate
             .call(&mut self.store, (edge_id.0, elevate_by))?;
         self.check_error("curve_degree_elevate")?;
         if result == 0 {
@@ -5695,7 +5727,7 @@ impl crate::kernel::OcctKernel {
         let result = self
             .generated
             .curve
-            .curve_knot_insert
+            .knot_insert
             .call(&mut self.store, (edge_id.0, knot, times))?;
         self.check_error("curve_knot_insert")?;
         if result == 0 {
@@ -5718,7 +5750,7 @@ impl crate::kernel::OcctKernel {
         let result = self
             .generated
             .curve
-            .curve_knot_remove
+            .knot_remove
             .call(&mut self.store, (edge_id.0, knot, tolerance))?;
         self.check_error("curve_knot_remove")?;
         if result == 0 {
@@ -5740,7 +5772,7 @@ impl crate::kernel::OcctKernel {
         let len = self
             .generated
             .curve
-            .curve_split
+            .split
             .call(&mut self.store, (edge_id.0, param))?;
         if len < 0 {
             return Err(self.read_last_error("curve_split"));
@@ -5782,7 +5814,7 @@ impl crate::kernel::OcctKernel {
             Ok(kernel
                 .generated
                 .query
-                .query_batch
+                .batch
                 .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
         })?;
         if len < 0 {
@@ -5840,7 +5872,7 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn revolve_vec(&mut self, request: RevolveVecRequest) -> OcctResult<ShapeHandle> {
+    pub fn revolve_vec(&mut self, request: requests::RevolveVecRequest) -> OcctResult<ShapeHandle> {
         let result = self.generated.sweep.revolve_vec.call(
             &mut self.store,
             (
@@ -5974,7 +6006,7 @@ impl crate::kernel::OcctKernel {
         freenet: bool,
         smooth: bool,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.sweep.sweep_pipe_shell.call(
+        let result = self.generated.sweep.pipe_shell.call(
             &mut self.store,
             (
                 profile_id.0,
@@ -5995,8 +6027,11 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn sweep_oriented(&mut self, request: SweepOrientedRequest) -> OcctResult<ShapeHandle> {
-        let result = self.generated.sweep.sweep_oriented.call(
+    pub fn sweep_oriented(
+        &mut self,
+        request: requests::SweepOrientedRequest,
+    ) -> OcctResult<ShapeHandle> {
+        let result = self.generated.sweep.oriented.call(
             &mut self.store,
             (
                 request.profile_id.0,
@@ -6025,8 +6060,11 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn sweep_advanced(&mut self, request: SweepAdvancedRequest) -> OcctResult<ShapeHandle> {
-        let result = self.generated.sweep.sweep_advanced.call(
+    pub fn sweep_advanced(
+        &mut self,
+        request: requests::SweepAdvancedRequest,
+    ) -> OcctResult<ShapeHandle> {
+        let result = self.generated.sweep.advanced.call(
             &mut self.store,
             (
                 request.profile_id.0,
@@ -6473,10 +6511,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn to_brep(&mut self, id: ShapeHandle) -> OcctResult<String> {
+    pub fn export_brep(&mut self, id: ShapeHandle) -> OcctResult<String> {
         let len = self.generated.io.to_brep.call(&mut self.store, (id.0,))?;
         if len < 0 {
-            return Err(self.read_last_error("to_brep"));
+            return Err(self.read_last_error("export_brep"));
         }
         self.read_string_result()
     }
@@ -6486,7 +6524,7 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn from_brep(&mut self, data: &str) -> OcctResult<ShapeHandle> {
+    pub fn import_brep(&mut self, data: &str) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(data.len(), 1)?];
         let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, data.as_bytes())?];
@@ -6496,9 +6534,9 @@ impl crate::kernel::OcctKernel {
                 .from_brep
                 .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
         })?;
-        self.check_error("from_brep")?;
+        self.check_error("import_brep")?;
         if result == 0 {
-            return Err(self.read_last_error("from_brep"));
+            return Err(self.read_last_error("import_brep"));
         }
         Ok(ShapeHandle(result))
     }
@@ -6508,14 +6546,14 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn to_brep_binary(&mut self, id: ShapeHandle) -> OcctResult<Vec<u8>> {
+    pub fn export_brep_binary(&mut self, id: ShapeHandle) -> OcctResult<Vec<u8>> {
         let len = self
             .generated
             .io
             .to_brep_binary
             .call(&mut self.store, (id.0,))?;
         if len < 0 {
-            return Err(self.read_last_error("to_brep_binary"));
+            return Err(self.read_last_error("export_brep_binary"));
         }
         self.read_bytes_result()
     }
@@ -6525,7 +6563,7 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn from_brep_binary(&mut self, data: &[u8]) -> OcctResult<ShapeHandle> {
+    pub fn import_brep_binary(&mut self, data: &[u8]) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(data.len(), 1)?];
         let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, data)?];
@@ -6535,9 +6573,9 @@ impl crate::kernel::OcctKernel {
                 .from_brep_binary
                 .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
         })?;
-        self.check_error("from_brep_binary")?;
+        self.check_error("import_brep_binary")?;
         if result == 0 {
-            return Err(self.read_last_error("from_brep_binary"));
+            return Err(self.read_last_error("import_brep_binary"));
         }
         Ok(ShapeHandle(result))
     }
@@ -6591,7 +6629,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn revolve_with_history(
         &mut self,
-        request: RevolveWithHistoryRequest<'_>,
+        request: requests::RevolveWithHistoryRequest<'_>,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(request.input_face_hashes.len(), 4)?];
         let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
@@ -6671,7 +6709,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn sweep_with_history(
         &mut self,
-        request: SweepWithHistoryRequest<'_>,
+        request: requests::SweepWithHistoryRequest<'_>,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [
             checked_wasm_len(request.options.len(), 8)?,
@@ -6724,7 +6762,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn loft_with_history(
         &mut self,
-        request: LoftWithHistoryRequest<'_>,
+        request: requests::LoftWithHistoryRequest<'_>,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [
             checked_wasm_len(request.wire_ids.len(), 4)?,
@@ -7022,7 +7060,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn rotate_with_history(
         &mut self,
-        request: RotateWithHistoryRequest<'_>,
+        request: requests::RotateWithHistoryRequest<'_>,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(request.input_face_hashes.len(), 4)?];
         let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
@@ -7064,7 +7102,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn mirror_with_history(
         &mut self,
-        request: MirrorWithHistoryRequest<'_>,
+        request: requests::MirrorWithHistoryRequest<'_>,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(request.input_face_hashes.len(), 4)?];
         let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
@@ -7105,7 +7143,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn scale_with_history(
         &mut self,
-        request: ScaleWithHistoryRequest<'_>,
+        request: requests::ScaleWithHistoryRequest<'_>,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(request.input_face_hashes.len(), 4)?];
         let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
@@ -7302,7 +7340,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn chamfer_distances_with_history(
         &mut self,
-        request: ChamferDistancesWithHistoryRequest<'_>,
+        request: requests::ChamferDistancesWithHistoryRequest<'_>,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [
             checked_wasm_len(request.edge_ids.len(), 4)?,
@@ -7389,7 +7427,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn chamfer_dist_angles_with_history(
         &mut self,
-        request: ChamferDistAnglesWithHistoryRequest<'_>,
+        request: requests::ChamferDistAnglesWithHistoryRequest<'_>,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [
             checked_wasm_len(request.edge_ids.len(), 4)?,
@@ -7571,7 +7609,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn shell_with_history_and_join(
         &mut self,
-        request: ShellWithHistoryAndJoinRequest<'_>,
+        request: requests::ShellWithHistoryAndJoinRequest<'_>,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [
             checked_wasm_len(request.face_ids.len(), 4)?,
@@ -7739,7 +7777,7 @@ impl crate::kernel::OcctKernel {
         linear_deflection: f64,
         angular_deflection: f64,
     ) -> OcctResult<Mesh> {
-        let status = self.generated.tessellate.tessellate_relative.call(
+        let status = self.generated.tessellate.relative.call(
             &mut self.store,
             (id.0, linear_deflection, angular_deflection),
         )?;
@@ -7832,7 +7870,10 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn project_edges(&mut self, request: ProjectEdgesRequest) -> OcctResult<ProjectionData> {
+    pub fn project_edges(
+        &mut self,
+        request: requests::ProjectEdgesRequest,
+    ) -> OcctResult<ProjectionData> {
         let status = self.generated.projection.project_edges.call(
             &mut self.store,
             (
@@ -7956,11 +7997,7 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn xcaf_new_document(&mut self) -> OcctResult<DocumentHandle> {
-        let result = self
-            .generated
-            .xcaf
-            .xcaf_new_document
-            .call(&mut self.store, ())?;
+        let result = self.generated.xcaf.new_document.call(&mut self.store, ())?;
         self.check_error("xcaf_new_document")?;
         Ok(DocumentHandle(result))
     }
@@ -7974,7 +8011,7 @@ impl crate::kernel::OcctKernel {
         let result = self
             .generated
             .xcaf
-            .xcaf_close
+            .close
             .call(&mut self.store, (doc_id.0,))?;
         if result < 0 {
             return Err(self.read_last_error("xcaf_close"));
@@ -7995,7 +8032,7 @@ impl crate::kernel::OcctKernel {
         let result = self
             .generated
             .xcaf
-            .xcaf_add_shape
+            .add_shape
             .call(&mut self.store, (doc_id.0, shape_id.0))?;
         self.check_error("xcaf_add_shape")?;
         Ok(result)
@@ -8014,7 +8051,7 @@ impl crate::kernel::OcctKernel {
         let result = self
             .generated
             .xcaf
-            .xcaf_add_assembly
+            .add_assembly
             .call(&mut self.store, (doc_id.0, shape_id.0))?;
         self.check_error("xcaf_add_assembly")?;
         Ok(result)
@@ -8025,8 +8062,11 @@ impl crate::kernel::OcctKernel {
     /// # Errors
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
-    pub fn xcaf_add_component(&mut self, request: XcafAddComponentRequest) -> OcctResult<i32> {
-        let result = self.generated.xcaf.xcaf_add_component.call(
+    pub fn xcaf_add_component(
+        &mut self,
+        request: requests::XcafAddComponentRequest,
+    ) -> OcctResult<i32> {
+        let result = self.generated.xcaf.add_component.call(
             &mut self.store,
             (
                 request.doc_id.0,
@@ -8060,7 +8100,7 @@ impl crate::kernel::OcctKernel {
         let result = self
             .generated
             .xcaf
-            .xcaf_set_color
+            .set_color
             .call(&mut self.store, (doc_id.0, label_id, r, g, b))?;
         if result < 0 {
             return Err(self.read_last_error("xcaf_set_color"));
@@ -8082,7 +8122,7 @@ impl crate::kernel::OcctKernel {
         let guest_lengths = [checked_wasm_len(name.len(), 1)?];
         let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, name.as_bytes())?];
-            Ok(kernel.generated.xcaf.xcaf_set_name.call(
+            Ok(kernel.generated.xcaf.set_name.call(
                 &mut kernel.store,
                 (doc_id.0, label_id, guest_ptrs[0], guest_lengths[0]),
             )?)
@@ -8106,7 +8146,7 @@ impl crate::kernel::OcctKernel {
         let status = self
             .generated
             .xcaf
-            .xcaf_get_label_info
+            .get_label_info
             .call(&mut self.store, (doc_id.0, label_id))?;
         if status < 0 {
             return Err(self.read_last_error("xcaf_get_label_info"));
@@ -8127,7 +8167,7 @@ impl crate::kernel::OcctKernel {
         let len = self
             .generated
             .xcaf
-            .xcaf_get_child_labels
+            .get_child_labels
             .call(&mut self.store, (doc_id.0, parent_label_id))?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_get_child_labels"));
@@ -8144,7 +8184,7 @@ impl crate::kernel::OcctKernel {
         let len = self
             .generated
             .xcaf
-            .xcaf_get_root_labels
+            .get_root_labels
             .call(&mut self.store, (doc_id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_get_root_labels"));
@@ -8165,7 +8205,7 @@ impl crate::kernel::OcctKernel {
         let result = self
             .generated
             .xcaf
-            .xcaf_get_referred_label
+            .get_referred_label
             .call(&mut self.store, (doc_id.0, label_id))?;
         self.check_error("xcaf_get_referred_label")?;
         Ok(result)
@@ -8184,7 +8224,7 @@ impl crate::kernel::OcctKernel {
         let len = self
             .generated
             .xcaf
-            .xcaf_get_label_location
+            .get_label_location
             .call(&mut self.store, (doc_id.0, label_id))?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_get_label_location"));
@@ -8205,7 +8245,7 @@ impl crate::kernel::OcctKernel {
         let len = self
             .generated
             .xcaf
-            .xcaf_get_sub_shape_labels
+            .get_sub_shape_labels
             .call(&mut self.store, (doc_id.0, label_id))?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_get_sub_shape_labels"));
@@ -8227,7 +8267,7 @@ impl crate::kernel::OcctKernel {
         let result = self
             .generated
             .xcaf
-            .xcaf_add_sub_shape
+            .add_sub_shape
             .call(&mut self.store, (doc_id.0, label_id, shape_id.0))?;
         self.check_error("xcaf_add_sub_shape")?;
         Ok(result)
@@ -8242,7 +8282,7 @@ impl crate::kernel::OcctKernel {
         let len = self
             .generated
             .xcaf
-            .xcaf_export_step
+            .export_step
             .call(&mut self.store, (doc_id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_export_step"));
@@ -8263,7 +8303,7 @@ impl crate::kernel::OcctKernel {
         let guest_lengths = [checked_wasm_len(unit.len(), 1)?];
         let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, unit.as_bytes())?];
-            Ok(kernel.generated.xcaf.xcaf_export_step_with_unit.call(
+            Ok(kernel.generated.xcaf.export_step_with_unit.call(
                 &mut kernel.store,
                 (doc_id.0, guest_ptrs[0], guest_lengths[0]),
             )?)
@@ -8294,7 +8334,7 @@ impl crate::kernel::OcctKernel {
                 buffers.write(kernel, unit.as_bytes())?,
                 buffers.write(kernel, schema.as_bytes())?,
             ];
-            Ok(kernel.generated.xcaf.xcaf_export_step_with_options.call(
+            Ok(kernel.generated.xcaf.export_step_with_options.call(
                 &mut kernel.store,
                 (
                     doc_id.0,
@@ -8323,7 +8363,7 @@ impl crate::kernel::OcctKernel {
             Ok(kernel
                 .generated
                 .xcaf
-                .xcaf_import_step
+                .import_step
                 .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
         })?;
         self.check_error("xcaf_import_step")?;
@@ -8344,7 +8384,7 @@ impl crate::kernel::OcctKernel {
         let len = self
             .generated
             .xcaf
-            .xcaf_export_glb
+            .export_glb
             .call(&mut self.store, (doc_id.0, lin_deflection, ang_deflection))?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_export_glb"));
