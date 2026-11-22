@@ -76,7 +76,6 @@ jobs:
         run: |
           cargo xtask codegen
           cargo fmt --all
-          git diff --exit-code -- facade/generated/ crate/src/kernel_generated.rs
           cargo xtask build-wasi --release
 
       - name: Stale-check vs. committed crate WASM
@@ -85,7 +84,8 @@ jobs:
         run: |
           set -euo pipefail
           new_size=$(stat -c%s crate/src/occt-wasm.wasm.br)
-          if cmp -s /tmp/committed.wasm.br crate/src/occt-wasm.wasm.br; then
+          if cmp -s /tmp/committed.wasm.br crate/src/occt-wasm.wasm.br &&
+             git diff --quiet -- facade/generated/ crate/src/kernel_generated.rs crate/tests/validation_bindings.rs; then
             echo "crate/src/occt-wasm.wasm.br is up to date ($new_size bytes)."
           else
             echo "::error file=crate/src/occt-wasm.wasm.br::Committed bytes diverge from the rebuild. Regenerate locally with: cargo xtask build-wasi --release && git add crate/src/occt-wasm.wasm.br. The fresh artifact is uploaded to this run."
@@ -96,8 +96,13 @@ jobs:
         if: steps.stale.outputs.stale == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: occt-wasm.wasm.br-fresh
-          path: crate/src/occt-wasm.wasm.br
+          name: occt-wasm-rebuilt
+          path: |
+            crate/src/occt-wasm.wasm.br
+            crate/src/kernel_generated.rs
+            facade/generated/bindings.cpp
+            facade/generated/kernel.cpp
+            crate/tests/validation_bindings.rs
           retention-days: 14
 
       - name: Test rebuilt kernel
@@ -106,6 +111,9 @@ jobs:
       - name: Fail when stale
         if: steps.stale.outputs.stale == 'true'
         run: exit 1
+
+      - name: Verify source and embedded artifact provenance
+        run: test "$(bash .github/scripts/wasi-input-digest.sh)" = "$(cat .github/scripts/wasi-input-digest.sha256)"
 
       - name: Finalize mandatory sccache
         if: always()
