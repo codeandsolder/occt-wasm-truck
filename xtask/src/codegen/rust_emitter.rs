@@ -136,6 +136,8 @@ const fn rust_return_type(rt: ReturnType) -> &'static str {
         ReturnType::String => "OcctResult<String>",
         ReturnType::Bytes => "OcctResult<Vec<u8>>",
         ReturnType::VectorUint32 => "OcctResult<Vec<u32>>",
+        ReturnType::StepImport => "OcctResult<StepImport>",
+        ReturnType::BRepProperties => "OcctResult<BRepProperties>",
         ReturnType::VectorShapeIds => "OcctResult<Vec<ShapeHandle>>",
         ReturnType::VectorDouble => "OcctResult<Vec<f64>>",
         ReturnType::VectorInt => "OcctResult<Vec<i32>>",
@@ -273,6 +275,8 @@ fn wasm_typed_func_type(spec: &MethodSpec) -> String {
         | ReturnType::String
         | ReturnType::Bytes
         | ReturnType::VectorUint32
+        | ReturnType::StepImport
+        | ReturnType::BRepProperties
         | ReturnType::VectorShapeIds
         | ReturnType::VectorDouble
         | ReturnType::VectorInt
@@ -316,6 +320,8 @@ const fn result_binding(rt: ReturnType) -> (&'static str, ResultCheck, &'static 
         ReturnType::String => ("len", Status, "self.read_string_result()"),
         ReturnType::Bytes => ("len", Status, "self.read_bytes_result()"),
         ReturnType::VectorUint32 => ("len", Status, "self.read_vec_u32_result()"),
+        ReturnType::StepImport => ("len", Status, "self.read_step_import_result()"),
+        ReturnType::BRepProperties => ("len", Status, "self.read_brep_properties_result()"),
         ReturnType::VectorShapeIds => ("len", Status, "self.read_vec_shape_result()"),
         ReturnType::VectorDouble => ("len", Status, "self.read_vec_f64_result()"),
         ReturnType::VectorInt => ("len", Status, "self.read_vec_i32_result()"),
@@ -604,8 +610,8 @@ use wasmtime::TypedFunc;
 use crate::error::OcctResult;
 use crate::kernel::checked_wasm_len;
 use crate::types::{
-    BoundingBox, CurveData, EdgeData, EvolutionData, LabelInfo, Mesh, MeshBatch,
-    DocumentHandle, NurbsCurveData, ProjectionData, ShapeHandle, SurfaceData,
+    BRepProperties, BoundingBox, CurveData, EdgeData, EvolutionData, LabelInfo, Mesh, MeshBatch,
+    DocumentHandle, NurbsCurveData, ProjectionData, ShapeHandle, StepImport, SurfaceData,
 };
 
 ",

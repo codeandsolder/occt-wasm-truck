@@ -138,6 +138,10 @@ pub enum ReturnType {
     VectorShapeIds,
     /// `std::vector<double>` return.
     VectorDouble,
+    /// STEP import handle and root/transfer counts packed as u32 values.
+    StepImport,
+    /// Native OCCT mass/inertia properties packed as f64 values.
+    BRepProperties,
     /// `double` return.
     Double,
     /// `std::string` return.

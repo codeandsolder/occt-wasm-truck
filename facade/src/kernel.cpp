@@ -1,3 +1,5 @@
+#include <BRepGProp_VinertGK.hxx>
+#include <BRepCheck_Analyzer.hxx>
 #include "occt_kernel.h"
 
 #include <BRepAdaptor_Curve.hxx>
@@ -36,6 +38,7 @@
 #include <Geom_Curve.hxx>
 #include <Geom_Surface.hxx>
 #include <IFSelect_ReturnStatus.hxx>
+#include <STEPControl_Reader.hxx>
 #include <Message_ProgressRange.hxx>
 #include <NCollection_Array1.hxx>
 #include <NCollection_Array2.hxx>
@@ -1532,4 +1535,136 @@ uint32_t EdgeData::getPointsPtr() const {
 
 uint32_t EdgeData::getEdgeGroupsPtr() const {
     return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(edgeGroups));
+}
+
+// Independent CAD validation needs topological occurrences, not the unique
+// shape identities returned by getSubShapes.
+TopAbs_ShapeEnum parseShapeType(const std::string& type) {
+    if (type == "vertex") return TopAbs_VERTEX;
+    if (type == "edge") return TopAbs_EDGE;
+    if (type == "wire") return TopAbs_WIRE;
+    if (type == "face") return TopAbs_FACE;
+    if (type == "shell") return TopAbs_SHELL;
+    if (type == "solid") return TopAbs_SOLID;
+    if (type == "compsolid") return TopAbs_COMPSOLID;
+    if (type == "compound") return TopAbs_COMPOUND;
+    throw std::runtime_error("Unknown shape type: " + type);
+}
+
+std::vector<double> signedFaceVolumeIntegrals(const TopoDS_Shape& shape,
+                                             const gp_Pnt& reference,
+                                             double epsilon) {
+    if (!std::isfinite(reference.X()) || !std::isfinite(reference.Y()) ||
+        !std::isfinite(reference.Z()) || !std::isfinite(epsilon) ||
+        epsilon <= 0.0 || epsilon >= 1.0) {
+        throw std::runtime_error("getSignedFaceVolumeIntegrals: invalid reference or epsilon");
+    }
+    TopExp_Explorer solids(shape, TopAbs_SOLID);
+    if (!solids.More() || !BRepCheck_Analyzer(shape).IsValid()) {
+        throw std::runtime_error("getSignedFaceVolumeIntegrals: valid solid required");
+    }
+    const TopoDS_Shape solid = solids.Current();
+    solids.Next();
+    if (solids.More()) {
+        throw std::runtime_error("getSignedFaceVolumeIntegrals: exactly one solid required");
+    }
+    BRepGProp_VinertGK integrator;
+    integrator.SetLocation(reference);
+    // Split integration spans on B-spline faces, as in the native oracle.
+    BRepGProp_Face surface(true);
+    BRepGProp_Domain domain;
+    std::vector<double> result;
+    for (TopExp_Explorer shells(solid, TopAbs_SHELL); shells.More(); shells.Next()) {
+        const auto& shell = shells.Current();
+        if (!BRep_Tool::IsClosed(shell)) {
+            throw std::runtime_error("getSignedFaceVolumeIntegrals: open shell");
+        }
+        for (TopExp_Explorer faces(shell, TopAbs_FACE); faces.More(); faces.Next()) {
+            const TopoDS_Face face = TopoDS::Face(faces.Current());
+            if (face.Orientation() != TopAbs_FORWARD && face.Orientation() != TopAbs_REVERSED) {
+                continue;
+            }
+            if (BRep_Tool::Surface(face).IsNull()) {
+                throw std::runtime_error("getSignedFaceVolumeIntegrals: missing exact surface");
+            }
+            surface.Load(face);
+            double error;
+            if (face.NbChildren() != 0) {
+                domain.Init(face);
+                error = integrator.Perform(surface, domain, epsilon, false, false);
+            } else {
+                error = integrator.Perform(surface, epsilon, false, false);
+            }
+            const double mass = integrator.Mass();
+            if (error < 0.0 || !std::isfinite(error) || !std::isfinite(mass)) {
+                throw std::runtime_error("getSignedFaceVolumeIntegrals: face integration failed");
+            }
+            result.push_back(mass);
+            result.push_back(error);
+        }
+    }
+    if (result.empty()) {
+        throw std::runtime_error("getSignedFaceVolumeIntegrals: no oriented surface faces");
+    }
+    return result;
+}
+
+// Keep OCCT's double-precision triangle coordinates for strict geometry
+// certification; graphics MeshData intentionally stores float32 positions.
+std::vector<double> tessellateTriangleCoordinates(const TopoDS_Shape& shape,
+                                                  double linearDeflection,
+                                                  double angularDeflection) {
+    if (!(linearDeflection > 0.0) || !std::isfinite(linearDeflection) ||
+        !(angularDeflection > 0.0) || !std::isfinite(angularDeflection)) {
+        throw std::runtime_error("tessellateTriangles64: invalid deflection");
+    }
+    BRepMesh_IncrementalMesh mesher(shape, linearDeflection, false, angularDeflection, false);
+    if (!mesher.IsDone()) {
+        throw std::runtime_error("tessellateTriangles64: meshing failed");
+    }
+    std::vector<double> coordinates;
+    for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
+        TopLoc_Location location;
+        const auto triangulation = BRep_Tool::Triangulation(TopoDS::Face(ex.Current()), location);
+        if (triangulation.IsNull()) {
+            continue;
+        }
+        const auto& transform = location.Transformation();
+        const size_t triangleCount = static_cast<size_t>(triangulation->NbTriangles());
+        // The generated C ABI returns a signed 32-bit element count.
+        if (triangleCount > (static_cast<size_t>(std::numeric_limits<int32_t>::max()) -
+                             coordinates.size()) / 9) {
+            throw std::runtime_error("tessellateTriangles64: triangle buffer exceeds ABI limit");
+        }
+        for (int i = 1; i <= triangulation->NbTriangles(); ++i) {
+            int a, b, c;
+            triangulation->Triangle(i).Get(a, b, c);
+            for (int index : {a, b, c}) {
+                const gp_Pnt point = triangulation->Node(index).Transformed(transform);
+                if (!std::isfinite(point.X()) || !std::isfinite(point.Y()) ||
+                    !std::isfinite(point.Z())) {
+                    throw std::runtime_error("tessellateTriangles64: nonfinite triangle coordinate");
+                }
+                coordinates.push_back(point.X());
+                coordinates.push_back(point.Y());
+                coordinates.push_back(point.Z());
+            }
+        }
+    }
+    return coordinates;
+}
+
+// STEP Part 21 streams are byte sequences, not necessarily UTF-8.
+StepReadData readStepShape(const std::string& data) {
+    STEPControl_Reader reader;
+    std::istringstream stream(data, std::ios::binary);
+    if (reader.ReadStream("import.step", stream) != IFSelect_RetDone) {
+        throw std::runtime_error("importStep: failed to read STEP data");
+    }
+    const int roots = reader.NbRootsForTransfer();
+    const int transferred = reader.TransferRoots();
+    if (reader.NbShapes() == 0 || roots < 0 || transferred < 0 || transferred > roots) {
+        throw std::runtime_error("importStep: no shapes found in STEP data");
+    }
+    return {reader.OneShape(), static_cast<uint32_t>(roots), static_cast<uint32_t>(transferred)};
 }

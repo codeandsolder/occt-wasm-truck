@@ -2810,18 +2810,7 @@ default: return \"shape\";
         occt_class: "",
         ctor_args: "",
         setup_code: "\
-auto parseType = [](const std::string& t) -> TopAbs_ShapeEnum {
-    if (t == \"vertex\") return TopAbs_VERTEX;
-    if (t == \"edge\") return TopAbs_EDGE;
-    if (t == \"wire\") return TopAbs_WIRE;
-    if (t == \"face\") return TopAbs_FACE;
-    if (t == \"shell\") return TopAbs_SHELL;
-    if (t == \"solid\") return TopAbs_SOLID;
-    if (t == \"compsolid\") return TopAbs_COMPSOLID;
-    if (t == \"compound\") return TopAbs_COMPOUND;
-    throw std::runtime_error(\"Unknown shape type: \" + t);
-};
-TopAbs_ShapeEnum toExplore = parseType(shapeType);
+TopAbs_ShapeEnum toExplore = parseShapeType(shapeType);
 NCollection_IndexedMap<TopoDS_Shape, TopTools_ShapeMapHasher> map;
 TopExp::MapShapes(get(id), toExplore, map);
 BatchScope result(*this, static_cast<size_t>(map.Extent()));
@@ -2843,24 +2832,51 @@ return result.take();",
         occt_class: "",
         ctor_args: "",
         setup_code: "\
-auto parseType = [](const std::string& t) -> TopAbs_ShapeEnum {
-    if (t == \"vertex\") return TopAbs_VERTEX;
-    if (t == \"edge\") return TopAbs_EDGE;
-    if (t == \"wire\") return TopAbs_WIRE;
-    if (t == \"face\") return TopAbs_FACE;
-    if (t == \"shell\") return TopAbs_SHELL;
-    if (t == \"solid\") return TopAbs_SOLID;
-    if (t == \"compsolid\") return TopAbs_COMPSOLID;
-    if (t == \"compound\") return TopAbs_COMPOUND;
-    throw std::runtime_error(\"Unknown shape type: \" + t);
-};
 NCollection_IndexedMap<TopoDS_Shape, TopTools_ShapeMapHasher> map;
-TopExp::MapShapes(get(id), parseType(shapeType), map);
+TopExp::MapShapes(get(id), parseShapeType(shapeType), map);
 return map.Extent();",
         includes: &[
             "TopAbs_ShapeEnum.hxx", "TopExp.hxx",
             "NCollection_IndexedMap.hxx", "TopTools_ShapeMapHasher.hxx",
         ],
+        category: "topology",
+        return_type: ReturnType::Int,
+    },
+    MethodSpec {
+        name: "getSubShapeOccurrences",
+        kind: MethodKind::CustomBody,
+        params: &[FacadeParam::ShapeId("id"), FacadeParam::String("shapeType")],
+        occt_class: "",
+        ctor_args: "",
+        setup_code: "\
+TopAbs_ShapeEnum type = parseShapeType(shapeType);
+const auto& shape = get(id);
+BatchScope result(*this, 0);
+for (TopExp_Explorer ex(shape, type); ex.More(); ex.Next()) {
+    result.add(ex.Current());
+}
+return result.take();",
+        includes: &["TopExp_Explorer.hxx"],
+        category: "topology",
+        return_type: ReturnType::VectorShapeIds,
+    },
+    MethodSpec {
+        name: "subShapeOccurrenceCount",
+        kind: MethodKind::CustomBody,
+        params: &[FacadeParam::ShapeId("id"), FacadeParam::String("shapeType")],
+        occt_class: "",
+        ctor_args: "",
+        setup_code: "\
+TopAbs_ShapeEnum type = parseShapeType(shapeType);
+int count = 0;
+for (TopExp_Explorer ex(get(id), type); ex.More(); ex.Next()) {
+    if (count == std::numeric_limits<int>::max()) {
+        throw std::runtime_error(\"subShapeOccurrenceCount: count overflow\");
+    }
+    ++count;
+}
+return count;",
+        includes: &["TopExp_Explorer.hxx", "limits"],
         category: "topology",
         return_type: ReturnType::Int,
     },
@@ -3174,6 +3190,100 @@ return result;",
         includes: &["BRepBndLib.hxx", "Bnd_Box.hxx"],
         category: "query",
         return_type: ReturnType::BBoxData,
+    },
+    MethodSpec {
+        name: "getOptimalBounds",
+        kind: MethodKind::CustomBody,
+        params: &[
+            FacadeParam::ShapeId("id"),
+            FacadeParam::Bool("useTriangulation"),
+            FacadeParam::Bool("useShapeTolerance"),
+        ],
+        occt_class: "",
+        ctor_args: "",
+        setup_code: "\
+Bnd_Box box;
+BRepBndLib::AddOptimal(get(id), box, useTriangulation, useShapeTolerance);
+if (box.IsVoid() || box.IsOpen()) {
+    throw std::runtime_error(\"getOptimalBounds: shape has no finite bounds\");
+}
+BBoxData result{};
+box.Get(result.xmin, result.ymin, result.zmin, result.xmax, result.ymax, result.zmax);
+return result;",
+        includes: &["BRepBndLib.hxx", "Bnd_Box.hxx"],
+        category: "query",
+        return_type: ReturnType::BBoxData,
+    },
+    MethodSpec {
+        name: "getSignedFaceVolumeIntegrals",
+        kind: MethodKind::CustomBody,
+        params: &[
+            FacadeParam::ShapeId("id"),
+            FacadeParam::Double("x"),
+            FacadeParam::Double("y"),
+            FacadeParam::Double("z"),
+            FacadeParam::Double("epsilon"),
+        ],
+        occt_class: "",
+        ctor_args: "",
+        setup_code: "\
+return signedFaceVolumeIntegrals(get(id), gp_Pnt(x, y, z), epsilon);",
+        includes: &["gp_Pnt.hxx"],
+        category: "query",
+        return_type: ReturnType::VectorDouble,
+    },
+    MethodSpec {
+        name: "classifySolidPoint",
+        kind: MethodKind::CustomBody,
+        params: &[
+            FacadeParam::ShapeId("id"),
+            FacadeParam::Double("x"),
+            FacadeParam::Double("y"),
+            FacadeParam::Double("z"),
+            FacadeParam::Double("tolerance"),
+        ],
+        occt_class: "",
+        ctor_args: "",
+        setup_code: "\
+const auto& shape = get(id);
+if (shape.ShapeType() != TopAbs_SOLID || !std::isfinite(x) || !std::isfinite(y) ||
+    !std::isfinite(z) || !std::isfinite(tolerance) || tolerance < 0.0) {
+    throw std::runtime_error(\"classifySolidPoint: invalid solid or coordinates/tolerance\");
+}
+BRepClass3d_SolidClassifier classifier(shape);
+classifier.Perform(gp_Pnt(x, y, z), tolerance);
+switch (classifier.State()) {
+    case TopAbs_OUT: return 0;
+    case TopAbs_IN: return 1;
+    case TopAbs_ON: return 2;
+    default: return 3;
+}",
+        includes: &["BRepClass3d_SolidClassifier.hxx", "gp_Pnt.hxx", "TopAbs_State.hxx", "cmath"],
+        category: "query",
+        return_type: ReturnType::Int,
+    },
+    MethodSpec {
+        name: "getBRepProperties",
+        kind: MethodKind::CustomBody,
+        params: &[FacadeParam::ShapeId("id")],
+        occt_class: "",
+        ctor_args: "",
+        setup_code: "\
+const auto& shape = get(id);
+GProp_GProps volume, surface, linear;
+BRepGProp::VolumeProperties(shape, volume);
+BRepGProp::SurfaceProperties(shape, surface);
+BRepGProp::LinearProperties(shape, linear);
+const gp_Pnt center = volume.CentreOfMass();
+const gp_Mat inertia = volume.MatrixOfInertia();
+return {volume.Mass(), surface.Mass(), linear.Mass(),
+        center.X(), center.Y(), center.Z(),
+        inertia(1,1), inertia(1,2), inertia(1,3),
+        inertia(2,1), inertia(2,2), inertia(2,3),
+        inertia(3,1), inertia(3,2), inertia(3,3)};",
+        includes: &["BRepGProp.hxx", "GProp_GProps.hxx", "gp_Pnt.hxx", "gp_Mat.hxx"],
+        category: "query",
+        return_type: ReturnType::BRepProperties,
     },
     MethodSpec {
         name: "getVolume",
@@ -5061,23 +5171,25 @@ return store(fixer.Shape());",
         occt_class: "",
         ctor_args: "",
         setup_code: "\
-STEPControl_Reader reader;
-// Streams, not files: the standalone WASI build the crate embeds has no filesystem.
-std::istringstream iss(data);
-IFSelect_ReturnStatus status = reader.ReadStream(\"import.step\", iss);
-if (status != IFSelect_RetDone) {
-    throw std::runtime_error(\"importStep: failed to read STEP data\");
-}
-
-reader.TransferRoots();
-if (reader.NbShapes() == 0) {
-    throw std::runtime_error(\"importStep: no shapes found in STEP data\");
-}
-
-return store(reader.OneShape());",
+return store(readStepShape(data).shape);",
         includes: &["IFSelect_ReturnStatus.hxx", "STEPControl_Reader.hxx"],
         category: "io",
         return_type: ReturnType::ShapeId,
+    },
+    MethodSpec {
+        name: "importStepBytes",
+        kind: MethodKind::CustomBody,
+        params: &[FacadeParam::Bytes("data")],
+        occt_class: "",
+        ctor_args: "",
+        setup_code: "\
+const auto imported = readStepShape(data);
+std::vector<uint32_t> result{0, imported.roots, imported.transferred};
+result[0] = store(imported.shape);
+return result;",
+        includes: &[],
+        category: "io",
+        return_type: ReturnType::StepImport,
     },
     MethodSpec {
         name: "exportStep",
@@ -6224,6 +6336,22 @@ return buildEvolution(maker, resultId, get(resultId), {shape}, inputFaceHashes, 
         includes: &[],
         category: "tessellate",
         return_type: ReturnType::MeshData,
+    },
+    MethodSpec {
+        name: "tessellateTriangles64",
+        kind: MethodKind::CustomBody,
+        params: &[
+            FacadeParam::ShapeId("id"),
+            FacadeParam::Double("linearDeflection"),
+            FacadeParam::Double("angularDeflection"),
+        ],
+        occt_class: "",
+        ctor_args: "",
+        setup_code: "\
+return tessellateTriangleCoordinates(get(id), linearDeflection, angularDeflection);",
+        includes: &[],
+        category: "tessellate",
+        return_type: ReturnType::VectorDouble,
     },
     MethodSpec {
         name: "tessellateRelative",

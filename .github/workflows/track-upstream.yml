@@ -1,0 +1,31 @@
+name: Track upstream
+
+on:
+  schedule:
+    - cron: "43 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  sync:
+    uses: codeandsolder/ci-workflows/.github/workflows/upstream-tracking.yml@e3c936399ed6a5a497aa4b07bbc3427bf12c7dc4 # main
+    with:
+      upstream-repository: andymai/occt-wasm
+      upstream-branch: main
+      target-branch: main
+      strategy: merge
+      workflow-policy: preserve
+      upstream-release-prefix: crate-v
+      generation-container: ghcr.io/andymai/occt-wasm-builder@sha256:8fd87a3e12ef671b9196d5891b2dfcccd416ed36f55b6f2130ee74edcd2fc89a
+      generation-script: .github/scripts/generate-upstream.sh
+      generated-files: >-
+        facade/generated/bindings.cpp
+        facade/generated/kernel.cpp
+        crate/src/kernel_generated.rs
+        crate/src/occt-wasm.wasm.br
+      validation-script: .github/scripts/validate-upstream.sh
+      timeout-minutes: 120
+      rust-toolchain: repository

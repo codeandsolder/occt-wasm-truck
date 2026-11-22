@@ -11,8 +11,9 @@ use crate::error::{OcctError, OcctResult};
 use crate::host::HostState;
 use crate::kernel_generated::GeneratedFuncs;
 use crate::types::{
-    BoundingBox, CurveData, CurveGeometry, EdgeData, EvolutionData, LabelInfo, Mesh, MeshBatch,
-    NurbsCurveData, NurbsSurfaceData, ProjectionData, ShapeHandle, SurfaceData, SurfaceFrame, Vec3,
+    BRepProperties, BoundingBox, CurveData, CurveGeometry, EdgeData, EvolutionData, LabelInfo,
+    Mesh, MeshBatch, NurbsCurveData, NurbsSurfaceData, ProjectionData, ShapeHandle, StepImport,
+    SurfaceData, SurfaceFrame, Vec3,
 };
 
 /// Brotli-compressed WASM binary, embedded at compile time.
@@ -584,6 +585,61 @@ impl OcctKernel {
             .into_iter()
             .map(ShapeHandle)
             .collect())
+    }
+
+    /// Decode the typed STEP import record using the existing u32 result buffer.
+    pub(crate) fn read_step_import_result(&mut self) -> OcctResult<StepImport> {
+        let values = self.read_vec_u32_result()?;
+        let [shape, roots, transferred] = values.as_slice() else {
+            return Err(OcctError::Memory(
+                "invalid STEP import result length".into(),
+            ));
+        };
+        if *shape == 0 || transferred > roots {
+            return Err(OcctError::Memory("invalid STEP import result".into()));
+        }
+        Ok(StepImport {
+            shape: ShapeHandle(*shape),
+            roots: *roots,
+            transferred: *transferred,
+        })
+    }
+
+    /// Decode the typed mass-property record using the existing f64 buffer.
+    pub(crate) fn read_brep_properties_result(&mut self) -> OcctResult<BRepProperties> {
+        let values = self.read_vec_f64_result()?;
+        let [
+            volume,
+            area,
+            edge_length,
+            cx,
+            cy,
+            cz,
+            xx,
+            xy,
+            xz,
+            yx,
+            yy,
+            yz,
+            zx,
+            zy,
+            zz,
+        ] = values.as_slice()
+        else {
+            return Err(OcctError::Memory(
+                "invalid BRep property result length".into(),
+            ));
+        };
+        if !values.iter().all(|value| value.is_finite()) {
+            return Err(OcctError::Memory("nonfinite BRep property result".into()));
+        }
+        Ok(BRepProperties {
+            volume: *volume,
+            area: *area,
+            edge_length: *edge_length,
+            center_of_mass: [*cx, *cy, *cz],
+            inertia: [[*xx, *xy, *xz], [*yx, *yy, *yz], [*zx, *zy, *zz]],
+        })
     }
 
     /// Read a `Vec<f64>` result.

@@ -6,8 +6,8 @@ use wasmtime::TypedFunc;
 use crate::error::OcctResult;
 use crate::kernel::checked_wasm_len;
 use crate::types::{
-    BoundingBox, CurveData, DocumentHandle, EdgeData, EvolutionData, LabelInfo, Mesh, MeshBatch,
-    NurbsCurveData, ProjectionData, ShapeHandle, SurfaceData,
+    BRepProperties, BoundingBox, CurveData, DocumentHandle, EdgeData, EvolutionData, LabelInfo,
+    Mesh, MeshBatch, NurbsCurveData, ProjectionData, ShapeHandle, StepImport, SurfaceData,
 };
 
 /// Named argument types for wide facade operations.
@@ -1229,6 +1229,8 @@ struct TopologyExports {
     get_shape_type: TypedFunc<(u32,), i32>,
     get_sub_shapes: TypedFunc<(u32, u32, u32), i32>,
     sub_shape_count: TypedFunc<(u32, u32, u32), i32>,
+    get_sub_shape_occurrences: TypedFunc<(u32, u32, u32), i32>,
+    sub_shape_occurrence_count: TypedFunc<(u32, u32, u32), i32>,
     sub_shape_hashes: TypedFunc<(u32, u32, u32, i32), i32>,
     distance_between: TypedFunc<(u32, u32), f64>,
     is_same: TypedFunc<(u32, u32), i32>,
@@ -1251,6 +1253,10 @@ impl TopologyExports {
             get_shape_type: instance.get_typed_func(&mut *store, "occt_get_shape_type")?,
             get_sub_shapes: instance.get_typed_func(&mut *store, "occt_get_sub_shapes")?,
             sub_shape_count: instance.get_typed_func(&mut *store, "occt_sub_shape_count")?,
+            get_sub_shape_occurrences: instance
+                .get_typed_func(&mut *store, "occt_get_sub_shape_occurrences")?,
+            sub_shape_occurrence_count: instance
+                .get_typed_func(&mut *store, "occt_sub_shape_occurrence_count")?,
             sub_shape_hashes: instance.get_typed_func(&mut *store, "occt_sub_shape_hashes")?,
             distance_between: instance.get_typed_func(&mut *store, "occt_distance_between")?,
             is_same: instance.get_typed_func(&mut *store, "occt_is_same")?,
@@ -1270,6 +1276,10 @@ impl TopologyExports {
 struct QueryExports {
     get_bounding_box: TypedFunc<(u32, i32), i32>,
     get_bounding_box_loose: TypedFunc<(u32, i32), i32>,
+    get_optimal_bounds: TypedFunc<(u32, i32, i32), i32>,
+    get_signed_face_volume_integrals: TypedFunc<(u32, f64, f64, f64, f64), i32>,
+    classify_solid_point: TypedFunc<(u32, f64, f64, f64, f64), i32>,
+    get_b_rep_properties: TypedFunc<(u32,), i32>,
     get_volume: TypedFunc<(u32,), f64>,
     get_surface_area: TypedFunc<(u32,), f64>,
     get_length: TypedFunc<(u32,), f64>,
@@ -1302,6 +1312,13 @@ impl QueryExports {
             get_bounding_box: instance.get_typed_func(&mut *store, "occt_get_bounding_box")?,
             get_bounding_box_loose: instance
                 .get_typed_func(&mut *store, "occt_get_bounding_box_loose")?,
+            get_optimal_bounds: instance.get_typed_func(&mut *store, "occt_get_optimal_bounds")?,
+            get_signed_face_volume_integrals: instance
+                .get_typed_func(&mut *store, "occt_get_signed_face_volume_integrals")?,
+            classify_solid_point: instance
+                .get_typed_func(&mut *store, "occt_classify_solid_point")?,
+            get_b_rep_properties: instance
+                .get_typed_func(&mut *store, "occt_get_b_rep_properties")?,
             get_volume: instance.get_typed_func(&mut *store, "occt_get_volume")?,
             get_surface_area: instance.get_typed_func(&mut *store, "occt_get_surface_area")?,
             get_length: instance.get_typed_func(&mut *store, "occt_get_length")?,
@@ -1454,6 +1471,7 @@ impl HealingExports {
 
 struct IoExports {
     import_step: TypedFunc<(u32, u32), u32>,
+    import_step_bytes: TypedFunc<(u32, u32), i32>,
     export_step: TypedFunc<(u32,), i32>,
     export_step_with_unit: TypedFunc<(u32, u32, u32), i32>,
     export_step_with_options: TypedFunc<(u32, u32, u32, u32, u32), i32>,
@@ -1473,6 +1491,7 @@ impl IoExports {
     ) -> OcctResult<Self> {
         Ok(Self {
             import_step: instance.get_typed_func(&mut *store, "occt_import_step")?,
+            import_step_bytes: instance.get_typed_func(&mut *store, "occt_import_step_bytes")?,
             export_step: instance.get_typed_func(&mut *store, "occt_export_step")?,
             export_step_with_unit: instance
                 .get_typed_func(&mut *store, "occt_export_step_with_unit")?,
@@ -1569,6 +1588,7 @@ impl EvolutionExports {
 
 struct TessellateExports {
     tessellate: TypedFunc<(u32, f64, f64), i32>,
+    triangles64: TypedFunc<(u32, f64, f64), i32>,
     relative: TypedFunc<(u32, f64, f64), i32>,
     mesh_shape: TypedFunc<(u32, f64, f64), i32>,
     mesh_batch: TypedFunc<(u32, u32, f64, f64), i32>,
@@ -1581,6 +1601,7 @@ impl TessellateExports {
     ) -> OcctResult<Self> {
         Ok(Self {
             tessellate: instance.get_typed_func(&mut *store, "occt_tessellate")?,
+            triangles64: instance.get_typed_func(&mut *store, "occt_tessellate_triangles64")?,
             relative: instance.get_typed_func(&mut *store, "occt_tessellate_relative")?,
             mesh_shape: instance.get_typed_func(&mut *store, "occt_mesh_shape")?,
             mesh_batch: instance.get_typed_func(&mut *store, "occt_mesh_batch")?,
@@ -4722,6 +4743,54 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `getSubShapeOccurrences` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
+    pub fn get_sub_shape_occurrences(
+        &mut self,
+        id: ShapeHandle,
+        shape_type: &str,
+    ) -> OcctResult<Vec<ShapeHandle>> {
+        let guest_lengths = [checked_wasm_len(shape_type.len(), 1)?];
+        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let guest_ptrs = [buffers.write(kernel, shape_type.as_bytes())?];
+            Ok(kernel
+                .generated
+                .topology
+                .get_sub_shape_occurrences
+                .call(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?)
+        })?;
+        if len < 0 {
+            return Err(self.read_last_error("get_sub_shape_occurrences"));
+        }
+        self.read_vec_shape_result()
+    }
+
+    /// Call the `subShapeOccurrenceCount` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
+    pub fn sub_shape_occurrence_count(
+        &mut self,
+        id: ShapeHandle,
+        shape_type: &str,
+    ) -> OcctResult<i32> {
+        let guest_lengths = [checked_wasm_len(shape_type.len(), 1)?];
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let guest_ptrs = [buffers.write(kernel, shape_type.as_bytes())?];
+            Ok(kernel
+                .generated
+                .topology
+                .sub_shape_occurrence_count
+                .call(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?)
+        })?;
+        self.check_error("sub_shape_occurrence_count")?;
+        Ok(result)
+    }
+
     /// Call the `subShapeHashes` OCCT facade operation.
     ///
     /// # Errors
@@ -4987,6 +5056,94 @@ impl crate::kernel::OcctKernel {
             return Err(self.read_last_error("get_bounding_box_loose"));
         }
         self.read_bbox_result()
+    }
+
+    /// Call the `getOptimalBounds` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
+    pub fn get_optimal_bounds(
+        &mut self,
+        id: ShapeHandle,
+        use_triangulation: bool,
+        use_shape_tolerance: bool,
+    ) -> OcctResult<BoundingBox> {
+        let status = self.generated.query.get_optimal_bounds.call(
+            &mut self.store,
+            (
+                id.0,
+                i32::from(use_triangulation),
+                i32::from(use_shape_tolerance),
+            ),
+        )?;
+        if status < 0 {
+            return Err(self.read_last_error("get_optimal_bounds"));
+        }
+        self.read_bbox_result()
+    }
+
+    /// Call the `getSignedFaceVolumeIntegrals` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
+    pub fn get_signed_face_volume_integrals(
+        &mut self,
+        id: ShapeHandle,
+        x: f64,
+        y: f64,
+        z: f64,
+        epsilon: f64,
+    ) -> OcctResult<Vec<f64>> {
+        let len = self
+            .generated
+            .query
+            .get_signed_face_volume_integrals
+            .call(&mut self.store, (id.0, x, y, z, epsilon))?;
+        if len < 0 {
+            return Err(self.read_last_error("get_signed_face_volume_integrals"));
+        }
+        self.read_vec_f64_result()
+    }
+
+    /// Call the `classifySolidPoint` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
+    pub fn classify_solid_point(
+        &mut self,
+        id: ShapeHandle,
+        x: f64,
+        y: f64,
+        z: f64,
+        tolerance: f64,
+    ) -> OcctResult<i32> {
+        let result = self
+            .generated
+            .query
+            .classify_solid_point
+            .call(&mut self.store, (id.0, x, y, z, tolerance))?;
+        self.check_error("classify_solid_point")?;
+        Ok(result)
+    }
+
+    /// Call the `getBRepProperties` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
+    pub fn get_b_rep_properties(&mut self, id: ShapeHandle) -> OcctResult<BRepProperties> {
+        let len = self
+            .generated
+            .query
+            .get_b_rep_properties
+            .call(&mut self.store, (id.0,))?;
+        if len < 0 {
+            return Err(self.read_last_error("get_b_rep_properties"));
+        }
+        self.read_brep_properties_result()
     }
 
     /// Call the `getVolume` OCCT facade operation.
@@ -6342,6 +6499,27 @@ impl crate::kernel::OcctKernel {
             return Err(self.read_last_error("import_step"));
         }
         Ok(ShapeHandle(result))
+    }
+
+    /// Call the `importStepBytes` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
+    pub fn import_step_bytes(&mut self, data: &[u8]) -> OcctResult<StepImport> {
+        let guest_lengths = [checked_wasm_len(data.len(), 1)?];
+        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let guest_ptrs = [buffers.write(kernel, data)?];
+            Ok(kernel
+                .generated
+                .io
+                .import_step_bytes
+                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
+        })?;
+        if len < 0 {
+            return Err(self.read_last_error("import_step_bytes"));
+        }
+        self.read_step_import_result()
     }
 
     /// Call the `exportStep` OCCT facade operation.
@@ -7764,6 +7942,27 @@ impl crate::kernel::OcctKernel {
             return Err(self.read_last_error("tessellate"));
         }
         self.read_mesh_result()
+    }
+
+    /// Call the `tessellateTriangles64` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
+    pub fn tessellate_triangles64(
+        &mut self,
+        id: ShapeHandle,
+        linear_deflection: f64,
+        angular_deflection: f64,
+    ) -> OcctResult<Vec<f64>> {
+        let len = self.generated.tessellate.triangles64.call(
+            &mut self.store,
+            (id.0, linear_deflection, angular_deflection),
+        )?;
+        if len < 0 {
+            return Err(self.read_last_error("tessellate_triangles64"));
+        }
+        self.read_vec_f64_result()
     }
 
     /// Call the `tessellateRelative` OCCT facade operation.
