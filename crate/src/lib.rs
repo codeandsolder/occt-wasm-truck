@@ -49,17 +49,6 @@
 // x-release-please-start-version
 #![doc(html_root_url = "https://docs.rs/occt-wasm/7.3.0")]
 // x-release-please-end
-// Generated code does cross-boundary integer casting (u32 <-> i32 for WASM ABI)
-// and has parameter names from the C++ facade that trigger similar_names.
-#![allow(
-    clippy::redundant_pub_crate,
-    clippy::cast_possible_wrap,
-    clippy::cast_sign_loss,
-    clippy::cast_possible_truncation,
-    clippy::similar_names,
-    clippy::too_many_arguments
-)]
-
 pub mod error;
 mod host;
 pub mod kernel;
@@ -68,6 +57,7 @@ pub mod types;
 
 pub use error::{OcctError, OcctResult};
 pub use kernel::OcctKernel;
+pub use kernel_generated::requests::*;
 pub use types::*;
 pub use wasmtime;
 

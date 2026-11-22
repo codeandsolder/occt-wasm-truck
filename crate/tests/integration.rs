@@ -1,13 +1,10 @@
 //! Integration tests for the occt-wasm Rust crate.
 //!
-//! These tests require a real WASI WASM binary at `crate/src/occt-wasm.wasm.br`.
-//! They are skipped (not failed) when the binary is a placeholder or the build
-//! is debug, unless `OCCT_WASM_REQUIRE_KERNEL` is set, which CI does so that a
-//! skip cannot pass for a green run.
+//! These tests exercise the embedded WASI kernel. Debug builds explicitly
+//! mark them ignored because debug wasmtime compilation is prohibitively slow.
+//! Release tests always require a working embedded kernel.
 //!
 //! To run: `cargo test --release -p occt-wasm --test integration`
-
-#![allow(clippy::unwrap_used, clippy::panic)]
 
 use std::sync::OnceLock;
 
@@ -16,82 +13,47 @@ use occt_wasm::{
     CurveGeometry, DocumentHandle, OcctError, OcctKernel, ShapeHandle, SurfaceData, Vec3,
 };
 
-/// The embedded module, compiled once for the whole test binary: compiling
-/// takes seconds and over a gigabyte per copy, instantiating about a
-/// millisecond. Returns None if the embedded WASM is a placeholder or if
-/// running in debug mode (WASM compilation is ~100x slower in debug).
-fn shared_module() -> Option<&'static Module> {
-    static MODULE: OnceLock<Result<Module, String>> = OnceLock::new();
-    if cfg!(debug_assertions) {
-        assert!(
-            !kernel_required(),
-            "OCCT_WASM_REQUIRE_KERNEL needs a release build: `cargo test --release`"
-        );
-        eprintln!(
-            "Skipping test: WASM compilation too slow in debug mode. Use `cargo test --release`."
-        );
-        return None;
-    }
-    let compiled = MODULE.get_or_init(|| {
-        let engine = Engine::new(&OcctKernel::engine_config()).map_err(|e| e.to_string())?;
-        OcctKernel::compile(&engine).map_err(|e| e.to_string())
-    });
-    match compiled {
-        Ok(module) => Some(module),
-        Err(msg) => skip_placeholder(msg),
-    }
+/// Compile once per integration-test process; every kernel has its own store.
+fn shared_module() -> &'static Module {
+    static MODULE: OnceLock<Module> = OnceLock::new();
+    MODULE.get_or_init(|| {
+        let engine = Engine::new(&OcctKernel::engine_config()).expect("create WASM engine");
+        OcctKernel::compile(&engine).expect("compile embedded OCCT module")
+    })
 }
 
-/// Try to create a kernel from [`shared_module`], with the same skip rules.
-fn try_kernel() -> Option<OcctKernel> {
-    match OcctKernel::from_module(shared_module()?) {
-        Ok(k) => Some(k),
-        Err(e) => skip_placeholder(&e.to_string()),
-    }
-}
-
-fn kernel_required() -> bool {
-    std::env::var_os("OCCT_WASM_REQUIRE_KERNEL").is_some()
-}
-
-fn skip_placeholder<T>(msg: &str) -> Option<T> {
-    // Placeholder WASM is too small to be a real module
-    if !kernel_required()
-        && (msg.contains("not enough bytes")
-            || msg.contains("unknown import")
-            || msg.contains("occt_init")
-            || msg.contains("no memory export"))
-    {
-        eprintln!(
-            "Skipping test: WASM binary is a placeholder. Run `cargo xtask build-wasi` first."
-        );
-        None
-    } else {
-        panic!("Unexpected kernel init error: {msg}");
-    }
+fn kernel() -> OcctKernel {
+    OcctKernel::from_module(shared_module()).expect("instantiate embedded OCCT module")
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn kernel_init_and_drop() {
-    let Some(_kernel) = try_kernel() else { return };
+    let _kernel = kernel();
     // Kernel initializes and drops cleanly
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn new_compiles_its_own_module() {
-    if shared_module().is_none() {
-        return;
-    }
     let mut kernel = OcctKernel::new().unwrap();
     let shape = kernel.make_box(1.0, 2.0, 3.0).unwrap();
     assert!((kernel.get_volume(shape).unwrap() - 6.0).abs() < 1e-9);
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn one_module_serves_independent_kernels() {
-    let Some(module) = shared_module() else {
-        return;
-    };
+    let module = shared_module();
     let mut a = OcctKernel::from_module(module).unwrap();
     let mut b = OcctKernel::from_module(module).unwrap();
     let in_a = a.make_box(1.0, 2.0, 3.0).unwrap();
@@ -103,11 +65,16 @@ fn one_module_serves_independent_kernels() {
 }
 
 #[test]
-#[allow(unsafe_code)]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
+#[expect(
+    unsafe_code,
+    reason = "test round-trips a module serialized in this process using the same engine configuration"
+)]
 fn serialized_module_instantiates() {
-    let Some(module) = shared_module() else {
-        return;
-    };
+    let module = shared_module();
     let bytes = module.serialize().unwrap();
     let engine = Engine::new(&OcctKernel::engine_config()).unwrap();
     // SAFETY: the bytes come from `Module::serialize` in this process, on an
@@ -119,10 +86,12 @@ fn serialized_module_instantiates() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn memory_limit_below_initial_memory_fails_instantiation() {
-    let Some(module) = shared_module() else {
-        return;
-    };
+    let module = shared_module();
     let limits = StoreLimitsBuilder::new().memory_size(64 << 20).build();
     match OcctKernel::from_module_with_limiter(module, limits) {
         Err(OcctError::MemoryLimit { current, requested }) => {
@@ -135,10 +104,12 @@ fn memory_limit_below_initial_memory_fails_instantiation() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn memory_limit_stops_the_call_that_exceeds_it() {
-    let Some(module) = shared_module() else {
-        return;
-    };
+    let module = shared_module();
     let cap = 160 << 20;
     let limits = StoreLimitsBuilder::new().memory_size(cap).build();
     let mut kernel = OcctKernel::from_module_with_limiter(module, limits).unwrap();
@@ -156,29 +127,35 @@ fn memory_limit_stops_the_call_that_exceeds_it() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn make_box() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let shape = kernel.make_box(10.0, 20.0, 30.0).unwrap();
     assert!(shape.id() > 0);
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn box_volume() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let shape = kernel.make_box(10.0, 20.0, 30.0).unwrap();
     let vol = kernel.get_volume(shape).unwrap();
     assert!((vol - 6000.0).abs() < 1.0, "expected ~6000, got {vol}");
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn fuse_two_boxes() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let a = kernel.make_box(10.0, 10.0, 10.0).unwrap();
     let b = kernel.make_box(10.0, 10.0, 10.0).unwrap();
     let result = kernel.fuse(a, b).unwrap();
@@ -188,10 +165,12 @@ fn fuse_two_boxes() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn cut_operation() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let box_shape = kernel.make_box(20.0, 20.0, 20.0).unwrap();
     let sphere = kernel.make_sphere(5.0).unwrap();
     let result = kernel.cut(box_shape, sphere).unwrap();
@@ -201,10 +180,12 @@ fn cut_operation() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn bounding_box() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let shape = kernel.make_box(10.0, 20.0, 30.0).unwrap();
     let bbox = kernel.get_bounding_box(shape, true).unwrap();
     assert!((bbox.min.x).abs() < 0.01);
@@ -216,10 +197,12 @@ fn bounding_box() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn bounding_box_loose_contains_precise() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let shape = kernel.make_box(10.0, 20.0, 30.0).unwrap();
     let bbox = kernel.get_bounding_box_loose(shape, false).unwrap();
     assert!((bbox.min.x).abs() < 0.01);
@@ -236,10 +219,12 @@ fn bounding_box_loose_contains_precise() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn tessellate_box() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let shape = kernel.make_box(10.0, 10.0, 10.0).unwrap();
     let mesh = kernel.tessellate(shape, 0.1, 0.5).unwrap();
     // A box has at least 8 vertices and 12 triangles
@@ -257,10 +242,12 @@ fn tessellate_box() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn step_roundtrip() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let shape = kernel.make_box(10.0, 20.0, 30.0).unwrap();
     let step_data = kernel.export_step(shape).unwrap();
     assert!(step_data.contains("STEP"), "expected STEP format data");
@@ -274,22 +261,26 @@ fn step_roundtrip() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn brep_binary_roundtrip() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let shape = kernel.make_box(10.0, 20.0, 30.0).unwrap();
-    let bytes = kernel.to_brep_binary(shape).unwrap();
-    let restored = kernel.from_brep_binary(&bytes).unwrap();
+    let bytes = kernel.export_brep_binary(shape).unwrap();
+    let restored = kernel.import_brep_binary(&bytes).unwrap();
     assert!((kernel.get_volume(restored).unwrap() - 6000.0).abs() < 1e-6);
-    assert!(kernel.from_brep_binary(b"not a brep").is_err());
+    assert!(kernel.import_brep_binary(b"not a brep").is_err());
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn stl_binary_roundtrip() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let shape = kernel.make_box(10.0, 20.0, 30.0).unwrap();
     let bytes = kernel.export_stl_binary(shape, 0.5).unwrap();
     let triangles = u32::from_le_bytes(bytes[80..84].try_into().unwrap()) as usize;
@@ -312,10 +303,12 @@ fn stl_binary_roundtrip() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn make_cylinder_and_query() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let cyl = kernel.make_cylinder(5.0, 10.0).unwrap();
     let vol = kernel.get_volume(cyl).unwrap();
     let expected = std::f64::consts::PI * 25.0 * 10.0;
@@ -326,10 +319,12 @@ fn make_cylinder_and_query() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn make_sphere_surface_area() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let sphere = kernel.make_sphere(5.0).unwrap();
     let area = kernel.get_surface_area(sphere).unwrap();
     let expected = 4.0 * std::f64::consts::PI * 25.0;
@@ -340,40 +335,48 @@ fn make_sphere_surface_area() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn release_shape() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let shape = kernel.make_box(1.0, 1.0, 1.0).unwrap();
     kernel.release(shape).unwrap();
     // After release, the handle is invalid
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn get_shape_type() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let shape = kernel.make_box(10.0, 10.0, 10.0).unwrap();
     let shape_type = kernel.get_shape_type(shape).unwrap();
     assert_eq!(shape_type, "solid", "box should be a solid");
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn get_sub_shapes() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let shape = kernel.make_box(10.0, 10.0, 10.0).unwrap();
     let faces = kernel.get_sub_shapes(shape, "face").unwrap();
     assert_eq!(faces.len(), 6, "box should have 6 faces");
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn sub_shape_count_and_hashes() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let shape = kernel.make_box(10.0, 10.0, 10.0).unwrap();
     assert_eq!(kernel.sub_shape_count(shape, "face").unwrap(), 6);
     let hashes = kernel.sub_shape_hashes(shape, "face", 1_000_000).unwrap();
@@ -381,10 +384,12 @@ fn sub_shape_count_and_hashes() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn checkpoint_release_since() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let _keep = kernel.make_box(1.0, 1.0, 1.0).unwrap();
     let mark = kernel.checkpoint().unwrap();
     let _a = kernel.make_box(2.0, 2.0, 2.0).unwrap();
@@ -396,10 +401,12 @@ fn checkpoint_release_since() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn extrude_rectangle() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let rect = kernel.make_rectangle(10.0, 20.0).unwrap();
     let solid = kernel.extrude(rect, 0.0, 0.0, 5.0).unwrap();
     let vol = kernel.get_volume(solid).unwrap();
@@ -410,10 +417,12 @@ fn extrude_rectangle() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn sweep_oriented_auxiliary_keeps_planes_exact() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let corners = [
         (-2.0, -2.0),
         (2.0, -2.0),
@@ -440,23 +449,47 @@ fn sweep_oriented_auxiliary_keeps_planes_exact() {
     let guide = kernel.make_wire(&[guide_edge]).unwrap();
 
     let solid = kernel
-        .sweep_oriented(
-            profile, spine, 3, 0.0, 0.0, 1.0, guide, false, 0, 0.0, 0.0, 0.0,
-        )
+        .sweep_oriented(occt_wasm::SweepOrientedRequest {
+            profile_id: profile,
+            spine_id: spine,
+            mode: 3,
+            up_x: 0.0,
+            up_y: 0.0,
+            up_z: 1.0,
+            aux_spine_id: guide,
+            curvilinear_equivalence: false,
+            contact_mode: 0,
+            tol3d: 0.0,
+            bound_tol: 0.0,
+            tol_angular: 0.0,
+        })
         .unwrap();
     let vol = kernel.get_volume(solid).unwrap().abs();
     assert!((vol - 320.0).abs() < 1e-6, "expected 4*4*20=320, got {vol}");
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn helix_handedness_mirrors_across_the_axis_plane() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     // One turn: pitch 5, height 5, radius 3 about +Z through the origin.
     let mut quarter_turn = |left_handed: bool| {
         let wire = kernel
-            .make_helix_wire_handed(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 5.0, 5.0, 3.0, left_handed)
+            .make_helix_wire_handed(occt_wasm::MakeHelixWireHandedRequest {
+                px: 0.0,
+                py: 0.0,
+                pz: 0.0,
+                dx: 0.0,
+                dy: 0.0,
+                dz: 1.0,
+                pitch: 5.0,
+                height: 5.0,
+                radius: 3.0,
+                left_handed,
+            })
             .unwrap();
         let range = kernel.curve_parameters(wire).unwrap();
         let param = range[0] + (range[1] - range[0]) / 4.0;
@@ -486,17 +519,29 @@ fn housing_with_gear(kernel: &mut OcctKernel) -> (DocumentHandle, i32, i32) {
     kernel.xcaf_set_name(doc, root, "housing").unwrap();
     kernel.xcaf_set_color(doc, root, 0.8, 0.2, 0.1).unwrap();
     let comp = kernel
-        .xcaf_add_component(doc, root, gear, 10.0, 0.0, 5.0, 0.0, 0.0, 0.0)
+        .xcaf_add_component(occt_wasm::XcafAddComponentRequest {
+            doc_id: doc,
+            parent_label_id: root,
+            shape_id: gear,
+            tx: 10.0,
+            ty: 0.0,
+            tz: 5.0,
+            rx: 0.0,
+            ry: 0.0,
+            rz: 0.0,
+        })
         .unwrap();
     kernel.xcaf_set_name(doc, comp, "gear-1").unwrap();
     (doc, root, comp)
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn xcaf_document_assembly() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let (doc, _, comp) = housing_with_gear(&mut kernel);
 
     let info = kernel.xcaf_get_label_info(doc, comp).unwrap();
@@ -513,10 +558,12 @@ fn xcaf_document_assembly() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn xcaf_export_glb() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let (doc, _, _) = housing_with_gear(&mut kernel);
     let glb = kernel.xcaf_export_glb(doc, 0.5, 0.5).unwrap();
     assert_eq!(&glb[..4], b"glTF");
@@ -527,10 +574,12 @@ fn xcaf_export_glb() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn xcaf_step_roundtrip() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let (doc, _, _) = housing_with_gear(&mut kernel);
     let step = kernel.xcaf_export_step(doc).unwrap();
     assert!(step.contains("STEP"));
@@ -546,10 +595,12 @@ fn xcaf_step_roundtrip() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn enumerated_sub_shapes_feed_back_into_modelling() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     // get_sub_shapes hands back the same handle type the modelling calls take,
     // so an enumerated edge can be filleted without leaving the type system.
     let box_id = kernel.make_box(10.0, 10.0, 10.0).unwrap();
@@ -562,10 +613,12 @@ fn enumerated_sub_shapes_feed_back_into_modelling() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn unbuildable_fillet_reports_an_error_instead_of_trapping() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     // A radius equal to the wall thickness drives OCCT's blend solver into an
     // adaptor holding no curve. Through wasmtime that dereference used to be a
     // trap, which no caller can handle (#348).
@@ -642,10 +695,12 @@ const TANGENT: i32 = 2;
 const BOUND: i32 = 1_000_000;
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn join_type_keeps_the_concave_edge_sharp() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     // Intersection keeps a 2 x 2 square at the concave edge where Arc keeps a
     // quarter circle of radius 2.
     let corner = 4.0 - std::f64::consts::PI;
@@ -680,10 +735,12 @@ fn join_type_keeps_the_concave_edge_sharp() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn history_join_variants_return_a_usable_result() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let solid = l_prism(&mut kernel);
     let hashes: Vec<i32> = kernel
         .get_sub_shapes(solid, "face")
@@ -700,7 +757,15 @@ fn history_join_variants_return_a_usable_result() {
 
     let top = top_face(&mut kernel, solid);
     let evo = kernel
-        .shell_with_history_and_join(solid, &[top], 2.0, 1e-6, &hashes, BOUND, INTERSECTION)
+        .shell_with_history_and_join(occt_wasm::ShellWithHistoryAndJoinRequest {
+            solid_id: solid,
+            face_ids: &[top],
+            thickness: 2.0,
+            tolerance: 1e-6,
+            input_face_hashes: &hashes,
+            hash_upper_bound: BOUND,
+            join_type: INTERSECTION,
+        })
         .unwrap();
     assert!(all_planar(&mut kernel, evo.result()));
     assert!(!evo.modified.is_empty());
@@ -712,10 +777,12 @@ fn history_join_variants_return_a_usable_result() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn join_type_rejects_tangent() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let solid = l_prism(&mut kernel);
     let err = kernel
         .offset_with_join(solid, -2.0, 1e-6, TANGENT)
@@ -743,10 +810,12 @@ fn vertical_edges(kernel: &mut OcctKernel, solid: ShapeHandle) -> Vec<ShapeHandl
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn fillet_radii_gives_each_edge_its_own_radius() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let cube = kernel.make_box(10.0, 10.0, 10.0).unwrap();
     let edges = vertical_edges(&mut kernel, cube);
     assert_eq!(edges.len(), 4);
@@ -771,10 +840,12 @@ fn fillet_radii_gives_each_edge_its_own_radius() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn chamfer_distances_and_angles_per_edge() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let cube = kernel.make_box(10.0, 10.0, 10.0).unwrap();
     let edges = vertical_edges(&mut kernel, cube);
 
@@ -806,7 +877,15 @@ fn chamfer_distances_and_angles_per_edge() {
         .map(|f| kernel.hash_code(f, BOUND).unwrap())
         .collect();
     let angled_history = kernel
-        .chamfer_dist_angles_with_history(cube, &edges, &[1.0; 4], &[45.0; 4], &[], &hashes, BOUND)
+        .chamfer_dist_angles_with_history(occt_wasm::ChamferDistAnglesWithHistoryRequest {
+            solid_id: cube,
+            edge_ids: &edges,
+            distances: &[1.0; 4],
+            angles_deg: &[45.0; 4],
+            reference_face_ids: &[],
+            input_face_hashes: &hashes,
+            hash_upper_bound: BOUND,
+        })
         .unwrap();
     assert!((kernel.get_volume(angled_history.result()).unwrap() - 980.0).abs() < 1e-6);
     assert!(!angled_history.modified.is_empty());
@@ -818,10 +897,12 @@ fn chamfer_distances_and_angles_per_edge() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn draft_faces_pivot_about_the_neutral_plane() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let cube = kernel
         .make_box_from_corners(0.0, 0.0, 100.0, 10.0, 10.0, 110.0)
         .unwrap();
@@ -836,20 +917,20 @@ fn draft_faces_pivot_about_the_neutral_plane() {
     assert_eq!(sides.len(), 4);
     let angle = 5f64.to_radians();
     let drafted = kernel
-        .draft_faces(
-            cube,
-            &sides[..1],
-            &[angle],
-            0.0,
-            0.0,
-            1.0,
-            0.0,
-            0.0,
-            100.0,
-            0.0,
-            0.0,
-            1.0,
-        )
+        .draft_faces(occt_wasm::DraftFacesRequest {
+            shape_id: cube,
+            face_ids: &sides[..1],
+            angles_rad: &[angle],
+            dx: 0.0,
+            dy: 0.0,
+            dz: 1.0,
+            px: 0.0,
+            py: 0.0,
+            pz: 100.0,
+            nx: 0.0,
+            ny: 0.0,
+            nz: 1.0,
+        })
         .unwrap();
     let wedge = 500.0 * angle.tan();
     let expected = 1000.0 - wedge;
@@ -860,29 +941,31 @@ fn draft_faces_pivot_about_the_neutral_plane() {
     );
 
     let all = kernel
-        .draft_faces(
-            cube,
-            &sides,
-            &[angle; 4],
-            0.0,
-            0.0,
-            1.0,
-            0.0,
-            0.0,
-            100.0,
-            0.0,
-            0.0,
-            1.0,
-        )
+        .draft_faces(occt_wasm::DraftFacesRequest {
+            shape_id: cube,
+            face_ids: &sides,
+            angles_rad: &[angle; 4],
+            dx: 0.0,
+            dy: 0.0,
+            dz: 1.0,
+            px: 0.0,
+            py: 0.0,
+            pz: 100.0,
+            nx: 0.0,
+            ny: 0.0,
+            nz: 1.0,
+        })
         .unwrap();
     assert!(kernel.get_volume(all).unwrap() < volume);
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn step_export_writes_the_requested_unit() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let cube = kernel.make_box(25.4, 25.4, 25.4).unwrap();
     let step = kernel.export_step_with_unit(cube, "inch").unwrap();
     assert!(step.contains("CONVERSION_BASED_UNIT('INCH'"));
@@ -917,11 +1000,13 @@ fn file_schema(step: &str) -> &str {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn step_export_writes_the_requested_schema() {
     const AP214: &str = "'AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'";
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     // The cone's lateral face is dropped unless DirectFaces runs, so it shows
     // that every protocol still writes it.
     let cone = kernel.make_cone(8.0, 0.0, 24.0).unwrap();
@@ -975,10 +1060,12 @@ fn step_export_writes_the_requested_schema() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn freeform_bounds_and_volume_are_exact() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let ellipsoid = kernel.make_ellipsoid(3.0, 4.0, 5.0).unwrap();
     let bb = kernel.get_bounding_box(ellipsoid, false).unwrap();
     for (got, want) in [
@@ -1000,10 +1087,12 @@ fn freeform_bounds_and_volume_are_exact() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn fill_surface_passes_through_boundary_and_point() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let corners = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)];
     let edges: Vec<ShapeHandle> = (0..4)
         .map(|i| {
@@ -1012,21 +1101,41 @@ fn fill_surface_passes_through_boundary_and_point() {
         })
         .collect();
     let face = kernel
-        .fill_surface(&edges, &[], &[], &[], &[], &[5.0, 5.0, 2.0], 0, &[])
+        .fill_surface(occt_wasm::FillSurfaceRequest {
+            free_edge_ids: &edges,
+            supported_edge_ids: &[],
+            support_face_ids: &[],
+            support_orders: &[],
+            guide_edge_ids: &[],
+            flat_points: &[5.0, 5.0, 2.0],
+            init_face_id: 0,
+            params: &[],
+        })
         .unwrap();
     assert_eq!(kernel.get_shape_type(face).unwrap(), "face");
     let apex = kernel.make_vertex(5.0, 5.0, 2.0).unwrap();
     let gap = kernel.distance_between(face, apex).unwrap();
     assert!(gap < 1e-3, "filling misses its point by {gap}");
-    let bad = kernel.fill_surface(&edges, &[], &[], &[], &[], &[], 0, &[3.0]);
+    let bad = kernel.fill_surface(occt_wasm::FillSurfaceRequest {
+        free_edge_ids: &edges,
+        supported_edge_ids: &[],
+        support_face_ids: &[],
+        support_orders: &[],
+        guide_edge_ids: &[],
+        flat_points: &[],
+        init_face_id: 0,
+        params: &[3.0],
+    });
     assert!(bad.is_err(), "a short params vector must be rejected");
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn edge_on_surface_follows_a_cylinder_across_its_seam() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let cylinder = kernel.make_cylinder(5.0, 10.0).unwrap();
     let face = kernel
         .get_sub_shapes(cylinder, "face")
@@ -1047,10 +1156,12 @@ fn edge_on_surface_follows_a_cylinder_across_its_seam() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn fillet_with_history_reports_each_rounded_face_under_its_edge() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let cube = kernel.make_box(10.0, 10.0, 10.0).unwrap();
     let edges = vertical_edges(&mut kernel, cube);
     let evo = kernel
@@ -1089,39 +1200,41 @@ fn fillet_with_history_reports_each_rounded_face_under_its_edge() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn nurbs_surface_is_the_surface_its_poles_describe() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     // A bilinear patch: degree 1 both ways, so its middle is the poles' mean.
     let poles = [
         0.0, 0.0, 0.0, 0.0, 10.0, 2.0, //
         10.0, 0.0, 4.0, 10.0, 10.0, 0.0,
     ];
     let face = kernel
-        .nurbs_surface(
-            &poles,
-            &[],
-            &[0.0, 1.0],
-            &[0.0, 1.0],
-            &[2, 2],
-            &[2, 2],
-            &[1, 1, 2, 2, 0, 0],
-        )
+        .nurbs_surface(occt_wasm::NurbsSurfaceRequest {
+            flat_poles: &poles,
+            weights: &[],
+            knots_u: &[0.0, 1.0],
+            knots_v: &[0.0, 1.0],
+            mults_u: &[2, 2],
+            mults_v: &[2, 2],
+            layout: &[1, 1, 2, 2, 0, 0],
+        })
         .unwrap();
     assert_eq!(kernel.surface_type(face).unwrap(), "bspline");
     let middle = kernel.make_vertex(5.0, 5.0, 1.5).unwrap();
     let gap = kernel.distance_between(face, middle).unwrap();
     assert!(gap < 1e-9, "the patch misses its middle by {gap}");
-    let bad = kernel.nurbs_surface(
-        &poles,
-        &[],
-        &[0.0, 1.0],
-        &[0.0, 1.0],
-        &[2, 1],
-        &[2, 2],
-        &[1, 1, 2, 2, 0, 0],
-    );
+    let bad = kernel.nurbs_surface(occt_wasm::NurbsSurfaceRequest {
+        flat_poles: &poles,
+        weights: &[],
+        knots_u: &[0.0, 1.0],
+        knots_v: &[0.0, 1.0],
+        mults_u: &[2, 1],
+        mults_v: &[2, 2],
+        layout: &[1, 1, 2, 2, 0, 0],
+    });
     assert!(
         bad.is_err(),
         "multiplicities short of the poles must be rejected"
@@ -1141,10 +1254,12 @@ fn assert_near(actual: Vec3, expected: [f64; 3]) {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn curve_data_reads_exact_parameters() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let line = kernel
         .make_line_edge(1.0, 2.0, 3.0, 1.0, 2.0, 13.0)
         .unwrap();
@@ -1158,7 +1273,15 @@ fn curve_data_reads_exact_parameters() {
     assert_near(direction, [0.0, 0.0, 1.0]);
 
     let circle = kernel
-        .make_circle_edge(1.0, 2.0, 3.0, 0.0, 0.0, 1.0, 7.0)
+        .make_circle_edge(occt_wasm::MakeCircleEdgeRequest {
+            cx: 1.0,
+            cy: 2.0,
+            cz: 3.0,
+            nx: 0.0,
+            ny: 0.0,
+            nz: 1.0,
+            radius: 7.0,
+        })
         .unwrap();
     let CurveGeometry::Circle {
         center,
@@ -1188,10 +1311,12 @@ fn curve_data_reads_exact_parameters() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn surface_data_reads_exact_parameters() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let cylinder = kernel.make_cylinder(5.0, 10.0).unwrap();
     let faces = kernel.get_sub_shapes(cylinder, "face").unwrap();
     let side = faces
@@ -1218,15 +1343,15 @@ fn surface_data_reads_exact_parameters() {
         10.0, 0.0, 4.0, 10.0, 10.0, 0.0,
     ];
     let face = kernel
-        .nurbs_surface(
-            &poles,
-            &[],
-            &[0.0, 1.0],
-            &[0.0, 1.0],
-            &[2, 2],
-            &[2, 2],
-            &[1, 1, 2, 2, 0, 0],
-        )
+        .nurbs_surface(occt_wasm::NurbsSurfaceRequest {
+            flat_poles: &poles,
+            weights: &[],
+            knots_u: &[0.0, 1.0],
+            knots_v: &[0.0, 1.0],
+            mults_u: &[2, 2],
+            mults_v: &[2, 2],
+            layout: &[1, 1, 2, 2, 0, 0],
+        })
         .unwrap();
     let SurfaceData::BSpline(data) = kernel.surface_data(face).unwrap() else {
         panic!("expected a B-spline");
@@ -1258,10 +1383,12 @@ fn runs(flat: &[i32]) -> Vec<(i32, Vec<i32>)> {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn revolve_with_history_names_walls_and_caps() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let points = [
         [5.0, 0.0, 0.0],
         [8.0, 0.0, 0.0],
@@ -1279,7 +1406,18 @@ fn revolve_with_history_names_walls_and_caps() {
     let wire = kernel.make_wire(&edges).unwrap();
     let face = kernel.make_face(wire).unwrap();
     let evo = kernel
-        .revolve_with_history(face, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.5, &[], BOUND)
+        .revolve_with_history(occt_wasm::RevolveWithHistoryRequest {
+            shape_id: face,
+            px: 0.0,
+            py: 0.0,
+            pz: 0.0,
+            dx: 0.0,
+            dy: 0.0,
+            dz: 1.0,
+            angle_rad: 1.5,
+            input_face_hashes: &[],
+            hash_upper_bound: BOUND,
+        })
         .unwrap();
     assert_eq!(evo.first_shape.len(), 1);
     assert_eq!(evo.last_shape.len(), 1);
@@ -1303,28 +1441,30 @@ fn revolve_with_history_names_walls_and_caps() {
     }
 
     let full = kernel
-        .revolve_with_history(
-            face,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            1.0,
-            std::f64::consts::TAU,
-            &[],
-            BOUND,
-        )
+        .revolve_with_history(occt_wasm::RevolveWithHistoryRequest {
+            shape_id: face,
+            px: 0.0,
+            py: 0.0,
+            pz: 0.0,
+            dx: 0.0,
+            dy: 0.0,
+            dz: 1.0,
+            angle_rad: std::f64::consts::TAU,
+            input_face_hashes: &[],
+            hash_upper_bound: BOUND,
+        })
         .unwrap();
     assert!(full.first_shape.is_empty());
     assert!(full.last_shape.is_empty());
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn sweep_and_pipe_with_history_pair_spine_and_profile_edges() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let spine_edges = [
         kernel
             .make_line_edge(0.0, 0.0, 0.0, 0.0, 0.0, 10.0)
@@ -1346,7 +1486,15 @@ fn sweep_and_pipe_with_history_pair_spine_and_profile_edges() {
         .pipe_with_history(profile, spine, &[], BOUND)
         .unwrap();
     let swept = kernel
-        .sweep_with_history(profile, spine, 0, 0, &[], &[], BOUND)
+        .sweep_with_history(occt_wasm::SweepWithHistoryRequest {
+            profile_id: profile,
+            spine_id: spine,
+            aux_spine_id: 0,
+            support_id: 0,
+            options: &[],
+            input_face_hashes: &[],
+            hash_upper_bound: BOUND,
+        })
         .unwrap();
     // Read back from the wires: make_wire can copy an edge to share a vertex.
     let spine_hashes: Vec<i32> = kernel
@@ -1394,35 +1542,77 @@ fn sweep_and_pipe_with_history_pair_spine_and_profile_edges() {
         assert_eq!(pairs, expected);
     }
 
-    let short = kernel.sweep_with_history(profile, spine, 0, 0, &[1.0], &[], BOUND);
+    let short = kernel.sweep_with_history(occt_wasm::SweepWithHistoryRequest {
+        profile_id: profile,
+        spine_id: spine,
+        aux_spine_id: 0,
+        support_id: 0,
+        options: &[1.0],
+        input_face_hashes: &[],
+        hash_upper_bound: BOUND,
+    });
     assert!(short.is_err(), "a short options list must be rejected");
     let mut options = [0.0; 17];
     options[3] = 1.0;
     options[16] = 1.0;
     for bad in [f64::NAN, f64::INFINITY, 0.5, 3e10] {
         options[0] = bad;
-        let swept = kernel.sweep_with_history(profile, spine, 0, 0, &options, &[], BOUND);
+        let swept = kernel.sweep_with_history(occt_wasm::SweepWithHistoryRequest {
+            profile_id: profile,
+            spine_id: spine,
+            aux_spine_id: 0,
+            support_id: 0,
+            options: &options,
+            input_face_hashes: &[],
+            hash_upper_bound: BOUND,
+        });
         assert!(swept.is_err(), "a mode of {bad} must be rejected");
     }
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn loft_and_unify_with_history_report_their_inputs() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     let bottom = kernel
-        .make_circle_edge(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 5.0)
+        .make_circle_edge(occt_wasm::MakeCircleEdgeRequest {
+            cx: 0.0,
+            cy: 0.0,
+            cz: 0.0,
+            nx: 0.0,
+            ny: 0.0,
+            nz: 1.0,
+            radius: 5.0,
+        })
         .unwrap();
     let top = kernel
-        .make_circle_edge(0.0, 0.0, 10.0, 0.0, 0.0, 1.0, 3.0)
+        .make_circle_edge(occt_wasm::MakeCircleEdgeRequest {
+            cx: 0.0,
+            cy: 0.0,
+            cz: 10.0,
+            nx: 0.0,
+            ny: 0.0,
+            nz: 1.0,
+            radius: 3.0,
+        })
         .unwrap();
     let wires = [
         kernel.make_wire(&[bottom]).unwrap(),
         kernel.make_wire(&[top]).unwrap(),
     ];
     let evo = kernel
-        .loft_with_history(&wires, true, false, 0, 0, &[], BOUND)
+        .loft_with_history(occt_wasm::LoftWithHistoryRequest {
+            wire_ids: &wires,
+            is_solid: true,
+            ruled: false,
+            start_vertex_id: 0,
+            end_vertex_id: 0,
+            input_face_hashes: &[],
+            hash_upper_bound: BOUND,
+        })
         .unwrap();
     assert_eq!(evo.first_shape.len(), 1);
     assert_eq!(evo.last_shape.len(), 1);
@@ -1459,10 +1649,12 @@ fn loft_and_unify_with_history_report_their_inputs() {
 }
 
 #[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
 fn thread_groove_is_a_valid_solid_of_the_exact_volume() {
-    let Some(mut kernel) = try_kernel() else {
-        return;
-    };
+    let mut kernel = kernel();
     // An ISO 68-1 M6 x 1 shaft groove, 10 long: the trapezoid in the meridian
     // plane swept round the axis as many turns as the length holds (Pappus).
     let (pitch, length) = (1.0_f64, 10.0_f64);
@@ -1482,9 +1674,21 @@ fn thread_groove_is_a_valid_solid_of_the_exact_volume() {
         (area / 2.0).abs() * std::f64::consts::TAU * (moment / (3.0 * area)) * (length / pitch);
 
     let groove = kernel
-        .thread_groove(
-            0.0, 0.0, 0.0, 0.0, 0.0, 1.0, pitch, length, cover, root, cover_half, root_half, 0.137,
-        )
+        .thread_groove(occt_wasm::ThreadGrooveRequest {
+            px: 0.0,
+            py: 0.0,
+            pz: 0.0,
+            dx: 0.0,
+            dy: 0.0,
+            dz: 1.0,
+            pitch,
+            length,
+            cover_radius: cover,
+            root_radius: root,
+            cover_half_width: cover_half,
+            root_half_width: root_half,
+            phase: 0.137,
+        })
         .unwrap();
     assert!(kernel.is_valid(groove).unwrap());
     let volume = kernel.get_volume(groove).unwrap();

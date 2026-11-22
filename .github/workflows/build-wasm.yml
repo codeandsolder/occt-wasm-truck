@@ -37,6 +37,24 @@ jobs:
             package-lock.json
             ts/package-lock.json
 
+      - name: Resolve fleet compiler
+        id: compiler
+        uses: codeandsolder/ci-workflows/.github/actions/resolve-rust-toolchain@6461397f9c7b2e283677906fdf2fe2b573001789 # main
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
+        with:
+          toolchain: ${{ steps.compiler.outputs.channel }}
+
+      - name: Trust checked-out workspace inside builder container
+        shell: bash
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Setup canonical sccache
+        uses: codeandsolder/ci-workflows/.github/actions/setup-sccache@6461397f9c7b2e283677906fdf2fe2b573001789 # main
+        with:
+          rust-toolchain: ${{ steps.compiler.outputs.channel }}
+
       - name: Install dependencies
         run: |
           npm ci
@@ -95,3 +113,7 @@ jobs:
           name: occt-wasm-dist
           path: ts/dist/
           retention-days: 7
+
+      - name: Finalize canonical sccache
+        if: always()
+        uses: codeandsolder/ci-workflows/.github/actions/finalize-sccache@6461397f9c7b2e283677906fdf2fe2b573001789 # main

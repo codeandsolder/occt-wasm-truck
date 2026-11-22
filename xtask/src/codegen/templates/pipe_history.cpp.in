@@ -1,0 +1,26 @@
+/// BRepFill_Pipe keeps Generated lists for a wire's edges only, so a bare edge profile,
+/// alone or in a compound, answers from its face along each spine edge instead.
+class PipeHistory : public BRepBuilderAPI_MakeShape {
+  public:
+    PipeHistory(BRepOffsetAPI_MakePipe& maker, const TopoDS_Shape& spine) : maker_(maker) {
+        TopExp::MapShapes(spine, TopAbs_EDGE, spineEdges_);
+    }
+    const NCollection_List<TopoDS_Shape>& Generated(const TopoDS_Shape& s) override {
+        const NCollection_List<TopoDS_Shape>& generated = maker_.Generated(s);
+        if (!generated.IsEmpty() || s.ShapeType() != TopAbs_EDGE) {
+            return generated;
+        }
+        myGenerated.Clear();
+        for (int i = 1; i <= spineEdges_.Extent(); ++i) {
+            const TopoDS_Shape face = maker_.Generated(spineEdges_.FindKey(i), s);
+            if (!face.IsNull()) {
+                myGenerated.Append(face);
+            }
+        }
+        return myGenerated;
+    }
+
+  private:
+    BRepOffsetAPI_MakePipe& maker_;
+    NCollection_IndexedMap<TopoDS_Shape, TopTools_ShapeMapHasher> spineEdges_;
+};

@@ -1,0 +1,33 @@
+static NurbsSurfaceData toNurbsSurfaceData(const Handle(Geom_BSplineSurface)& surface) {
+    NurbsSurfaceData data;
+    data.degreeU = surface->UDegree();
+    data.degreeV = surface->VDegree();
+    data.nbPolesU = surface->NbUPoles();
+    data.nbPolesV = surface->NbVPoles();
+    data.periodicU = surface->IsUPeriodic();
+    data.periodicV = surface->IsVPeriodic();
+    for (int i = 1; i <= surface->NbUKnots(); i++) {
+        data.knotsU.push_back(surface->UKnot(i));
+        data.multiplicitiesU.push_back(surface->UMultiplicity(i));
+    }
+    for (int i = 1; i <= surface->NbVKnots(); i++) {
+        data.knotsV.push_back(surface->VKnot(i));
+        data.multiplicitiesV.push_back(surface->VMultiplicity(i));
+    }
+    const size_t count = static_cast<size_t>(data.nbPolesU) * data.nbPolesV;
+    const bool rational = surface->IsURational() || surface->IsVRational();
+    data.poles.reserve(3 * count);
+    if (rational) {
+        data.weights.reserve(count);
+    }
+    for (int i = 1; i <= data.nbPolesU; i++) {
+        for (int j = 1; j <= data.nbPolesV; j++) {
+            const gp_Pnt p = surface->Pole(i, j);
+            data.poles.insert(data.poles.end(), {p.X(), p.Y(), p.Z()});
+            if (rational) {
+                data.weights.push_back(surface->Weight(i, j));
+            }
+        }
+    }
+    return data;
+}

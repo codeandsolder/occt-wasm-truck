@@ -1,0 +1,13 @@
+/// Map a raw join code for the 3D offset family (shell/offset and their
+/// history variants). The codes are the ones `offsetWire2D` takes: 0 = Arc,
+/// 1 = Intersection. `BRepOffset_MakeOffset` has no branch for
+/// `GeomAbs_Tangent` (raw 2), so it is rejected instead of passed on.
+static GeomAbs_JoinType solidJoinType(int joinType, const char* op) {
+    switch (joinType) {
+    case 0: return GeomAbs_Arc;
+    case 1: return GeomAbs_Intersection;
+    default:
+        throw std::runtime_error(std::string(op) +
+                                 ": joinType must be Arc (0) or Intersection (1)");
+    }
+}

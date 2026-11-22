@@ -1,0 +1,26 @@
+static const char* surfaceKindName(GeomAbs_SurfaceType type) {
+    switch (type) {
+    case GeomAbs_Plane:
+        return "plane";
+    case GeomAbs_Cylinder:
+        return "cylinder";
+    case GeomAbs_Cone:
+        return "cone";
+    case GeomAbs_Sphere:
+        return "sphere";
+    case GeomAbs_Torus:
+        return "torus";
+    case GeomAbs_BezierSurface:
+        return "bezier";
+    case GeomAbs_BSplineSurface:
+        return "bspline";
+    case GeomAbs_SurfaceOfRevolution:
+        return "revolution";
+    case GeomAbs_SurfaceOfExtrusion:
+        return "extrusion";
+    case GeomAbs_OffsetSurface:
+        return "offset";
+    default:
+        return "other";
+    }
+}

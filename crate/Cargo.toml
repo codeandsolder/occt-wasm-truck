@@ -8,7 +8,6 @@ rust-version.workspace = true
 description = "OpenCascade CAD kernel via WebAssembly — no C++ toolchain required"
 readme = "README.md"
 documentation = "https://docs.rs/occt-wasm"
-homepage = "https://github.com/andymai/occt-wasm"
 keywords = ["cad", "opencascade", "wasm", "brep", "geometry"]
 categories = ["graphics", "science", "wasm"]
 
@@ -44,6 +43,10 @@ wasmtime = { version = "48.0.6", default-features = false, features = [
 ] }
 brotli = "9"
 thiserror = "2"
+
+[package.metadata.rust-skills2]
+allow-test-panics = true
+allow-test-panics-reason = "CAD integration tests use fail-fast assertions on kernel construction and geometry operations; production remains strict"
 
 [lints]
 workspace = true

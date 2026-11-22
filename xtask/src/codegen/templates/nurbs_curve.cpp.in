@@ -1,0 +1,26 @@
+static NurbsCurveData toNurbsCurveData(const Handle(Geom_BSplineCurve)& curve) {
+    NurbsCurveData data;
+    data.degree = curve->Degree();
+    data.rational = curve->IsRational();
+    data.periodic = curve->IsPeriodic();
+    const int nbKnots = curve->NbKnots();
+    data.knots.reserve(nbKnots);
+    data.multiplicities.reserve(nbKnots);
+    for (int i = 1; i <= nbKnots; i++) {
+        data.knots.push_back(curve->Knot(i));
+        data.multiplicities.push_back(curve->Multiplicity(i));
+    }
+    const int nbPoles = curve->NbPoles();
+    data.poles.reserve(3 * static_cast<size_t>(nbPoles));
+    for (int i = 1; i <= nbPoles; i++) {
+        const gp_Pnt p = curve->Pole(i);
+        data.poles.insert(data.poles.end(), {p.X(), p.Y(), p.Z()});
+    }
+    if (curve->IsRational()) {
+        data.weights.reserve(nbPoles);
+        for (int i = 1; i <= nbPoles; i++) {
+            data.weights.push_back(curve->Weight(i));
+        }
+    }
+    return data;
+}

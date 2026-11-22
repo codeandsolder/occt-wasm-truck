@@ -12,7 +12,7 @@ pub struct ShapeHandle(pub(crate) u32);
 
 impl ShapeHandle {
     /// Returns the raw arena ID. Useful for debugging.
-    #[must_use]
+    #[must_use = "this returns an identifier without modifying the handle"]
     pub const fn id(self) -> u32 {
         self.0
     }
@@ -53,7 +53,7 @@ pub struct DocumentHandle(pub(crate) u32);
 
 impl DocumentHandle {
     /// Returns the raw document ID. Useful for debugging.
-    #[must_use]
+    #[must_use = "this returns an identifier without modifying the handle"]
     pub const fn id(self) -> u32 {
         self.0
     }
@@ -359,7 +359,7 @@ pub struct EvolutionData {
 
 impl EvolutionData {
     /// The result as a handle, to pass on to further operations.
-    #[must_use]
+    #[must_use = "the returned handle identifies the operation result"]
     pub const fn result(&self) -> ShapeHandle {
         ShapeHandle(self.result_id)
     }

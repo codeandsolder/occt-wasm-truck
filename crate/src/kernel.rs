@@ -22,6 +22,136 @@ use crate::types::{
 /// [`OcctKernel::compile()`] decompresses it.
 static WASM_BINARY: &[u8] = include_bytes!("occt-wasm.wasm.br");
 
+/// A WASI result buffer is exposed as a pointer plus an element count.
+struct BufferExport<C> {
+    address: TypedFunc<(), u32>,
+    count: TypedFunc<(), C>,
+}
+
+impl<C: wasmtime::WasmResults + TryInto<u32>> BufferExport<C> {
+    fn resolve(
+        instance: &Instance,
+        store: &mut Store<HostState>,
+        address: &str,
+    ) -> OcctResult<Self> {
+        Self::resolve_with_count(instance, store, address, &format!("{address}_len"))
+    }
+
+    fn resolve_with_count(
+        instance: &Instance,
+        store: &mut Store<HostState>,
+        address: &str,
+        count: &str,
+    ) -> OcctResult<Self> {
+        Ok(Self {
+            address: instance.get_typed_func(&mut *store, address)?,
+            count: instance.get_typed_func(&mut *store, count)?,
+        })
+    }
+
+    fn query(&self, store: &mut Store<HostState>) -> OcctResult<(u32, u32)> {
+        let address = self.address.call(&mut *store, ())?;
+        let count = checked_count(self.count.call(&mut *store, ())?)?;
+        Ok((address, count))
+    }
+}
+
+/// Runtime services shared by every generated facade call.
+struct RuntimeExports {
+    has_error: TypedFunc<(), i32>,
+    error: BufferExport<u32>,
+    alloc: TypedFunc<u32, u32>,
+    free: TypedFunc<u32, ()>,
+}
+
+impl RuntimeExports {
+    fn resolve(instance: &Instance, store: &mut Store<HostState>) -> OcctResult<Self> {
+        Ok(Self {
+            has_error: instance.get_typed_func(&mut *store, "occt_has_error")?,
+            error: BufferExport::resolve(instance, store, "occt_get_error")?,
+            alloc: instance.get_typed_func(&mut *store, "occt_alloc")?,
+            free: instance.get_typed_func(&mut *store, "occt_free")?,
+        })
+    }
+}
+
+/// Scalars that can be decoded from the little-endian WASM result buffers.
+trait GuestElement: Sized {
+    fn decode(
+        memory: Memory,
+        store: &Store<HostState>,
+        address: u32,
+        count: u32,
+    ) -> OcctResult<Vec<Self>>;
+}
+
+macro_rules! guest_elements {
+    ($($ty:ty),+ $(,)?) => {$(
+        impl GuestElement for $ty {
+            fn decode(
+                memory: Memory,
+                store: &Store<HostState>,
+                address: u32,
+                count: u32,
+            ) -> OcctResult<Vec<Self>> {
+                read_array(memory, store, address, count, Self::from_le_bytes)
+            }
+        }
+    )+};
+}
+guest_elements!(i32, u32, f32, f64);
+
+struct ResultReader<'a> {
+    memory: Memory,
+    store: &'a mut Store<HostState>,
+}
+
+impl ResultReader<'_> {
+    fn read<T: GuestElement, C: wasmtime::WasmResults + TryInto<u32>>(
+        &mut self,
+        source: &BufferExport<C>,
+    ) -> OcctResult<Vec<T>> {
+        let (address, count) = source.query(&mut *self.store)?;
+        T::decode(self.memory, self.store, address, count)
+    }
+}
+
+/// Input buffers allocated for one WASM call. The generated number of
+/// heap arguments determines the stack capacity; no heap bookkeeping needed.
+pub(super) struct GuestBuffers<const N: usize> {
+    pointers: [u32; N],
+    used: usize,
+}
+
+impl<const N: usize> GuestBuffers<N> {
+    pub(super) fn write(&mut self, kernel: &mut OcctKernel, data: &[u8]) -> OcctResult<u32> {
+        let slot = self
+            .pointers
+            .get_mut(self.used)
+            .ok_or_else(|| OcctError::Memory("too many guest allocations".to_owned()))?;
+        let ptr = kernel
+            .runtime
+            .alloc
+            .call(&mut kernel.store, checked_wasm_len(data.len(), 1)?)?;
+        if ptr == 0 {
+            core::hint::cold_path();
+            return Err(OcctError::Memory("allocation failed".to_owned()));
+        }
+        *slot = ptr;
+        self.used += 1;
+        let mem = kernel.memory.data_mut(&mut kernel.store);
+        let start = ptr as usize;
+        let end = start
+            .checked_add(data.len())
+            .ok_or_else(|| OcctError::Memory("write range overflow".to_owned()))?;
+        let destination = mem
+            .get_mut(start..end)
+            .ok_or_else(|| OcctError::Memory("write out of bounds".to_owned()))?;
+        destination.copy_from_slice(data);
+        Ok(ptr)
+    }
+}
+
 /// The OCCT CAD kernel, backed by a sandboxed WASM module.
 ///
 /// Create an instance with [`OcctKernel::new()`], then call methods to
@@ -40,153 +170,108 @@ static WASM_BINARY: &[u8] = include_bytes!("occt-wasm.wasm.br");
 /// ```
 pub struct OcctKernel {
     pub(crate) store: Store<HostState>,
-    pub(crate) instance: Instance,
-    pub(crate) memory: Memory,
+    instance: Instance,
+    memory: Memory,
 
-    // Lifecycle + error functions
-    pub(crate) fn_has_error: TypedFunc<(), i32>,
-    pub(crate) fn_get_error: TypedFunc<(), i32>,
-    pub(crate) fn_get_error_len: TypedFunc<(), u32>,
-
-    // Memory management
-    pub(crate) fn_alloc: TypedFunc<u32, u32>,
-    pub(crate) fn_free: TypedFunc<u32, ()>,
+    runtime: RuntimeExports,
 
     // Result buffer accessors
-    pub(crate) fn_get_string_result: TypedFunc<(), i32>,
-    pub(crate) fn_get_string_result_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_vec_u32_result: TypedFunc<(), i32>,
-    pub(crate) fn_get_vec_u32_result_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_vec_f64_result: TypedFunc<(), i32>,
-    pub(crate) fn_get_vec_f64_result_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_vec_i32_result: TypedFunc<(), i32>,
-    pub(crate) fn_get_vec_i32_result_len: TypedFunc<(), u32>,
+    buffer_string_result: BufferExport<u32>,
+    buffer_vec_u32_result: BufferExport<u32>,
+    buffer_vec_f64_result: BufferExport<u32>,
+    buffer_vec_i32_result: BufferExport<u32>,
 
     // BBox accessors
-    pub(crate) fn_get_bbox_xmin: TypedFunc<(), f64>,
-    pub(crate) fn_get_bbox_ymin: TypedFunc<(), f64>,
-    pub(crate) fn_get_bbox_zmin: TypedFunc<(), f64>,
-    pub(crate) fn_get_bbox_xmax: TypedFunc<(), f64>,
-    pub(crate) fn_get_bbox_ymax: TypedFunc<(), f64>,
-    pub(crate) fn_get_bbox_zmax: TypedFunc<(), f64>,
+    fn_get_bbox_xmin: TypedFunc<(), f64>,
+    fn_get_bbox_ymin: TypedFunc<(), f64>,
+    fn_get_bbox_zmin: TypedFunc<(), f64>,
+    fn_get_bbox_xmax: TypedFunc<(), f64>,
+    fn_get_bbox_ymax: TypedFunc<(), f64>,
+    fn_get_bbox_zmax: TypedFunc<(), f64>,
 
     // Mesh accessors
-    pub(crate) fn_get_mesh_positions: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_positions_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_normals: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_normals_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_indices: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_indices_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_face_groups: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_face_groups_len: TypedFunc<(), i32>,
+    buffer_mesh_positions: BufferExport<i32>,
+    buffer_mesh_normals: BufferExport<i32>,
+    buffer_mesh_indices: BufferExport<i32>,
+    buffer_mesh_face_groups: BufferExport<i32>,
 
     // MeshBatch accessors
-    pub(crate) fn_get_mesh_batch_positions: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_batch_positions_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_batch_normals: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_batch_normals_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_batch_indices: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_batch_indices_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_batch_shape_offsets: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_batch_shape_count: TypedFunc<(), i32>,
+    buffer_mesh_batch_positions: BufferExport<i32>,
+    buffer_mesh_batch_normals: BufferExport<i32>,
+    buffer_mesh_batch_indices: BufferExport<i32>,
+    buffer_mesh_batch_shape_offsets: BufferExport<i32>,
 
     // Edge accessors
-    pub(crate) fn_get_edge_points: TypedFunc<(), i32>,
-    pub(crate) fn_get_edge_points_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_edge_groups: TypedFunc<(), i32>,
-    pub(crate) fn_get_edge_groups_len: TypedFunc<(), i32>,
+    buffer_edge_points: BufferExport<i32>,
+    buffer_edge_groups: BufferExport<i32>,
 
     // NURBS accessors
-    pub(crate) fn_get_nurbs_degree: TypedFunc<(), i32>,
-    pub(crate) fn_get_nurbs_rational: TypedFunc<(), i32>,
-    pub(crate) fn_get_nurbs_periodic: TypedFunc<(), i32>,
-    pub(crate) fn_get_nurbs_knots: TypedFunc<(), i32>,
-    pub(crate) fn_get_nurbs_knots_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_nurbs_multiplicities: TypedFunc<(), i32>,
-    pub(crate) fn_get_nurbs_multiplicities_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_nurbs_poles: TypedFunc<(), i32>,
-    pub(crate) fn_get_nurbs_poles_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_nurbs_weights: TypedFunc<(), i32>,
-    pub(crate) fn_get_nurbs_weights_len: TypedFunc<(), u32>,
+    fn_get_nurbs_degree: TypedFunc<(), i32>,
+    fn_get_nurbs_rational: TypedFunc<(), i32>,
+    fn_get_nurbs_periodic: TypedFunc<(), i32>,
+    buffer_nurbs_knots: BufferExport<u32>,
+    buffer_nurbs_multiplicities: BufferExport<u32>,
+    buffer_nurbs_poles: BufferExport<u32>,
+    buffer_nurbs_weights: BufferExport<u32>,
 
     // Curve geometry accessors
-    pub(crate) fn_get_curve_kind: TypedFunc<(), i32>,
-    pub(crate) fn_get_curve_kind_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_curve_first: TypedFunc<(), f64>,
-    pub(crate) fn_get_curve_last: TypedFunc<(), f64>,
-    pub(crate) fn_get_curve_params: TypedFunc<(), i32>,
-    pub(crate) fn_get_curve_params_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_curve_has_bspline: TypedFunc<(), i32>,
+    buffer_curve_kind: BufferExport<u32>,
+    fn_get_curve_first: TypedFunc<(), f64>,
+    fn_get_curve_last: TypedFunc<(), f64>,
+    buffer_curve_params: BufferExport<u32>,
+    fn_get_curve_has_bspline: TypedFunc<(), i32>,
 
     // Surface geometry accessors
-    pub(crate) fn_get_surface_kind: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_kind_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_surface_is_direct: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_params: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_params_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_surface_has_bspline: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_degree_u: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_degree_v: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_nb_poles_u: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_nb_poles_v: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_periodic_u: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_periodic_v: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_knots_u: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_knots_u_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_surface_knots_v: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_knots_v_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_surface_multiplicities_u: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_multiplicities_u_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_surface_multiplicities_v: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_multiplicities_v_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_surface_poles: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_poles_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_surface_weights: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_weights_len: TypedFunc<(), u32>,
+    buffer_surface_kind: BufferExport<u32>,
+    fn_get_surface_is_direct: TypedFunc<(), i32>,
+    buffer_surface_params: BufferExport<u32>,
+    fn_get_surface_has_bspline: TypedFunc<(), i32>,
+    fn_get_surface_degree_u: TypedFunc<(), i32>,
+    fn_get_surface_degree_v: TypedFunc<(), i32>,
+    fn_get_surface_nb_poles_u: TypedFunc<(), i32>,
+    fn_get_surface_nb_poles_v: TypedFunc<(), i32>,
+    fn_get_surface_periodic_u: TypedFunc<(), i32>,
+    fn_get_surface_periodic_v: TypedFunc<(), i32>,
+    buffer_surface_knots_u: BufferExport<u32>,
+    buffer_surface_knots_v: BufferExport<u32>,
+    buffer_surface_multiplicities_u: BufferExport<u32>,
+    buffer_surface_multiplicities_v: BufferExport<u32>,
+    buffer_surface_poles: BufferExport<u32>,
+    buffer_surface_weights: BufferExport<u32>,
 
     // Evolution accessors
-    pub(crate) fn_get_evo_result_id: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_modified: TypedFunc<(), i32>,
-    pub(crate) fn_get_evo_modified_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_generated: TypedFunc<(), i32>,
-    pub(crate) fn_get_evo_generated_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_deleted: TypedFunc<(), i32>,
-    pub(crate) fn_get_evo_deleted_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_edge_modified: TypedFunc<(), i32>,
-    pub(crate) fn_get_evo_edge_modified_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_edge_generated: TypedFunc<(), i32>,
-    pub(crate) fn_get_evo_edge_generated_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_edge_deleted: TypedFunc<(), i32>,
-    pub(crate) fn_get_evo_edge_deleted_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_first_shape: TypedFunc<(), i32>,
-    pub(crate) fn_get_evo_first_shape_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_last_shape: TypedFunc<(), i32>,
-    pub(crate) fn_get_evo_last_shape_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_spine_generated: TypedFunc<(), i32>,
-    pub(crate) fn_get_evo_spine_generated_len: TypedFunc<(), u32>,
+    fn_get_evo_result_id: TypedFunc<(), u32>,
+    buffer_evo_modified: BufferExport<u32>,
+    buffer_evo_generated: BufferExport<u32>,
+    buffer_evo_deleted: BufferExport<u32>,
+    buffer_evo_edge_modified: BufferExport<u32>,
+    buffer_evo_edge_generated: BufferExport<u32>,
+    buffer_evo_edge_deleted: BufferExport<u32>,
+    buffer_evo_first_shape: BufferExport<u32>,
+    buffer_evo_last_shape: BufferExport<u32>,
+    buffer_evo_spine_generated: BufferExport<u32>,
 
     // Projection accessors
-    pub(crate) fn_get_proj_visible_outline: TypedFunc<(), u32>,
-    pub(crate) fn_get_proj_visible_smooth: TypedFunc<(), u32>,
-    pub(crate) fn_get_proj_visible_sharp: TypedFunc<(), u32>,
-    pub(crate) fn_get_proj_hidden_outline: TypedFunc<(), u32>,
-    pub(crate) fn_get_proj_hidden_smooth: TypedFunc<(), u32>,
-    pub(crate) fn_get_proj_hidden_sharp: TypedFunc<(), u32>,
+    fn_get_proj_visible_outline: TypedFunc<(), u32>,
+    fn_get_proj_visible_smooth: TypedFunc<(), u32>,
+    fn_get_proj_visible_sharp: TypedFunc<(), u32>,
+    fn_get_proj_hidden_outline: TypedFunc<(), u32>,
+    fn_get_proj_hidden_smooth: TypedFunc<(), u32>,
+    fn_get_proj_hidden_sharp: TypedFunc<(), u32>,
 
     // Label info accessors
-    pub(crate) fn_get_label_info_label_id: TypedFunc<(), i32>,
-    pub(crate) fn_get_label_info_name: TypedFunc<(), i32>,
-    pub(crate) fn_get_label_info_name_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_label_info_has_color: TypedFunc<(), i32>,
-    pub(crate) fn_get_label_info_r: TypedFunc<(), f64>,
-    pub(crate) fn_get_label_info_g: TypedFunc<(), f64>,
-    pub(crate) fn_get_label_info_b: TypedFunc<(), f64>,
-    pub(crate) fn_get_label_info_is_assembly: TypedFunc<(), i32>,
-    pub(crate) fn_get_label_info_is_component: TypedFunc<(), i32>,
-    pub(crate) fn_get_label_info_shape_id: TypedFunc<(), u32>,
+    fn_get_label_info_label_id: TypedFunc<(), i32>,
+    buffer_label_info_name: BufferExport<u32>,
+    fn_get_label_info_has_color: TypedFunc<(), i32>,
+    fn_get_label_info_r: TypedFunc<(), f64>,
+    fn_get_label_info_g: TypedFunc<(), f64>,
+    fn_get_label_info_b: TypedFunc<(), f64>,
+    fn_get_label_info_is_assembly: TypedFunc<(), i32>,
+    fn_get_label_info_is_component: TypedFunc<(), i32>,
+    fn_get_label_info_shape_id: TypedFunc<(), u32>,
 
     // Generated method handles
-    pub(crate) generated: GeneratedFuncs,
+    pub(super) generated: GeneratedFuncs,
 }
 
 impl OcctKernel {
@@ -195,6 +280,9 @@ impl OcctKernel {
     /// Decompresses and compiles the embedded WASM binary, then initializes
     /// the OCCT runtime. Compiling is most of that cost; to pay it once for
     /// many kernels, or once across processes, see [`OcctKernel::compile()`].
+    ///
+    /// # Errors
+    /// Returns an error if the embedded module cannot be compiled or initialized.
     pub fn new() -> OcctResult<Self> {
         let engine = Engine::new(&Self::engine_config())?;
         Self::from_module(&Self::compile(&engine)?)
@@ -206,7 +294,7 @@ impl OcctKernel {
     /// adding any settings of your own. wasmtime's compilation cache sits
     /// behind its `cache` feature, which this crate leaves off; to use it,
     /// enable `cache` on your own `wasmtime` dependency of the same version.
-    #[must_use]
+    #[must_use = "the returned configuration enables the features needed by the OCCT module"]
     pub fn engine_config() -> wasmtime::Config {
         let mut config = wasmtime::Config::new();
         config.wasm_simd(true);
@@ -237,11 +325,17 @@ impl OcctKernel {
     /// let mut b = OcctKernel::from_module(&module)?;
     /// # Ok::<(), occt_wasm::OcctError>(())
     /// ```
+    ///
+    /// # Errors
+    /// Returns an error if decompression or WASM compilation fails.
     pub fn compile(engine: &Engine) -> OcctResult<Module> {
         Ok(Module::new(engine, decompress_wasm()?)?)
     }
 
     /// Instantiate a kernel from a module made by [`OcctKernel::compile()`].
+    ///
+    /// # Errors
+    /// Returns an error if WASM instantiation, export resolution or initialization fails.
     pub fn from_module(module: &Module) -> OcctResult<Self> {
         Self::from_module_with_limiter(module, StoreLimits::default())
     }
@@ -275,45 +369,25 @@ impl OcctKernel {
     /// }
     /// # Ok::<(), occt_wasm::OcctError>(())
     /// ```
-    #[allow(clippy::too_many_lines)]
+    ///
+    /// # Errors
+    /// Returns an error if instantiation, initialization or export resolution fails,
+    /// including if the limiter refuses the module's initial allocation.
     pub fn from_module_with_limiter(
         module: &Module,
         limiter: impl ResourceLimiter + Sync + 'static,
     ) -> OcctResult<Self> {
-        let engine = module.engine();
-        let mut store = Store::new(engine, HostState::new(Box::new(limiter)));
-        store.limiter(|state| state);
-        let mut linker = Linker::new(engine);
-        crate::host::define_imports(&mut linker)?;
-        // An import a future build adds instantiates as a trap instead of
-        // failing `new()`; it only matters if it is ever called.
-        linker.define_unknown_imports_as_traps(module)?;
-        let instance = linker.instantiate(&mut store, module)?;
-
-        let memory = instance
-            .get_memory(&mut store, "memory")
-            .ok_or_else(|| OcctError::Memory("no memory export".to_owned()))?;
-
-        // A WASI reactor runs its C++ static constructors in `_initialize`, which
-        // the host must call before any other export. Skipping it leaves globals
-        // such as `std::cout` unconstructed, and OCCT's STEP code traps without them.
-        let initialize: TypedFunc<(), ()> = instance.get_typed_func(&mut store, "_initialize")?;
-        initialize.call(&mut store, ())?;
-
-        // Call occt_init
-        let init: TypedFunc<(), i32> = instance.get_typed_func(&mut store, "occt_init")?;
-        let result = init.call(&mut store, ())?;
-        if result != 0 {
-            return Err(OcctError::Memory("occt_init failed".to_owned()));
-        }
-
+        let (mut store, instance, memory) = instantiate(module, limiter)?;
         // Resolve all accessor functions
         macro_rules! get_fn {
             ($name:expr => $ret:ty) => {
                 instance.get_typed_func::<(), $ret>(&mut store, $name)?
             };
-            ($name:expr, $param:ty => $ret:ty) => {
-                instance.get_typed_func::<$param, $ret>(&mut store, $name)?
+        }
+
+        macro_rules! get_buffer {
+            ($name:literal) => {
+                BufferExport::resolve(&instance, &mut store, $name)?
             };
         }
 
@@ -323,20 +397,12 @@ impl OcctKernel {
             memory,
             instance,
 
-            fn_has_error: get_fn!("occt_has_error" => i32),
-            fn_get_error: get_fn!("occt_get_error" => i32),
-            fn_get_error_len: get_fn!("occt_get_error_len" => u32),
-            fn_alloc: get_fn!("occt_alloc", u32 => u32),
-            fn_free: get_fn!("occt_free", u32 => ()),
+            runtime: RuntimeExports::resolve(&instance, &mut store)?,
 
-            fn_get_string_result: get_fn!("occt_get_string_result" => i32),
-            fn_get_string_result_len: get_fn!("occt_get_string_result_len" => u32),
-            fn_get_vec_u32_result: get_fn!("occt_get_vec_u32_result" => i32),
-            fn_get_vec_u32_result_len: get_fn!("occt_get_vec_u32_result_len" => u32),
-            fn_get_vec_f64_result: get_fn!("occt_get_vec_f64_result" => i32),
-            fn_get_vec_f64_result_len: get_fn!("occt_get_vec_f64_result_len" => u32),
-            fn_get_vec_i32_result: get_fn!("occt_get_vec_i32_result" => i32),
-            fn_get_vec_i32_result_len: get_fn!("occt_get_vec_i32_result_len" => u32),
+            buffer_string_result: get_buffer!("occt_get_string_result"),
+            buffer_vec_u32_result: get_buffer!("occt_get_vec_u32_result"),
+            buffer_vec_f64_result: get_buffer!("occt_get_vec_f64_result"),
+            buffer_vec_i32_result: get_buffer!("occt_get_vec_i32_result"),
 
             fn_get_bbox_xmin: get_fn!("occt_get_bbox_xmin" => f64),
             fn_get_bbox_ymin: get_fn!("occt_get_bbox_ymin" => f64),
@@ -345,54 +411,41 @@ impl OcctKernel {
             fn_get_bbox_ymax: get_fn!("occt_get_bbox_ymax" => f64),
             fn_get_bbox_zmax: get_fn!("occt_get_bbox_zmax" => f64),
 
-            fn_get_mesh_positions: get_fn!("occt_get_mesh_positions" => i32),
-            fn_get_mesh_positions_len: get_fn!("occt_get_mesh_positions_len" => i32),
-            fn_get_mesh_normals: get_fn!("occt_get_mesh_normals" => i32),
-            fn_get_mesh_normals_len: get_fn!("occt_get_mesh_normals_len" => i32),
-            fn_get_mesh_indices: get_fn!("occt_get_mesh_indices" => i32),
-            fn_get_mesh_indices_len: get_fn!("occt_get_mesh_indices_len" => i32),
-            fn_get_mesh_face_groups: get_fn!("occt_get_mesh_face_groups" => i32),
-            fn_get_mesh_face_groups_len: get_fn!("occt_get_mesh_face_groups_len" => i32),
+            buffer_mesh_positions: get_buffer!("occt_get_mesh_positions"),
+            buffer_mesh_normals: get_buffer!("occt_get_mesh_normals"),
+            buffer_mesh_indices: get_buffer!("occt_get_mesh_indices"),
+            buffer_mesh_face_groups: get_buffer!("occt_get_mesh_face_groups"),
 
-            fn_get_mesh_batch_positions: get_fn!("occt_get_mesh_batch_positions" => i32),
-            fn_get_mesh_batch_positions_len: get_fn!("occt_get_mesh_batch_positions_len" => i32),
-            fn_get_mesh_batch_normals: get_fn!("occt_get_mesh_batch_normals" => i32),
-            fn_get_mesh_batch_normals_len: get_fn!("occt_get_mesh_batch_normals_len" => i32),
-            fn_get_mesh_batch_indices: get_fn!("occt_get_mesh_batch_indices" => i32),
-            fn_get_mesh_batch_indices_len: get_fn!("occt_get_mesh_batch_indices_len" => i32),
-            fn_get_mesh_batch_shape_offsets: get_fn!("occt_get_mesh_batch_shape_offsets" => i32),
-            fn_get_mesh_batch_shape_count: get_fn!("occt_get_mesh_batch_shape_count" => i32),
+            buffer_mesh_batch_positions: get_buffer!("occt_get_mesh_batch_positions"),
+            buffer_mesh_batch_normals: get_buffer!("occt_get_mesh_batch_normals"),
+            buffer_mesh_batch_indices: get_buffer!("occt_get_mesh_batch_indices"),
+            buffer_mesh_batch_shape_offsets: BufferExport::resolve_with_count(
+                &instance,
+                &mut store,
+                "occt_get_mesh_batch_shape_offsets",
+                "occt_get_mesh_batch_shape_count",
+            )?,
 
-            fn_get_edge_points: get_fn!("occt_get_edge_points" => i32),
-            fn_get_edge_points_len: get_fn!("occt_get_edge_points_len" => i32),
-            fn_get_edge_groups: get_fn!("occt_get_edge_groups" => i32),
-            fn_get_edge_groups_len: get_fn!("occt_get_edge_groups_len" => i32),
+            buffer_edge_points: get_buffer!("occt_get_edge_points"),
+            buffer_edge_groups: get_buffer!("occt_get_edge_groups"),
 
             fn_get_nurbs_degree: get_fn!("occt_get_nurbs_degree" => i32),
             fn_get_nurbs_rational: get_fn!("occt_get_nurbs_rational" => i32),
             fn_get_nurbs_periodic: get_fn!("occt_get_nurbs_periodic" => i32),
-            fn_get_nurbs_knots: get_fn!("occt_get_nurbs_knots" => i32),
-            fn_get_nurbs_knots_len: get_fn!("occt_get_nurbs_knots_len" => u32),
-            fn_get_nurbs_multiplicities: get_fn!("occt_get_nurbs_multiplicities" => i32),
-            fn_get_nurbs_multiplicities_len: get_fn!("occt_get_nurbs_multiplicities_len" => u32),
-            fn_get_nurbs_poles: get_fn!("occt_get_nurbs_poles" => i32),
-            fn_get_nurbs_poles_len: get_fn!("occt_get_nurbs_poles_len" => u32),
-            fn_get_nurbs_weights: get_fn!("occt_get_nurbs_weights" => i32),
-            fn_get_nurbs_weights_len: get_fn!("occt_get_nurbs_weights_len" => u32),
+            buffer_nurbs_knots: get_buffer!("occt_get_nurbs_knots"),
+            buffer_nurbs_multiplicities: get_buffer!("occt_get_nurbs_multiplicities"),
+            buffer_nurbs_poles: get_buffer!("occt_get_nurbs_poles"),
+            buffer_nurbs_weights: get_buffer!("occt_get_nurbs_weights"),
 
-            fn_get_curve_kind: get_fn!("occt_get_curve_kind" => i32),
-            fn_get_curve_kind_len: get_fn!("occt_get_curve_kind_len" => u32),
+            buffer_curve_kind: get_buffer!("occt_get_curve_kind"),
             fn_get_curve_first: get_fn!("occt_get_curve_first" => f64),
             fn_get_curve_last: get_fn!("occt_get_curve_last" => f64),
-            fn_get_curve_params: get_fn!("occt_get_curve_params" => i32),
-            fn_get_curve_params_len: get_fn!("occt_get_curve_params_len" => u32),
+            buffer_curve_params: get_buffer!("occt_get_curve_params"),
             fn_get_curve_has_bspline: get_fn!("occt_get_curve_has_bspline" => i32),
 
-            fn_get_surface_kind: get_fn!("occt_get_surface_kind" => i32),
-            fn_get_surface_kind_len: get_fn!("occt_get_surface_kind_len" => u32),
+            buffer_surface_kind: get_buffer!("occt_get_surface_kind"),
             fn_get_surface_is_direct: get_fn!("occt_get_surface_is_direct" => i32),
-            fn_get_surface_params: get_fn!("occt_get_surface_params" => i32),
-            fn_get_surface_params_len: get_fn!("occt_get_surface_params_len" => u32),
+            buffer_surface_params: get_buffer!("occt_get_surface_params"),
             fn_get_surface_has_bspline: get_fn!("occt_get_surface_has_bspline" => i32),
             fn_get_surface_degree_u: get_fn!("occt_get_surface_degree_u" => i32),
             fn_get_surface_degree_v: get_fn!("occt_get_surface_degree_v" => i32),
@@ -400,38 +453,23 @@ impl OcctKernel {
             fn_get_surface_nb_poles_v: get_fn!("occt_get_surface_nb_poles_v" => i32),
             fn_get_surface_periodic_u: get_fn!("occt_get_surface_periodic_u" => i32),
             fn_get_surface_periodic_v: get_fn!("occt_get_surface_periodic_v" => i32),
-            fn_get_surface_knots_u: get_fn!("occt_get_surface_knots_u" => i32),
-            fn_get_surface_knots_u_len: get_fn!("occt_get_surface_knots_u_len" => u32),
-            fn_get_surface_knots_v: get_fn!("occt_get_surface_knots_v" => i32),
-            fn_get_surface_knots_v_len: get_fn!("occt_get_surface_knots_v_len" => u32),
-            fn_get_surface_multiplicities_u: get_fn!("occt_get_surface_multiplicities_u" => i32),
-            fn_get_surface_multiplicities_u_len: get_fn!("occt_get_surface_multiplicities_u_len" => u32),
-            fn_get_surface_multiplicities_v: get_fn!("occt_get_surface_multiplicities_v" => i32),
-            fn_get_surface_multiplicities_v_len: get_fn!("occt_get_surface_multiplicities_v_len" => u32),
-            fn_get_surface_poles: get_fn!("occt_get_surface_poles" => i32),
-            fn_get_surface_poles_len: get_fn!("occt_get_surface_poles_len" => u32),
-            fn_get_surface_weights: get_fn!("occt_get_surface_weights" => i32),
-            fn_get_surface_weights_len: get_fn!("occt_get_surface_weights_len" => u32),
+            buffer_surface_knots_u: get_buffer!("occt_get_surface_knots_u"),
+            buffer_surface_knots_v: get_buffer!("occt_get_surface_knots_v"),
+            buffer_surface_multiplicities_u: get_buffer!("occt_get_surface_multiplicities_u"),
+            buffer_surface_multiplicities_v: get_buffer!("occt_get_surface_multiplicities_v"),
+            buffer_surface_poles: get_buffer!("occt_get_surface_poles"),
+            buffer_surface_weights: get_buffer!("occt_get_surface_weights"),
 
             fn_get_evo_result_id: get_fn!("occt_get_evo_result_id" => u32),
-            fn_get_evo_modified: get_fn!("occt_get_evo_modified" => i32),
-            fn_get_evo_modified_len: get_fn!("occt_get_evo_modified_len" => u32),
-            fn_get_evo_generated: get_fn!("occt_get_evo_generated" => i32),
-            fn_get_evo_generated_len: get_fn!("occt_get_evo_generated_len" => u32),
-            fn_get_evo_deleted: get_fn!("occt_get_evo_deleted" => i32),
-            fn_get_evo_deleted_len: get_fn!("occt_get_evo_deleted_len" => u32),
-            fn_get_evo_edge_modified: get_fn!("occt_get_evo_edge_modified" => i32),
-            fn_get_evo_edge_modified_len: get_fn!("occt_get_evo_edge_modified_len" => u32),
-            fn_get_evo_edge_generated: get_fn!("occt_get_evo_edge_generated" => i32),
-            fn_get_evo_edge_generated_len: get_fn!("occt_get_evo_edge_generated_len" => u32),
-            fn_get_evo_edge_deleted: get_fn!("occt_get_evo_edge_deleted" => i32),
-            fn_get_evo_edge_deleted_len: get_fn!("occt_get_evo_edge_deleted_len" => u32),
-            fn_get_evo_first_shape: get_fn!("occt_get_evo_first_shape" => i32),
-            fn_get_evo_first_shape_len: get_fn!("occt_get_evo_first_shape_len" => u32),
-            fn_get_evo_last_shape: get_fn!("occt_get_evo_last_shape" => i32),
-            fn_get_evo_last_shape_len: get_fn!("occt_get_evo_last_shape_len" => u32),
-            fn_get_evo_spine_generated: get_fn!("occt_get_evo_spine_generated" => i32),
-            fn_get_evo_spine_generated_len: get_fn!("occt_get_evo_spine_generated_len" => u32),
+            buffer_evo_modified: get_buffer!("occt_get_evo_modified"),
+            buffer_evo_generated: get_buffer!("occt_get_evo_generated"),
+            buffer_evo_deleted: get_buffer!("occt_get_evo_deleted"),
+            buffer_evo_edge_modified: get_buffer!("occt_get_evo_edge_modified"),
+            buffer_evo_edge_generated: get_buffer!("occt_get_evo_edge_generated"),
+            buffer_evo_edge_deleted: get_buffer!("occt_get_evo_edge_deleted"),
+            buffer_evo_first_shape: get_buffer!("occt_get_evo_first_shape"),
+            buffer_evo_last_shape: get_buffer!("occt_get_evo_last_shape"),
+            buffer_evo_spine_generated: get_buffer!("occt_get_evo_spine_generated"),
 
             fn_get_proj_visible_outline: get_fn!("occt_get_proj_visible_outline" => u32),
             fn_get_proj_visible_smooth: get_fn!("occt_get_proj_visible_smooth" => u32),
@@ -441,8 +479,7 @@ impl OcctKernel {
             fn_get_proj_hidden_sharp: get_fn!("occt_get_proj_hidden_sharp" => u32),
 
             fn_get_label_info_label_id: get_fn!("occt_get_label_info_label_id" => i32),
-            fn_get_label_info_name: get_fn!("occt_get_label_info_name" => i32),
-            fn_get_label_info_name_len: get_fn!("occt_get_label_info_name_len" => u32),
+            buffer_label_info_name: get_buffer!("occt_get_label_info_name"),
             fn_get_label_info_has_color: get_fn!("occt_get_label_info_has_color" => i32),
             fn_get_label_info_r: get_fn!("occt_get_label_info_r" => f64),
             fn_get_label_info_g: get_fn!("occt_get_label_info_g" => f64),
@@ -458,83 +495,38 @@ impl OcctKernel {
 
     // === Memory helpers ===
 
-    /// Write bytes into WASM linear memory via `occt_alloc`.
-    pub(crate) fn write_bytes(&mut self, data: &[u8]) -> OcctResult<u32> {
-        let ptr = self.fn_alloc.call(&mut self.store, data.len() as u32)?;
-        if ptr == 0 {
-            core::hint::cold_path();
-            return Err(OcctError::Memory("allocation failed".to_owned()));
+    /// Execute a guest call with scoped input allocations. A trap invalidates
+    /// the kernel, so do not make further guest calls (even free) after one.
+    pub(super) fn with_guest_buffers<const N: usize, T>(
+        &mut self,
+        call: impl FnOnce(&mut Self, &mut GuestBuffers<N>) -> OcctResult<T>,
+    ) -> OcctResult<T> {
+        let mut buffers = GuestBuffers {
+            pointers: [0; N],
+            used: 0,
+        };
+        let result = call(self, &mut buffers);
+        if !matches!(
+            &result,
+            Err(OcctError::Runtime(_) | OcctError::MemoryLimit { .. })
+        ) {
+            for ptr in buffers.pointers.into_iter().take(buffers.used) {
+                self.runtime.free.call(&mut self.store, ptr)?;
+            }
         }
-        let mem = self.memory.data_mut(&mut self.store);
-        let start = ptr as usize;
-        let end = start + data.len();
-        if end > mem.len() {
-            core::hint::cold_path();
-            return Err(OcctError::Memory("write out of bounds".to_owned()));
-        }
-        mem[start..end].copy_from_slice(data);
-        Ok(ptr)
+        result
     }
 
-    /// Free previously allocated WASM memory.
-    pub(crate) fn free_bytes(&mut self, ptr: u32) -> OcctResult<()> {
-        self.fn_free.call(&mut self.store, ptr)?;
-        Ok(())
-    }
-
-    /// Read a byte slice from WASM memory.
+    /// Read an owned byte slice from WASM memory.
     fn read_bytes(&self, ptr: u32, len: u32) -> OcctResult<Vec<u8>> {
-        let mem = self.memory.data(&self.store);
-        let start = ptr as usize;
-        let end = start + len as usize;
-        if end > mem.len() {
-            core::hint::cold_path();
-            return Err(OcctError::Memory("read out of bounds".to_owned()));
-        }
-        Ok(mem[start..end].to_vec())
-    }
-
-    /// Read a typed slice from WASM memory as `f32` values.
-    fn read_f32_slice(&self, ptr: u32, count: u32) -> OcctResult<Vec<f32>> {
-        let bytes = self.read_bytes(ptr, count * 4)?;
-        Ok(bytes
-            .chunks_exact(4)
-            .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect())
-    }
-
-    /// Read a typed slice from WASM memory as `u32` values.
-    fn read_u32_slice(&self, ptr: u32, count: u32) -> OcctResult<Vec<u32>> {
-        let bytes = self.read_bytes(ptr, count * 4)?;
-        Ok(bytes
-            .chunks_exact(4)
-            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect())
-    }
-
-    /// Read a typed slice from WASM memory as `i32` values.
-    fn read_i32_slice(&self, ptr: u32, count: u32) -> OcctResult<Vec<i32>> {
-        let bytes = self.read_bytes(ptr, count * 4)?;
-        Ok(bytes
-            .chunks_exact(4)
-            .map(|c| i32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect())
-    }
-
-    /// Read a typed slice from WASM memory as `f64` values.
-    fn read_f64_slice(&self, ptr: u32, count: u32) -> OcctResult<Vec<f64>> {
-        let bytes = self.read_bytes(ptr, count * 8)?;
-        Ok(bytes
-            .chunks_exact(8)
-            .map(|c| f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]))
-            .collect())
+        Ok(read_slice(self.memory, &self.store, ptr, len)?.to_vec())
     }
 
     // === Error handling ===
 
     /// Check if the WASM module has a pending error and return it.
     pub(crate) fn check_error(&mut self, operation: &str) -> OcctResult<()> {
-        let has_error = self.fn_has_error.call(&mut self.store, ())?;
+        let has_error = self.runtime.has_error.call(&mut self.store, ())?;
         if has_error != 0 {
             // Errors are the exception, not the norm — this branch runs after
             // every facade call. Hint to LLVM that it's cold so the happy path
@@ -548,10 +540,9 @@ impl OcctKernel {
     /// Read the last error message from the WASM module.
     #[cold]
     pub(crate) fn read_last_error(&mut self, operation: &str) -> OcctError {
-        let ptr = self.fn_get_error.call(&mut self.store, ()).unwrap_or(0);
-        let len = self.fn_get_error_len.call(&mut self.store, ()).unwrap_or(0);
+        let (ptr, len) = self.runtime.error.query(&mut self.store).unwrap_or((0, 0));
         let message = if ptr != 0 && len > 0 {
-            self.read_bytes(ptr as u32, len)
+            self.read_bytes(ptr, len)
                 .ok()
                 .and_then(|b| String::from_utf8(b).ok())
                 .unwrap_or_else(|| "unknown error".to_owned())
@@ -574,16 +565,17 @@ impl OcctKernel {
 
     /// Read a raw-bytes result (binary payloads such as STL).
     pub(crate) fn read_bytes_result(&mut self) -> OcctResult<Vec<u8>> {
-        let ptr = self.fn_get_string_result.call(&mut self.store, ())?;
-        let len = self.fn_get_string_result_len.call(&mut self.store, ())?;
-        self.read_bytes(ptr as u32, len)
+        let (ptr, len) = self.buffer_string_result.query(&mut self.store)?;
+        self.read_bytes(ptr, len)
     }
 
     /// Read a `Vec<u32>` result.
     pub(crate) fn read_vec_u32_result(&mut self) -> OcctResult<Vec<u32>> {
-        let ptr = self.fn_get_vec_u32_result.call(&mut self.store, ())?;
-        let len = self.fn_get_vec_u32_result_len.call(&mut self.store, ())?;
-        self.read_u32_slice(ptr as u32, len)
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        reader.read(&self.buffer_vec_u32_result)
     }
 
     /// Read a `Vec<ShapeHandle>` result.
@@ -652,16 +644,20 @@ impl OcctKernel {
 
     /// Read a `Vec<f64>` result.
     pub(crate) fn read_vec_f64_result(&mut self) -> OcctResult<Vec<f64>> {
-        let ptr = self.fn_get_vec_f64_result.call(&mut self.store, ())?;
-        let len = self.fn_get_vec_f64_result_len.call(&mut self.store, ())?;
-        self.read_f64_slice(ptr as u32, len)
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        reader.read(&self.buffer_vec_f64_result)
     }
 
     /// Read a `Vec<i32>` result.
     pub(crate) fn read_vec_i32_result(&mut self) -> OcctResult<Vec<i32>> {
-        let ptr = self.fn_get_vec_i32_result.call(&mut self.store, ())?;
-        let len = self.fn_get_vec_i32_result_len.call(&mut self.store, ())?;
-        self.read_i32_slice(ptr as u32, len)
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        reader.read(&self.buffer_vec_i32_result)
     }
 
     /// Read a bounding box result.
@@ -682,105 +678,90 @@ impl OcctKernel {
 
     /// Read a mesh result.
     pub(crate) fn read_mesh_result(&mut self) -> OcctResult<Mesh> {
-        let pos_ptr = self.fn_get_mesh_positions.call(&mut self.store, ())?;
-        let pos_len = self.fn_get_mesh_positions_len.call(&mut self.store, ())?;
-        let norm_ptr = self.fn_get_mesh_normals.call(&mut self.store, ())?;
-        let norm_len = self.fn_get_mesh_normals_len.call(&mut self.store, ())?;
-        let idx_ptr = self.fn_get_mesh_indices.call(&mut self.store, ())?;
-        let idx_len = self.fn_get_mesh_indices_len.call(&mut self.store, ())?;
-        let fg_ptr = self.fn_get_mesh_face_groups.call(&mut self.store, ())?;
-        let fg_len = self.fn_get_mesh_face_groups_len.call(&mut self.store, ())?;
-
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
         Ok(Mesh {
-            positions: self.read_f32_slice(pos_ptr as u32, pos_len as u32)?,
-            normals: self.read_f32_slice(norm_ptr as u32, norm_len as u32)?,
-            indices: self.read_u32_slice(idx_ptr as u32, idx_len as u32)?,
-            face_groups: self.read_i32_slice(fg_ptr as u32, fg_len as u32)?,
+            positions: reader.read(&self.buffer_mesh_positions)?,
+            normals: reader.read(&self.buffer_mesh_normals)?,
+            indices: reader.read(&self.buffer_mesh_indices)?,
+            face_groups: reader.read(&self.buffer_mesh_face_groups)?,
         })
     }
 
     /// Read a mesh batch result.
     pub(crate) fn read_mesh_batch_result(&mut self) -> OcctResult<MeshBatch> {
-        let pos_ptr = self.fn_get_mesh_batch_positions.call(&mut self.store, ())?;
-        let pos_len = self
-            .fn_get_mesh_batch_positions_len
-            .call(&mut self.store, ())?;
-        let norm_ptr = self.fn_get_mesh_batch_normals.call(&mut self.store, ())?;
-        let norm_len = self
-            .fn_get_mesh_batch_normals_len
-            .call(&mut self.store, ())?;
-        let idx_ptr = self.fn_get_mesh_batch_indices.call(&mut self.store, ())?;
-        let idx_len = self
-            .fn_get_mesh_batch_indices_len
-            .call(&mut self.store, ())?;
-        let off_ptr = self
-            .fn_get_mesh_batch_shape_offsets
-            .call(&mut self.store, ())?;
-        let shape_count = self
-            .fn_get_mesh_batch_shape_count
-            .call(&mut self.store, ())?;
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        let (off_ptr, shape_count) = self
+            .buffer_mesh_batch_shape_offsets
+            .query(&mut *reader.store)?;
 
         Ok(MeshBatch {
-            positions: self.read_f32_slice(pos_ptr as u32, pos_len as u32)?,
-            normals: self.read_f32_slice(norm_ptr as u32, norm_len as u32)?,
-            indices: self.read_u32_slice(idx_ptr as u32, idx_len as u32)?,
-            shape_offsets: self.read_i32_slice(off_ptr as u32, (shape_count * 4) as u32)?,
+            positions: reader.read(&self.buffer_mesh_batch_positions)?,
+            normals: reader.read(&self.buffer_mesh_batch_normals)?,
+            indices: reader.read(&self.buffer_mesh_batch_indices)?,
+            shape_offsets: read_array(
+                self.memory,
+                &*reader.store,
+                off_ptr,
+                checked_wasm_product(shape_count, 4)?,
+                i32::from_le_bytes,
+            )?,
         })
     }
 
     /// Read an edge data result.
     pub(crate) fn read_edge_result(&mut self) -> OcctResult<EdgeData> {
-        let pts_ptr = self.fn_get_edge_points.call(&mut self.store, ())?;
-        let pts_len = self.fn_get_edge_points_len.call(&mut self.store, ())?;
-        let grp_ptr = self.fn_get_edge_groups.call(&mut self.store, ())?;
-        let grp_len = self.fn_get_edge_groups_len.call(&mut self.store, ())?;
-
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
         Ok(EdgeData {
-            points: self.read_f32_slice(pts_ptr as u32, pts_len as u32)?,
-            edge_groups: self.read_i32_slice(grp_ptr as u32, grp_len as u32)?,
+            points: reader.read(&self.buffer_edge_points)?,
+            edge_groups: reader.read(&self.buffer_edge_groups)?,
         })
     }
 
     /// Read a NURBS curve data result.
     pub(crate) fn read_nurbs_result(&mut self) -> OcctResult<NurbsCurveData> {
-        let degree = self.fn_get_nurbs_degree.call(&mut self.store, ())?;
-        let rational = self.fn_get_nurbs_rational.call(&mut self.store, ())? != 0;
-        let periodic = self.fn_get_nurbs_periodic.call(&mut self.store, ())? != 0;
-
-        let knots_ptr = self.fn_get_nurbs_knots.call(&mut self.store, ())?;
-        let knots_len = self.fn_get_nurbs_knots_len.call(&mut self.store, ())?;
-        let mult_ptr = self.fn_get_nurbs_multiplicities.call(&mut self.store, ())?;
-        let mult_len = self
-            .fn_get_nurbs_multiplicities_len
-            .call(&mut self.store, ())?;
-        let poles_ptr = self.fn_get_nurbs_poles.call(&mut self.store, ())?;
-        let poles_len = self.fn_get_nurbs_poles_len.call(&mut self.store, ())?;
-        let weights_ptr = self.fn_get_nurbs_weights.call(&mut self.store, ())?;
-        let weights_len = self.fn_get_nurbs_weights_len.call(&mut self.store, ())?;
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        let degree = self.fn_get_nurbs_degree.call(&mut *reader.store, ())?;
+        let rational = self.fn_get_nurbs_rational.call(&mut *reader.store, ())? != 0;
+        let periodic = self.fn_get_nurbs_periodic.call(&mut *reader.store, ())? != 0;
 
         Ok(NurbsCurveData {
             degree,
             rational,
             periodic,
-            knots: self.read_f64_slice(knots_ptr as u32, knots_len)?,
-            multiplicities: self.read_i32_slice(mult_ptr as u32, mult_len)?,
-            poles: self.read_f64_slice(poles_ptr as u32, poles_len)?,
-            weights: self.read_f64_slice(weights_ptr as u32, weights_len)?,
+            knots: reader.read(&self.buffer_nurbs_knots)?,
+            multiplicities: reader.read(&self.buffer_nurbs_multiplicities)?,
+            poles: reader.read(&self.buffer_nurbs_poles)?,
+            weights: reader.read(&self.buffer_nurbs_weights)?,
         })
     }
 
     /// Read a curve geometry result.
     pub(crate) fn read_curve_result(&mut self) -> OcctResult<CurveData> {
-        let kind_ptr = self.fn_get_curve_kind.call(&mut self.store, ())?;
-        let kind_len = self.fn_get_curve_kind_len.call(&mut self.store, ())?;
-        let kind = String::from_utf8(self.read_bytes(kind_ptr as u32, kind_len)?)
-            .map_err(|e| OcctError::Memory(e.to_string()))?;
-        let first = self.fn_get_curve_first.call(&mut self.store, ())?;
-        let last = self.fn_get_curve_last.call(&mut self.store, ())?;
-        let params_ptr = self.fn_get_curve_params.call(&mut self.store, ())?;
-        let params_len = self.fn_get_curve_params_len.call(&mut self.store, ())?;
-        let params = self.read_f64_slice(params_ptr as u32, params_len)?;
-        let has_bspline = self.fn_get_curve_has_bspline.call(&mut self.store, ())? != 0;
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        let (kind_ptr, kind_len) = self.buffer_curve_kind.query(&mut *reader.store)?;
+        let kind = String::from_utf8(
+            read_slice(reader.memory, reader.store, kind_ptr, kind_len).map(<[u8]>::to_vec)?,
+        )
+        .map_err(|e| OcctError::Memory(e.to_string()))?;
+        let first = self.fn_get_curve_first.call(&mut *reader.store, ())?;
+        let last = self.fn_get_curve_last.call(&mut *reader.store, ())?;
+        let params = reader.read(&self.buffer_curve_params)?;
+        let has_bspline = self.fn_get_curve_has_bspline.call(&mut *reader.store, ())? != 0;
         let bspline = if has_bspline {
             Some(self.read_nurbs_result()?)
         } else {
@@ -795,15 +776,21 @@ impl OcctKernel {
 
     /// Read a surface geometry result.
     pub(crate) fn read_surface_result(&mut self) -> OcctResult<SurfaceData> {
-        let kind_ptr = self.fn_get_surface_kind.call(&mut self.store, ())?;
-        let kind_len = self.fn_get_surface_kind_len.call(&mut self.store, ())?;
-        let kind = String::from_utf8(self.read_bytes(kind_ptr as u32, kind_len)?)
-            .map_err(|e| OcctError::Memory(e.to_string()))?;
-        let is_direct = self.fn_get_surface_is_direct.call(&mut self.store, ())? != 0;
-        let params_ptr = self.fn_get_surface_params.call(&mut self.store, ())?;
-        let params_len = self.fn_get_surface_params_len.call(&mut self.store, ())?;
-        let params = self.read_f64_slice(params_ptr as u32, params_len)?;
-        let has_bspline = self.fn_get_surface_has_bspline.call(&mut self.store, ())? != 0;
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        let (kind_ptr, kind_len) = self.buffer_surface_kind.query(&mut *reader.store)?;
+        let kind = String::from_utf8(
+            read_slice(reader.memory, reader.store, kind_ptr, kind_len).map(<[u8]>::to_vec)?,
+        )
+        .map_err(|e| OcctError::Memory(e.to_string()))?;
+        let is_direct = self.fn_get_surface_is_direct.call(&mut *reader.store, ())? != 0;
+        let params = reader.read(&self.buffer_surface_params)?;
+        let has_bspline = self
+            .fn_get_surface_has_bspline
+            .call(&mut *reader.store, ())?
+            != 0;
         let bspline = if has_bspline {
             Some(self.read_nurbs_surface()?)
         } else {
@@ -813,82 +800,55 @@ impl OcctKernel {
     }
 
     fn read_nurbs_surface(&mut self) -> OcctResult<NurbsSurfaceData> {
-        let knots_u_ptr = self.fn_get_surface_knots_u.call(&mut self.store, ())?;
-        let knots_u_len = self.fn_get_surface_knots_u_len.call(&mut self.store, ())?;
-        let knots_v_ptr = self.fn_get_surface_knots_v.call(&mut self.store, ())?;
-        let knots_v_len = self.fn_get_surface_knots_v_len.call(&mut self.store, ())?;
-        let mults_u_ptr = self
-            .fn_get_surface_multiplicities_u
-            .call(&mut self.store, ())?;
-        let mults_u_len = self
-            .fn_get_surface_multiplicities_u_len
-            .call(&mut self.store, ())?;
-        let mults_v_ptr = self
-            .fn_get_surface_multiplicities_v
-            .call(&mut self.store, ())?;
-        let mults_v_len = self
-            .fn_get_surface_multiplicities_v_len
-            .call(&mut self.store, ())?;
-        let poles_ptr = self.fn_get_surface_poles.call(&mut self.store, ())?;
-        let poles_len = self.fn_get_surface_poles_len.call(&mut self.store, ())?;
-        let weights_ptr = self.fn_get_surface_weights.call(&mut self.store, ())?;
-        let weights_len = self.fn_get_surface_weights_len.call(&mut self.store, ())?;
-
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
         Ok(NurbsSurfaceData {
-            degree_u: self.fn_get_surface_degree_u.call(&mut self.store, ())?,
-            degree_v: self.fn_get_surface_degree_v.call(&mut self.store, ())?,
-            nb_poles_u: self.fn_get_surface_nb_poles_u.call(&mut self.store, ())?,
-            nb_poles_v: self.fn_get_surface_nb_poles_v.call(&mut self.store, ())?,
-            periodic_u: self.fn_get_surface_periodic_u.call(&mut self.store, ())? != 0,
-            periodic_v: self.fn_get_surface_periodic_v.call(&mut self.store, ())? != 0,
-            knots_u: self.read_f64_slice(knots_u_ptr as u32, knots_u_len)?,
-            knots_v: self.read_f64_slice(knots_v_ptr as u32, knots_v_len)?,
-            multiplicities_u: self.read_i32_slice(mults_u_ptr as u32, mults_u_len)?,
-            multiplicities_v: self.read_i32_slice(mults_v_ptr as u32, mults_v_len)?,
-            poles: self.read_f64_slice(poles_ptr as u32, poles_len)?,
-            weights: self.read_f64_slice(weights_ptr as u32, weights_len)?,
+            degree_u: self.fn_get_surface_degree_u.call(&mut *reader.store, ())?,
+            degree_v: self.fn_get_surface_degree_v.call(&mut *reader.store, ())?,
+            nb_poles_u: self
+                .fn_get_surface_nb_poles_u
+                .call(&mut *reader.store, ())?,
+            nb_poles_v: self
+                .fn_get_surface_nb_poles_v
+                .call(&mut *reader.store, ())?,
+            periodic_u: self
+                .fn_get_surface_periodic_u
+                .call(&mut *reader.store, ())?
+                != 0,
+            periodic_v: self
+                .fn_get_surface_periodic_v
+                .call(&mut *reader.store, ())?
+                != 0,
+            knots_u: reader.read(&self.buffer_surface_knots_u)?,
+            knots_v: reader.read(&self.buffer_surface_knots_v)?,
+            multiplicities_u: reader.read(&self.buffer_surface_multiplicities_u)?,
+            multiplicities_v: reader.read(&self.buffer_surface_multiplicities_v)?,
+            poles: reader.read(&self.buffer_surface_poles)?,
+            weights: reader.read(&self.buffer_surface_weights)?,
         })
     }
 
     /// Read an evolution data result.
     pub(crate) fn read_evolution_result(&mut self) -> OcctResult<EvolutionData> {
-        let result_id = self.fn_get_evo_result_id.call(&mut self.store, ())?;
-        let mod_ptr = self.fn_get_evo_modified.call(&mut self.store, ())?;
-        let mod_len = self.fn_get_evo_modified_len.call(&mut self.store, ())?;
-        let gen_ptr = self.fn_get_evo_generated.call(&mut self.store, ())?;
-        let gen_len = self.fn_get_evo_generated_len.call(&mut self.store, ())?;
-        let del_ptr = self.fn_get_evo_deleted.call(&mut self.store, ())?;
-        let del_len = self.fn_get_evo_deleted_len.call(&mut self.store, ())?;
-        let edge_mod_ptr = self.fn_get_evo_edge_modified.call(&mut self.store, ())?;
-        let edge_mod_len = self
-            .fn_get_evo_edge_modified_len
-            .call(&mut self.store, ())?;
-        let edge_gen_ptr = self.fn_get_evo_edge_generated.call(&mut self.store, ())?;
-        let edge_gen_len = self
-            .fn_get_evo_edge_generated_len
-            .call(&mut self.store, ())?;
-        let edge_del_ptr = self.fn_get_evo_edge_deleted.call(&mut self.store, ())?;
-        let edge_del_len = self.fn_get_evo_edge_deleted_len.call(&mut self.store, ())?;
-        let first_ptr = self.fn_get_evo_first_shape.call(&mut self.store, ())?;
-        let first_len = self.fn_get_evo_first_shape_len.call(&mut self.store, ())?;
-        let last_ptr = self.fn_get_evo_last_shape.call(&mut self.store, ())?;
-        let last_len = self.fn_get_evo_last_shape_len.call(&mut self.store, ())?;
-        let spine_ptr = self.fn_get_evo_spine_generated.call(&mut self.store, ())?;
-        let spine_len = self
-            .fn_get_evo_spine_generated_len
-            .call(&mut self.store, ())?;
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        let result_id = self.fn_get_evo_result_id.call(&mut *reader.store, ())?;
 
         Ok(EvolutionData {
             result_id,
-            modified: self.read_i32_slice(mod_ptr as u32, mod_len)?,
-            generated: self.read_i32_slice(gen_ptr as u32, gen_len)?,
-            deleted: self.read_i32_slice(del_ptr as u32, del_len)?,
-            edge_modified: self.read_i32_slice(edge_mod_ptr as u32, edge_mod_len)?,
-            edge_generated: self.read_i32_slice(edge_gen_ptr as u32, edge_gen_len)?,
-            edge_deleted: self.read_i32_slice(edge_del_ptr as u32, edge_del_len)?,
-            first_shape: self.read_i32_slice(first_ptr as u32, first_len)?,
-            last_shape: self.read_i32_slice(last_ptr as u32, last_len)?,
-            spine_generated: self.read_i32_slice(spine_ptr as u32, spine_len)?,
+            modified: reader.read(&self.buffer_evo_modified)?,
+            generated: reader.read(&self.buffer_evo_generated)?,
+            deleted: reader.read(&self.buffer_evo_deleted)?,
+            edge_modified: reader.read(&self.buffer_evo_edge_modified)?,
+            edge_generated: reader.read(&self.buffer_evo_edge_generated)?,
+            edge_deleted: reader.read(&self.buffer_evo_edge_deleted)?,
+            first_shape: reader.read(&self.buffer_evo_first_shape)?,
+            last_shape: reader.read(&self.buffer_evo_last_shape)?,
+            spine_generated: reader.read(&self.buffer_evo_spine_generated)?,
         })
     }
 
@@ -909,9 +869,8 @@ impl OcctKernel {
     /// Read a label info result.
     pub(crate) fn read_label_info_result(&mut self) -> OcctResult<LabelInfo> {
         let label_id = self.fn_get_label_info_label_id.call(&mut self.store, ())?;
-        let name_ptr = self.fn_get_label_info_name.call(&mut self.store, ())?;
-        let name_len = self.fn_get_label_info_name_len.call(&mut self.store, ())?;
-        let name_bytes = self.read_bytes(name_ptr as u32, name_len)?;
+        let (name_ptr, name_len) = self.buffer_label_info_name.query(&mut self.store)?;
+        let name_bytes = self.read_bytes(name_ptr, name_len)?;
         let name = String::from_utf8(name_bytes).map_err(|e| OcctError::Memory(e.to_string()))?;
 
         Ok(LabelInfo {
@@ -944,6 +903,70 @@ impl Drop for OcctKernel {
             let _ = destroy.call(&mut self.store, ());
         }
     }
+}
+
+/// Borrow a byte slice from WASM memory after validating its full range.
+fn read_slice(memory: Memory, store: &Store<HostState>, ptr: u32, len: u32) -> OcctResult<&[u8]> {
+    let mem = memory.data(store);
+    let start = ptr as usize;
+    let end = start
+        .checked_add(len as usize)
+        .ok_or_else(|| OcctError::Memory("read range overflow".to_owned()))?;
+    mem.get(start..end)
+        .ok_or_else(|| OcctError::Memory("read out of bounds".to_owned()))
+}
+
+/// Decode little-endian elements without an intermediate byte allocation.
+fn read_array<const N: usize, T>(
+    memory: Memory,
+    store: &Store<HostState>,
+    ptr: u32,
+    count: u32,
+    decode: impl Fn([u8; N]) -> T,
+) -> OcctResult<Vec<T>> {
+    let width = checked_wasm_len(N, 1)?;
+    let len = checked_wasm_product(count, width)?;
+    let (chunks, []) = read_slice(memory, store, ptr, len)?.as_chunks::<N>() else {
+        return Err(OcctError::Memory(
+            "incomplete guest result element".to_owned(),
+        ));
+    };
+    Ok(chunks.iter().copied().map(decode).collect())
+}
+
+/// Instantiate the WASI reactor and initialize its C++ runtime.
+fn instantiate(
+    module: &Module,
+    limiter: impl ResourceLimiter + Sync + 'static,
+) -> OcctResult<(Store<HostState>, Instance, Memory)> {
+    let engine = module.engine();
+    let mut store = Store::new(engine, HostState::new(Box::new(limiter)));
+    store.limiter(|state| state);
+    let mut linker = Linker::new(engine);
+    crate::host::define_imports(&mut linker)?;
+    // An import a future build adds instantiates as a trap instead of
+    // failing `new()`; it only matters if it is ever called.
+    linker.define_unknown_imports_as_traps(module)?;
+    let instance = linker.instantiate(&mut store, module)?;
+
+    let memory = instance
+        .get_memory(&mut store, "memory")
+        .ok_or_else(|| OcctError::Memory("no memory export".to_owned()))?;
+
+    // A WASI reactor runs its C++ static constructors in `_initialize`, which
+    // the host must call before any other export. Skipping it leaves globals
+    // such as `std::cout` unconstructed, and OCCT's STEP code traps without them.
+    let initialize: TypedFunc<(), ()> = instance.get_typed_func(&mut store, "_initialize")?;
+    initialize.call(&mut store, ())?;
+
+    // Call occt_init
+    let init: TypedFunc<(), i32> = instance.get_typed_func(&mut store, "occt_init")?;
+    let result = init.call(&mut store, ())?;
+    if result != 0 {
+        return Err(OcctError::Memory("occt_init failed".to_owned()));
+    }
+
+    Ok((store, instance, memory))
 }
 
 /// Decompress the embedded brotli-compressed WASM binary.
@@ -1091,4 +1114,45 @@ fn decode_surface_data(
         _ => SurfaceData::Other { kind, bspline },
     };
     Ok(data)
+}
+
+/// Validate the element count and total byte size before crossing the wasm32 ABI.
+pub(super) fn checked_wasm_len(count: usize, width: u32) -> OcctResult<u32> {
+    let count = u32::try_from(count)
+        .map_err(|_| OcctError::Memory("element count exceeds wasm32".to_owned()))?;
+    checked_wasm_product(count, width)?;
+    Ok(count)
+}
+
+fn checked_wasm_product(count: u32, width: u32) -> OcctResult<u32> {
+    count
+        .checked_mul(width)
+        .ok_or_else(|| OcctError::Memory("buffer size exceeds wasm32".to_owned()))
+}
+
+fn checked_count(count: impl TryInto<u32>) -> OcctResult<u32> {
+    count
+        .try_into()
+        .map_err(|_| OcctError::Memory("negative buffer element count".to_owned()))
+}
+
+#[cfg(test)]
+mod memory_tests {
+    use super::{checked_count, checked_wasm_len, checked_wasm_product};
+    use crate::OcctResult;
+
+    #[test]
+    fn rejects_out_of_range_buffer_counts() -> OcctResult<()> {
+        assert_eq!(checked_wasm_len(0, 8)?, 0);
+        assert_eq!(checked_wasm_len(12, 8)?, 12);
+        assert_eq!(checked_wasm_product(u32::MAX / 8, 8)?, u32::MAX - 7);
+        assert!(checked_wasm_product(u32::MAX / 8 + 1, 8).is_err());
+        assert!(checked_wasm_len((u32::MAX / 8 + 1) as usize, 8).is_err());
+        if let Ok(too_large) = usize::try_from(u64::from(u32::MAX) + 1) {
+            assert!(checked_wasm_len(too_large, 1).is_err());
+        }
+        assert!(checked_count(-1).is_err());
+        assert_eq!(checked_count(i32::MAX)?, i32::MAX.cast_unsigned());
+        Ok(())
+    }
 }

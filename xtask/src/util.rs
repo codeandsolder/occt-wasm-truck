@@ -70,7 +70,10 @@ pub fn home_dir() -> Option<PathBuf> {
 }
 
 /// Convert a byte count to mebibytes for human-readable build output.
-#[allow(clippy::cast_precision_loss)] // file sizes fit in an f64 mantissa
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "human-readable approximate MiB display, not an integer byte count"
+)]
 pub fn bytes_to_mb(n: u64) -> f64 {
     n as f64 / 1_048_576.0
 }

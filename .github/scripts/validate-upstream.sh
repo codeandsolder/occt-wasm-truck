@@ -8,5 +8,5 @@ fi
 cargo run --locked --package xtask -- codegen
 cargo fmt --all
 git diff --exit-code -- facade/generated/ crate/src/kernel_generated.rs
-# Never let the upstream placeholder/debug test skips pass this gate.
-OCCT_WASM_REQUIRE_KERNEL=1 cargo test --locked --release -p occt-wasm --test integration --test validation_bindings -- --test-threads=4
+# Release integration tests require a real embedded kernel.
+cargo test --locked --release -p occt-wasm --test integration --test validation_bindings -- --test-threads=4

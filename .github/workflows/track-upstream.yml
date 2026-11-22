@@ -28,4 +28,4 @@ jobs:
         crate/src/occt-wasm.wasm.br
       validation-script: .github/scripts/validate-upstream.sh
       timeout-minutes: 120
-      rust-toolchain: "1.95"
+      rust-toolchain: repository
