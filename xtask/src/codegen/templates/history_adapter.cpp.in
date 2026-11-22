@@ -1,0 +1,15 @@
+/// Presents a BRepTools_History as a maker, so `buildEvolution` can read it.
+class HistoryMaker : public BRepBuilderAPI_MakeShape {
+  public:
+    explicit HistoryMaker(const Handle(BRepTools_History)& history) : history_(history) {}
+    const NCollection_List<TopoDS_Shape>& Generated(const TopoDS_Shape& s) override {
+        return history_->Generated(s);
+    }
+    const NCollection_List<TopoDS_Shape>& Modified(const TopoDS_Shape& s) override {
+        return history_->Modified(s);
+    }
+    bool IsDeleted(const TopoDS_Shape& s) override { return history_->IsRemoved(s); }
+
+  private:
+    Handle(BRepTools_History) history_;
+};

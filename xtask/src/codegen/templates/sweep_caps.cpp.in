@@ -1,0 +1,33 @@
+/// Record the result faces of a sweep's first and last shapes. A maker can name a cap
+/// the result does not hold, such as a closed pipe's section, so only the result's
+/// faces count. Best effort, like the edge history.
+template <class Maker>
+static void appendSweepCaps(EvolutionData& evo, Maker& maker, const TopoDS_Shape& result,
+                            int hashUpperBound) {
+    NCollection_IndexedMap<TopoDS_Shape, TopTools_ShapeMapHasher> faces;
+    TopExp::MapShapes(result, TopAbs_FACE, faces);
+    auto capFaces = [&](const TopoDS_Shape& cap, std::vector<int>& hashes,
+                        std::vector<int>& positions) {
+        if (cap.IsNull()) {
+            return;
+        }
+        for (TopExp_Explorer ex(cap, TopAbs_FACE); ex.More(); ex.Next()) {
+            const int at = faces.FindIndex(ex.Current());
+            if (at > 0) {
+                hashes.push_back(static_cast<int>(TopTools_ShapeMapHasher{}(ex.Current()) %
+                                                  static_cast<size_t>(hashUpperBound)));
+                positions.push_back(at - 1);
+            }
+        }
+    };
+    try {
+        std::vector<int> first, last, firstAt, lastAt;
+        capFaces(maker.FirstShape(), first, firstAt);
+        capFaces(maker.LastShape(), last, lastAt);
+        evo.firstShape = std::move(first);
+        evo.lastShape = std::move(last);
+        evo.firstShapeIndexed = std::move(firstAt);
+        evo.lastShapeIndexed = std::move(lastAt);
+    } catch (const Standard_Failure&) {
+    }
+}

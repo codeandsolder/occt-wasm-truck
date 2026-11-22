@@ -7484,11 +7484,7 @@ pub fn validate(methods: &[MethodSpec]) -> Result<()> {
                 bail!("method '{}' has an empty parameter name", m.name);
             }
             if !param_names.insert(name) {
-                bail!(
-                    "method '{}' has duplicate parameter name '{}'",
-                    m.name,
-                    name
-                );
+                bail!("method '{}' has duplicate parameter name '{name}'", m.name);
             }
         }
     }
@@ -7523,11 +7519,12 @@ mod tests {
     }
 
     #[test]
-    fn defeature_uses_occt_defeaturing_algorithm() {
+    fn defeature_uses_occt_defeaturing_algorithm() -> Result<()> {
+        use anyhow::Context as _;
         let spec = target_methods()
             .iter()
             .find(|method| method.name == "defeature")
-            .expect("defeature method spec");
+            .context("defeature method spec")?;
 
         assert!(spec.includes.contains(&"BRepAlgoAPI_Defeaturing.hxx"));
         assert!(spec.setup_code.contains("BRepAlgoAPI_Defeaturing maker"));
@@ -7536,6 +7533,7 @@ mod tests {
                 .contains("maker.AddFacesToRemove(facesToRemove)")
         );
         assert!(!spec.setup_code.contains("MakeThickSolidByJoin"));
+        Ok(())
     }
 
     #[test]

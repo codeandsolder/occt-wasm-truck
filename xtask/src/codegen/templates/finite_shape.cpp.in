@@ -1,0 +1,25 @@
+/// True when no face or edge of `shape` is unbounded.
+///
+/// An oriented bounding box cannot enclose infinite geometry, so with OBB on
+/// the interference pre-check drops every pair involving it and a cut by a
+/// half-space silently does nothing. An unbounded face (an infinite plane)
+/// has no edges; a half-infinite one has an edge with an infinite range.
+static bool isFiniteShape(const TopoDS_Shape& shape) {
+    for (TopExp_Explorer ex(shape, TopAbs_FACE); ex.More(); ex.Next()) {
+        if (!TopExp_Explorer(ex.Current(), TopAbs_EDGE).More()) return false;
+    }
+    for (TopExp_Explorer ex(shape, TopAbs_EDGE); ex.More(); ex.Next()) {
+        double first = 0.0;
+        double last = 0.0;
+        BRep_Tool::Range(TopoDS::Edge(ex.Current()), first, last);
+        if (Precision::IsInfinite(first) || Precision::IsInfinite(last)) return false;
+    }
+    return true;
+}
+
+static bool allFinite(const NCollection_List<TopoDS_Shape>& shapes) {
+    for (const TopoDS_Shape& shape : shapes) {
+        if (!isFiniteShape(shape)) return false;
+    }
+    return true;
+}

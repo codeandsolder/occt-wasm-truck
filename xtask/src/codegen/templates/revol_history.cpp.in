@@ -1,0 +1,31 @@
+/// BRepPrimAPI_MakeRevol::Generated asks BRepSweep_Revol::IsUsed first, which on a full
+/// revolve is false for an edge sweeping a planar face (it has no seam to use the edge)
+/// and for the profile face itself, though the sweep built them and the result holds
+/// them. This asks the sweep directly.
+class RevolHistory : public BRepBuilderAPI_MakeShape {
+  public:
+    RevolHistory(BRepPrimAPI_MakeRevol& maker, const TopoDS_Shape& result)
+        : maker_(maker), revol_(const_cast<BRepSweep_Revol&>(maker.Revol())) {
+        TopExp::MapShapes(result, resultShapes_);
+    }
+    const NCollection_List<TopoDS_Shape>& Generated(const TopoDS_Shape& s) override {
+        const NCollection_List<TopoDS_Shape>& generated = maker_.Generated(s);
+        if (!generated.IsEmpty()) {
+            return generated;
+        }
+        myGenerated.Clear();
+        const TopoDS_Shape swept = revol_.Shape(s);
+        if (!swept.IsNull() && resultShapes_.Contains(swept)) {
+            myGenerated.Append(swept);
+        }
+        return myGenerated;
+    }
+    bool IsDeleted(const TopoDS_Shape& s) override {
+        return maker_.IsDeleted(s) && Generated(s).IsEmpty();
+    }
+
+  private:
+    BRepPrimAPI_MakeRevol& maker_;
+    BRepSweep_Revol& revol_;
+    NCollection_IndexedMap<TopoDS_Shape, TopTools_ShapeMapHasher> resultShapes_;
+};

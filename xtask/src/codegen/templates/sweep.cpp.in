@@ -1,0 +1,115 @@
+/// The controls `sweepFull` and `sweepWithHistory` share. 0 or null leaves a control
+/// at OCCT's default.
+struct SweepSetup {
+    int mode = 0;
+    double upX = 0.0;
+    double upY = 0.0;
+    double upZ = 1.0;
+    const TopoDS_Shape* auxSpine = nullptr;
+    bool curvilinearEquivalence = false;
+    int guideContact = 0;
+    int transitionMode = 0;
+    bool withContact = false;
+    bool withCorrection = false;
+    double tol3d = 0.0;
+    double boundTol = 0.0;
+    double tolAngular = 0.0;
+    const TopoDS_Shape* support = nullptr;
+    int maxDegree = 0;
+    int maxSegments = 0;
+    int lawKind = 0;
+    double lawLength = 0.0;
+    double lawEndFactor = 1.0;
+};
+
+/// lawKind 1 is Law_Linear and 2 is Law_S, each set over [0,1] from lawLength to
+/// lawEndFactor. SetLaw replaces Add rather than supplementing it (OCCT warns the two
+/// should not be combined), so it carries the same contact and correction flags.
+static void buildSweep(BRepOffsetAPI_MakePipeShell& maker, const TopoDS_Shape& profile,
+                       const SweepSetup& setup, const std::string& op) {
+    if (setup.support != nullptr) {
+        if (!maker.SetMode(*setup.support)) {
+            throw std::runtime_error(
+                op + ": the support shape is not a valid spine support. It must contain the "
+                     "spine and supply the surface the sweep follows.");
+        }
+    } else {
+        switch (setup.mode) {
+        case 0:
+            maker.SetMode(Standard_False);
+            break;
+        case 1:
+            maker.SetMode(Standard_True);
+            break;
+        case 2:
+            maker.SetMode(gp_Dir(setup.upX, setup.upY, setup.upZ));
+            break;
+        case 3: {
+            BRepFill_TypeOfContact contact;
+            switch (setup.guideContact) {
+            case 0:
+                contact = BRepFill_NoContact;
+                break;
+            case 1:
+                contact = BRepFill_Contact;
+                break;
+            case 2:
+                contact = BRepFill_ContactOnBorder;
+                break;
+            default:
+                throw std::runtime_error(op + ": invalid contact mode");
+            }
+            maker.SetMode(TopoDS::Wire(*setup.auxSpine), setup.curvilinearEquivalence, contact);
+            break;
+        }
+        case 4:
+            maker.SetMode(gp::XOY());
+            break;
+        default:
+            throw std::runtime_error(op + ": invalid mode");
+        }
+    }
+    if (setup.transitionMode < 0 || setup.transitionMode > 2) {
+        throw std::runtime_error(op + ": invalid transition mode");
+    }
+    maker.SetTransitionMode(static_cast<BRepBuilderAPI_TransitionMode>(setup.transitionMode));
+    if (setup.tol3d > 0.0 || setup.boundTol > 0.0 || setup.tolAngular > 0.0) {
+        maker.SetTolerance(setup.tol3d > 0.0 ? setup.tol3d : 1.0e-4,
+                           setup.boundTol > 0.0 ? setup.boundTol : 1.0e-4,
+                           setup.tolAngular > 0.0 ? setup.tolAngular : 1.0e-2);
+    }
+    if (setup.maxDegree > 0) {
+        maker.SetMaxDegree(setup.maxDegree);
+    }
+    if (setup.maxSegments > 0) {
+        maker.SetMaxSegments(setup.maxSegments);
+    }
+    if (setup.lawKind == 0) {
+        maker.Add(profile, setup.withContact, setup.withCorrection);
+    } else if (setup.lawKind == 1) {
+        Handle(Law_Linear) law = new Law_Linear();
+        law->Set(0.0, 1.0, setup.lawLength, setup.lawEndFactor);
+        maker.SetLaw(profile, law, setup.withContact, setup.withCorrection);
+    } else if (setup.lawKind == 2) {
+        Handle(Law_S) law = new Law_S();
+        law->Set(0.0, 1.0, setup.lawLength, setup.lawEndFactor);
+        maker.SetLaw(profile, law, setup.withContact, setup.withCorrection);
+    } else {
+        throw std::runtime_error(op + ": invalid law kind");
+    }
+    maker.Build();
+    if (!maker.IsDone()) {
+        switch (maker.GetStatus()) {
+        case BRepBuilderAPI_PlaneNotIntersectGuide:
+            throw std::runtime_error(
+                op + ": a section plane does not intersect the guide wire. The guide must "
+                     "span the whole spine and stay close enough to meet every section.");
+        case BRepBuilderAPI_ImpossibleContact:
+            throw std::runtime_error(
+                op + ": cannot keep the section in contact with the guide wire. The guide "
+                     "must be close enough to the spine to intersect every section.");
+        default:
+            throw std::runtime_error(op + ": operation failed");
+        }
+    }
+}

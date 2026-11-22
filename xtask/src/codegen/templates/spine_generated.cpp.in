@@ -1,0 +1,44 @@
+/// Record the faces each spine edge and profile edge sweep into together.
+/// `facesOf(spineEdge, profileEdge)` names them. Best effort, like the edge history.
+template <class FacesOf>
+static void appendSpineGenerated(EvolutionData& evo, const TopoDS_Shape& spine,
+                                 const TopoDS_Shape& profile, const TopoDS_Shape& result,
+                                 int hashUpperBound, FacesOf facesOf) {
+    auto hashShape = [&](const TopoDS_Shape& s) -> int {
+        return static_cast<int>(TopTools_ShapeMapHasher{}(s) % static_cast<size_t>(hashUpperBound));
+    };
+    NCollection_IndexedMap<TopoDS_Shape, TopTools_ShapeMapHasher> faces, spineEdges, profileEdges;
+    TopExp::MapShapes(result, TopAbs_FACE, faces);
+    TopExp::MapShapes(spine, TopAbs_EDGE, spineEdges);
+    TopExp::MapShapes(profile, TopAbs_EDGE, profileEdges);
+    std::vector<int> generated, generatedAt;
+    try {
+        for (int i = 1; i <= spineEdges.Extent(); ++i) {
+            for (int j = 1; j <= profileEdges.Extent(); ++j) {
+                std::vector<int> hashes, positions;
+                for (const TopoDS_Shape& face : facesOf(spineEdges.FindKey(i), profileEdges.FindKey(j))) {
+                    const int at = faces.FindIndex(face);
+                    if (at > 0) {
+                        hashes.push_back(hashShape(face));
+                        positions.push_back(at - 1);
+                    }
+                }
+                if (hashes.empty()) {
+                    continue;
+                }
+                generated.push_back(hashShape(spineEdges.FindKey(i)));
+                generated.push_back(hashShape(profileEdges.FindKey(j)));
+                generated.push_back(static_cast<int>(hashes.size()));
+                generated.insert(generated.end(), hashes.begin(), hashes.end());
+                generatedAt.push_back(i - 1);
+                generatedAt.push_back(j - 1);
+                generatedAt.push_back(static_cast<int>(positions.size()));
+                generatedAt.insert(generatedAt.end(), positions.begin(), positions.end());
+            }
+        }
+    } catch (const Standard_Failure&) {
+        return;
+    }
+    evo.spineGenerated = std::move(generated);
+    evo.spineGeneratedIndexed = std::move(generatedAt);
+}
