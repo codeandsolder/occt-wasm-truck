@@ -1697,3 +1697,33 @@ fn thread_groove_is_a_valid_solid_of_the_exact_volume() {
         "volume {volume}, exact {exact}"
     );
 }
+
+#[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "requires optimized wasmtime; run in release mode"
+)]
+fn mesh_results_recover_after_ordinary_operation_errors() {
+    let mut kernel = kernel();
+    let valid = kernel.make_box(2.0, 3.0, 4.0).unwrap();
+    let released = kernel.make_box(3.0, 4.0, 5.0).unwrap();
+    kernel.release(released).unwrap();
+
+    let first = kernel.mesh_shape(valid, 0.1, 0.5).unwrap();
+    assert!(kernel.mesh_shape(released, 0.1, 0.5).is_err());
+    let second = kernel.mesh_shape(valid, 0.1, 0.5).unwrap();
+    assert_eq!(second.positions, first.positions);
+    assert_eq!(second.indices, first.indices);
+
+    let first = kernel.mesh_batch(&[valid], 0.1, 0.5).unwrap();
+    assert!(kernel.mesh_batch(&[released], 0.1, 0.5).is_err());
+    let second = kernel.mesh_batch(&[valid], 0.1, 0.5).unwrap();
+    assert_eq!(second.positions, first.positions);
+    assert_eq!(second.indices, first.indices);
+
+    let first = kernel.wireframe(valid, 0.1, 0).unwrap();
+    assert!(kernel.wireframe(released, 0.1, 0).is_err());
+    let second = kernel.wireframe(valid, 0.1, 0).unwrap();
+    assert_eq!(second.points, first.points);
+    assert_eq!(second.edge_groups, first.edge_groups);
+}

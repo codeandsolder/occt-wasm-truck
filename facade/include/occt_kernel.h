@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "mesh_results.h"
+
 #include <DESTEP_Parameters.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <TDF_Label.hxx>
@@ -100,48 +102,9 @@ std::string writeStep(const Handle(TDocStd_Document) & doc, const StepWriteOptio
 std::string writeToMemory(const char* extension,
                           const std::function<void(const TCollection_AsciiString& url)>& write);
 
-/// Mesh data returned from tessellation.
-struct MeshData {
-    float* positions = nullptr;
-    float* normals = nullptr;
-    float* uvs = nullptr;
-    uint32_t* indices = nullptr;
-    int32_t* faceGroups = nullptr; // [triStart, triCount, faceHash] per face
-    int positionCount = 0;
-    int normalCount = 0;
-    int uvCount = 0;
-    int indexCount = 0;
-    int faceGroupCount = 0; // number of int32s (faceCount * 3)
-
-    MeshData() = default;
-    ~MeshData();
-    MeshData(const MeshData& other);
-    MeshData& operator=(const MeshData&) = delete;
-    uint32_t getPositionsPtr() const;
-    uint32_t getNormalsPtr() const;
-    uint32_t getUvsPtr() const;
-    uint32_t getIndicesPtr() const;
-    uint32_t getFaceGroupsPtr() const;
-};
-
 /// Bounding box result.
 struct BBoxData {
     double xmin, ymin, zmin, xmax, ymax, zmax;
-};
-
-/// Edge line data for wireframe rendering.
-struct EdgeData {
-    float* points = nullptr;
-    int32_t* edgeGroups = nullptr; // [pointStart, pointCount, edgeHash] per edge
-    int pointCount = 0;
-    int edgeGroupCount = 0; // number of int32s (edgeCount * 3)
-
-    EdgeData() = default;
-    ~EdgeData();
-    EdgeData(const EdgeData& other);
-    EdgeData& operator=(const EdgeData&) = delete;
-    uint32_t getPointsPtr() const;
-    uint32_t getEdgeGroupsPtr() const;
 };
 
 /// Evolution data from an operation.
@@ -267,27 +230,6 @@ struct SurfaceData {
     std::vector<double> params;
     bool hasBSpline = false;
     NurbsSurfaceData bspline;
-};
-
-/// Batch mesh data: concatenated positions/normals/indices with per-shape offsets.
-struct MeshBatchData {
-    float* positions = nullptr;
-    float* normals = nullptr;
-    uint32_t* indices = nullptr;
-    int32_t* shapeOffsets = nullptr; // [posStart, posCount, idxStart, idxCount] per shape
-    int positionCount = 0;
-    int normalCount = 0;
-    int indexCount = 0;
-    int shapeCount = 0; // number of shapes (shapeOffsets has shapeCount * 4 int32s)
-
-    MeshBatchData() = default;
-    ~MeshBatchData();
-    MeshBatchData(const MeshBatchData& other);
-    MeshBatchData& operator=(const MeshBatchData&) = delete;
-    uint32_t getPositionsPtr() const;
-    uint32_t getNormalsPtr() const;
-    uint32_t getIndicesPtr() const;
-    uint32_t getShapeOffsetsPtr() const;
 };
 
 /// XCAF label info returned from queries.
