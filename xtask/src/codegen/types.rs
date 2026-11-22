@@ -140,8 +140,12 @@ pub enum ReturnType {
     VectorDouble,
     /// STEP import handle and root/transfer counts packed as u32 values.
     StepImport,
+    /// STEP entity transfer handle and resolved model rank.
+    StepEntityImport,
     /// Native OCCT mass/inertia properties packed as f64 values.
     BRepProperties,
+    /// Signed adaptive volume and achieved relative error.
+    AdaptiveVolume,
     /// `double` return.
     Double,
     /// `std::string` return.

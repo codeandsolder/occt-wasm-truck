@@ -124,7 +124,9 @@ const fn c_return_type(rt: ReturnType) -> &'static str {
         | ReturnType::Bytes
         | ReturnType::VectorUint32
         | ReturnType::StepImport
+        | ReturnType::StepEntityImport
         | ReturnType::BRepProperties
+        | ReturnType::AdaptiveVolume
         | ReturnType::VectorShapeIds
         | ReturnType::VectorDouble
         | ReturnType::VectorInt
@@ -157,7 +159,9 @@ const fn error_sentinel(rt: ReturnType) -> &'static str {
         | ReturnType::Bytes
         | ReturnType::VectorUint32
         | ReturnType::StepImport
+        | ReturnType::StepEntityImport
         | ReturnType::BRepProperties
+        | ReturnType::AdaptiveVolume
         | ReturnType::VectorShapeIds
         | ReturnType::VectorDouble
         | ReturnType::VectorInt
@@ -201,10 +205,13 @@ const fn result_transfer(rt: ReturnType) -> ResultTransfer {
         ReturnType::Bool => Boolean,
         ReturnType::Void => Void,
         ReturnType::String | ReturnType::Bytes => SizedBuffer("g_string_buf"),
-        ReturnType::VectorUint32 | ReturnType::VectorShapeIds | ReturnType::StepImport => {
-            SizedBuffer("g_vec_u32_buf")
+        ReturnType::VectorUint32
+        | ReturnType::VectorShapeIds
+        | ReturnType::StepImport
+        | ReturnType::StepEntityImport => SizedBuffer("g_vec_u32_buf"),
+        ReturnType::VectorDouble | ReturnType::BRepProperties | ReturnType::AdaptiveVolume => {
+            SizedBuffer("g_vec_f64_buf")
         }
-        ReturnType::VectorDouble | ReturnType::BRepProperties => SizedBuffer("g_vec_f64_buf"),
         ReturnType::VectorInt => SizedBuffer("g_vec_i32_buf"),
         ReturnType::BBoxData => AssignedBuffer("g_bbox_buf"),
         ReturnType::MeshData => ReconstructedBuffer {

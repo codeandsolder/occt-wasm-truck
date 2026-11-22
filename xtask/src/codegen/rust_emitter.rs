@@ -137,7 +137,9 @@ const fn rust_return_type(rt: ReturnType) -> &'static str {
         ReturnType::Bytes => "OcctResult<Vec<u8>>",
         ReturnType::VectorUint32 => "OcctResult<Vec<u32>>",
         ReturnType::StepImport => "OcctResult<StepImport>",
+        ReturnType::StepEntityImport => "OcctResult<StepEntityImport>",
         ReturnType::BRepProperties => "OcctResult<BRepProperties>",
+        ReturnType::AdaptiveVolume => "OcctResult<AdaptiveVolume>",
         ReturnType::VectorShapeIds => "OcctResult<Vec<ShapeHandle>>",
         ReturnType::VectorDouble => "OcctResult<Vec<f64>>",
         ReturnType::VectorInt => "OcctResult<Vec<i32>>",
@@ -276,7 +278,9 @@ fn wasm_typed_func_type(spec: &MethodSpec) -> String {
         | ReturnType::Bytes
         | ReturnType::VectorUint32
         | ReturnType::StepImport
+        | ReturnType::StepEntityImport
         | ReturnType::BRepProperties
+        | ReturnType::AdaptiveVolume
         | ReturnType::VectorShapeIds
         | ReturnType::VectorDouble
         | ReturnType::VectorInt
@@ -321,7 +325,9 @@ const fn result_binding(rt: ReturnType) -> (&'static str, ResultCheck, &'static 
         ReturnType::Bytes => ("len", Status, "self.read_bytes_result()"),
         ReturnType::VectorUint32 => ("len", Status, "self.read_vec_u32_result()"),
         ReturnType::StepImport => ("len", Status, "self.read_step_import_result()"),
+        ReturnType::StepEntityImport => ("len", Status, "self.read_step_entity_import_result()"),
         ReturnType::BRepProperties => ("len", Status, "self.read_brep_properties_result()"),
+        ReturnType::AdaptiveVolume => ("len", Status, "self.read_adaptive_volume_result()"),
         ReturnType::VectorShapeIds => ("len", Status, "self.read_vec_shape_result()"),
         ReturnType::VectorDouble => ("len", Status, "self.read_vec_f64_result()"),
         ReturnType::VectorInt => ("len", Status, "self.read_vec_i32_result()"),
@@ -610,8 +616,8 @@ use wasmtime::TypedFunc;
 use crate::error::OcctResult;
 use crate::kernel::checked_wasm_len;
 use crate::types::{
-    BRepProperties, BoundingBox, CurveData, EdgeData, EvolutionData, LabelInfo, Mesh, MeshBatch,
-    DocumentHandle, NurbsCurveData, ProjectionData, ShapeHandle, StepImport, SurfaceData,
+    AdaptiveVolume, BRepProperties, BoundingBox, CurveData, EdgeData, EvolutionData, LabelInfo, Mesh, MeshBatch,
+    DocumentHandle, NurbsCurveData, ProjectionData, ShapeHandle, StepEntityImport, StepImport, SurfaceData,
 };
 
 ",
