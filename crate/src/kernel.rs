@@ -55,6 +55,47 @@ impl<C: wasmtime::WasmResults + TryInto<u32>> BufferExport<C> {
     }
 }
 
+/// Scalars that can be decoded from the little-endian WASM result buffers.
+trait GuestElement: Sized {
+    fn decode(
+        memory: Memory,
+        store: &Store<HostState>,
+        address: u32,
+        count: u32,
+    ) -> OcctResult<Vec<Self>>;
+}
+
+macro_rules! guest_elements {
+    ($($ty:ty),+ $(,)?) => {$(
+        impl GuestElement for $ty {
+            fn decode(
+                memory: Memory,
+                store: &Store<HostState>,
+                address: u32,
+                count: u32,
+            ) -> OcctResult<Vec<Self>> {
+                read_array(memory, store, address, count, Self::from_le_bytes)
+            }
+        }
+    )+};
+}
+guest_elements!(i32, u32, f32, f64);
+
+struct ResultReader<'a> {
+    memory: Memory,
+    store: &'a mut Store<HostState>,
+}
+
+impl ResultReader<'_> {
+    fn read<T: GuestElement, C: wasmtime::WasmResults + TryInto<u32>>(
+        &mut self,
+        source: &BufferExport<C>,
+    ) -> OcctResult<Vec<T>> {
+        let (address, count) = source.query(&mut *self.store)?;
+        T::decode(self.memory, self.store, address, count)
+    }
+}
+
 /// Input buffers allocated for one WASM call. The generated number of
 /// heap arguments determines the stack capacity; no heap bookkeeping needed.
 pub(super) struct GuestBuffers<const N: usize> {
@@ -467,50 +508,9 @@ impl OcctKernel {
         result
     }
 
-    /// Borrow a byte slice from WASM memory after validating its full range.
-    fn read_slice(&self, ptr: u32, len: u32) -> OcctResult<&[u8]> {
-        let mem = self.memory.data(&self.store);
-        let start = ptr as usize;
-        let end = start
-            .checked_add(len as usize)
-            .ok_or_else(|| OcctError::Memory("read range overflow".to_owned()))?;
-        mem.get(start..end)
-            .ok_or_else(|| OcctError::Memory("read out of bounds".to_owned()))
-    }
-
     /// Read an owned byte slice from WASM memory.
     fn read_bytes(&self, ptr: u32, len: u32) -> OcctResult<Vec<u8>> {
-        Ok(self.read_slice(ptr, len)?.to_vec())
-    }
-
-    /// Decode little-endian elements without an intermediate byte allocation.
-    fn read_array<const N: usize, T>(
-        &self,
-        ptr: u32,
-        count: u32,
-        decode: impl Fn([u8; N]) -> T,
-    ) -> OcctResult<Vec<T>> {
-        let width = checked_wasm_len(N, 1)?;
-        let len = checked_wasm_product(count, width)?;
-        let (chunks, remainder) = self.read_slice(ptr, len)?.as_chunks::<N>();
-        debug_assert!(remainder.is_empty());
-        Ok(chunks.iter().copied().map(decode).collect())
-    }
-
-    fn read_f32_slice(&self, ptr: u32, count: u32) -> OcctResult<Vec<f32>> {
-        self.read_array(ptr, count, f32::from_le_bytes)
-    }
-
-    fn read_u32_slice(&self, ptr: u32, count: u32) -> OcctResult<Vec<u32>> {
-        self.read_array(ptr, count, u32::from_le_bytes)
-    }
-
-    fn read_i32_slice(&self, ptr: u32, count: u32) -> OcctResult<Vec<i32>> {
-        self.read_array(ptr, count, i32::from_le_bytes)
-    }
-
-    fn read_f64_slice(&self, ptr: u32, count: u32) -> OcctResult<Vec<f64>> {
-        self.read_array(ptr, count, f64::from_le_bytes)
+        Ok(read_slice(self.memory, &self.store, ptr, len)?.to_vec())
     }
 
     // === Error handling ===
@@ -562,8 +562,11 @@ impl OcctKernel {
 
     /// Read a `Vec<u32>` result.
     pub(crate) fn read_vec_u32_result(&mut self) -> OcctResult<Vec<u32>> {
-        let (ptr, len) = self.buffer_vec_u32_result.query(&mut self.store)?;
-        self.read_u32_slice(ptr, len)
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        reader.read(&self.buffer_vec_u32_result)
     }
 
     /// Read a `Vec<ShapeHandle>` result.
@@ -577,14 +580,20 @@ impl OcctKernel {
 
     /// Read a `Vec<f64>` result.
     pub(crate) fn read_vec_f64_result(&mut self) -> OcctResult<Vec<f64>> {
-        let (ptr, len) = self.buffer_vec_f64_result.query(&mut self.store)?;
-        self.read_f64_slice(ptr, len)
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        reader.read(&self.buffer_vec_f64_result)
     }
 
     /// Read a `Vec<i32>` result.
     pub(crate) fn read_vec_i32_result(&mut self) -> OcctResult<Vec<i32>> {
-        let (ptr, len) = self.buffer_vec_i32_result.query(&mut self.store)?;
-        self.read_i32_slice(ptr, len)
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        reader.read(&self.buffer_vec_i32_result)
     }
 
     /// Read a bounding box result.
@@ -605,79 +614,90 @@ impl OcctKernel {
 
     /// Read a mesh result.
     pub(crate) fn read_mesh_result(&mut self) -> OcctResult<Mesh> {
-        let (pos_ptr, pos_len) = self.buffer_mesh_positions.query(&mut self.store)?;
-        let (norm_ptr, norm_len) = self.buffer_mesh_normals.query(&mut self.store)?;
-        let (idx_ptr, idx_len) = self.buffer_mesh_indices.query(&mut self.store)?;
-        let (fg_ptr, fg_len) = self.buffer_mesh_face_groups.query(&mut self.store)?;
-
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
         Ok(Mesh {
-            positions: self.read_f32_slice(pos_ptr, pos_len)?,
-            normals: self.read_f32_slice(norm_ptr, norm_len)?,
-            indices: self.read_u32_slice(idx_ptr, idx_len)?,
-            face_groups: self.read_i32_slice(fg_ptr, fg_len)?,
+            positions: reader.read(&self.buffer_mesh_positions)?,
+            normals: reader.read(&self.buffer_mesh_normals)?,
+            indices: reader.read(&self.buffer_mesh_indices)?,
+            face_groups: reader.read(&self.buffer_mesh_face_groups)?,
         })
     }
 
     /// Read a mesh batch result.
     pub(crate) fn read_mesh_batch_result(&mut self) -> OcctResult<MeshBatch> {
-        let (pos_ptr, pos_len) = self.buffer_mesh_batch_positions.query(&mut self.store)?;
-        let (norm_ptr, norm_len) = self.buffer_mesh_batch_normals.query(&mut self.store)?;
-        let (idx_ptr, idx_len) = self.buffer_mesh_batch_indices.query(&mut self.store)?;
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
         let (off_ptr, shape_count) = self
             .buffer_mesh_batch_shape_offsets
-            .query(&mut self.store)?;
+            .query(&mut *reader.store)?;
 
         Ok(MeshBatch {
-            positions: self.read_f32_slice(pos_ptr, pos_len)?,
-            normals: self.read_f32_slice(norm_ptr, norm_len)?,
-            indices: self.read_u32_slice(idx_ptr, idx_len)?,
-            shape_offsets: self.read_i32_slice(off_ptr, checked_wasm_product(shape_count, 4)?)?,
+            positions: reader.read(&self.buffer_mesh_batch_positions)?,
+            normals: reader.read(&self.buffer_mesh_batch_normals)?,
+            indices: reader.read(&self.buffer_mesh_batch_indices)?,
+            shape_offsets: read_array(
+                self.memory,
+                &*reader.store,
+                off_ptr,
+                checked_wasm_product(shape_count, 4)?,
+                i32::from_le_bytes,
+            )?,
         })
     }
 
     /// Read an edge data result.
     pub(crate) fn read_edge_result(&mut self) -> OcctResult<EdgeData> {
-        let (pts_ptr, pts_len) = self.buffer_edge_points.query(&mut self.store)?;
-        let (grp_ptr, grp_len) = self.buffer_edge_groups.query(&mut self.store)?;
-
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
         Ok(EdgeData {
-            points: self.read_f32_slice(pts_ptr, pts_len)?,
-            edge_groups: self.read_i32_slice(grp_ptr, grp_len)?,
+            points: reader.read(&self.buffer_edge_points)?,
+            edge_groups: reader.read(&self.buffer_edge_groups)?,
         })
     }
 
     /// Read a NURBS curve data result.
     pub(crate) fn read_nurbs_result(&mut self) -> OcctResult<NurbsCurveData> {
-        let degree = self.fn_get_nurbs_degree.call(&mut self.store, ())?;
-        let rational = self.fn_get_nurbs_rational.call(&mut self.store, ())? != 0;
-        let periodic = self.fn_get_nurbs_periodic.call(&mut self.store, ())? != 0;
-
-        let (knots_ptr, knots_len) = self.buffer_nurbs_knots.query(&mut self.store)?;
-        let (mult_ptr, mult_len) = self.buffer_nurbs_multiplicities.query(&mut self.store)?;
-        let (poles_ptr, poles_len) = self.buffer_nurbs_poles.query(&mut self.store)?;
-        let (weights_ptr, weights_len) = self.buffer_nurbs_weights.query(&mut self.store)?;
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        let degree = self.fn_get_nurbs_degree.call(&mut *reader.store, ())?;
+        let rational = self.fn_get_nurbs_rational.call(&mut *reader.store, ())? != 0;
+        let periodic = self.fn_get_nurbs_periodic.call(&mut *reader.store, ())? != 0;
 
         Ok(NurbsCurveData {
             degree,
             rational,
             periodic,
-            knots: self.read_f64_slice(knots_ptr, knots_len)?,
-            multiplicities: self.read_i32_slice(mult_ptr, mult_len)?,
-            poles: self.read_f64_slice(poles_ptr, poles_len)?,
-            weights: self.read_f64_slice(weights_ptr, weights_len)?,
+            knots: reader.read(&self.buffer_nurbs_knots)?,
+            multiplicities: reader.read(&self.buffer_nurbs_multiplicities)?,
+            poles: reader.read(&self.buffer_nurbs_poles)?,
+            weights: reader.read(&self.buffer_nurbs_weights)?,
         })
     }
 
     /// Read a curve geometry result.
     pub(crate) fn read_curve_result(&mut self) -> OcctResult<CurveData> {
-        let (kind_ptr, kind_len) = self.buffer_curve_kind.query(&mut self.store)?;
-        let kind = String::from_utf8(self.read_bytes(kind_ptr, kind_len)?)
-            .map_err(|e| OcctError::Memory(e.to_string()))?;
-        let first = self.fn_get_curve_first.call(&mut self.store, ())?;
-        let last = self.fn_get_curve_last.call(&mut self.store, ())?;
-        let (params_ptr, params_len) = self.buffer_curve_params.query(&mut self.store)?;
-        let params = self.read_f64_slice(params_ptr, params_len)?;
-        let has_bspline = self.fn_get_curve_has_bspline.call(&mut self.store, ())? != 0;
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        let (kind_ptr, kind_len) = self.buffer_curve_kind.query(&mut *reader.store)?;
+        let kind = String::from_utf8(
+            read_slice(reader.memory, reader.store, kind_ptr, kind_len).map(<[u8]>::to_vec)?,
+        )
+        .map_err(|e| OcctError::Memory(e.to_string()))?;
+        let first = self.fn_get_curve_first.call(&mut *reader.store, ())?;
+        let last = self.fn_get_curve_last.call(&mut *reader.store, ())?;
+        let params = reader.read(&self.buffer_curve_params)?;
+        let has_bspline = self.fn_get_curve_has_bspline.call(&mut *reader.store, ())? != 0;
         let bspline = if has_bspline {
             Some(self.read_nurbs_result()?)
         } else {
@@ -692,13 +712,21 @@ impl OcctKernel {
 
     /// Read a surface geometry result.
     pub(crate) fn read_surface_result(&mut self) -> OcctResult<SurfaceData> {
-        let (kind_ptr, kind_len) = self.buffer_surface_kind.query(&mut self.store)?;
-        let kind = String::from_utf8(self.read_bytes(kind_ptr, kind_len)?)
-            .map_err(|e| OcctError::Memory(e.to_string()))?;
-        let is_direct = self.fn_get_surface_is_direct.call(&mut self.store, ())? != 0;
-        let (params_ptr, params_len) = self.buffer_surface_params.query(&mut self.store)?;
-        let params = self.read_f64_slice(params_ptr, params_len)?;
-        let has_bspline = self.fn_get_surface_has_bspline.call(&mut self.store, ())? != 0;
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        let (kind_ptr, kind_len) = self.buffer_surface_kind.query(&mut *reader.store)?;
+        let kind = String::from_utf8(
+            read_slice(reader.memory, reader.store, kind_ptr, kind_len).map(<[u8]>::to_vec)?,
+        )
+        .map_err(|e| OcctError::Memory(e.to_string()))?;
+        let is_direct = self.fn_get_surface_is_direct.call(&mut *reader.store, ())? != 0;
+        let params = reader.read(&self.buffer_surface_params)?;
+        let has_bspline = self
+            .fn_get_surface_has_bspline
+            .call(&mut *reader.store, ())?
+            != 0;
         let bspline = if has_bspline {
             Some(self.read_nurbs_surface()?)
         } else {
@@ -708,59 +736,55 @@ impl OcctKernel {
     }
 
     fn read_nurbs_surface(&mut self) -> OcctResult<NurbsSurfaceData> {
-        let (u_knots_pointer, u_knots_count) =
-            self.buffer_surface_knots_u.query(&mut self.store)?;
-        let (v_knots_pointer, v_knots_count) =
-            self.buffer_surface_knots_v.query(&mut self.store)?;
-        let (mults_u_ptr, mults_u_len) = self
-            .buffer_surface_multiplicities_u
-            .query(&mut self.store)?;
-        let (mults_v_ptr, mults_v_len) = self
-            .buffer_surface_multiplicities_v
-            .query(&mut self.store)?;
-        let (poles_ptr, poles_len) = self.buffer_surface_poles.query(&mut self.store)?;
-        let (weights_ptr, weights_len) = self.buffer_surface_weights.query(&mut self.store)?;
-
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
         Ok(NurbsSurfaceData {
-            degree_u: self.fn_get_surface_degree_u.call(&mut self.store, ())?,
-            degree_v: self.fn_get_surface_degree_v.call(&mut self.store, ())?,
-            nb_poles_u: self.fn_get_surface_nb_poles_u.call(&mut self.store, ())?,
-            nb_poles_v: self.fn_get_surface_nb_poles_v.call(&mut self.store, ())?,
-            periodic_u: self.fn_get_surface_periodic_u.call(&mut self.store, ())? != 0,
-            periodic_v: self.fn_get_surface_periodic_v.call(&mut self.store, ())? != 0,
-            knots_u: self.read_f64_slice(u_knots_pointer, u_knots_count)?,
-            knots_v: self.read_f64_slice(v_knots_pointer, v_knots_count)?,
-            multiplicities_u: self.read_i32_slice(mults_u_ptr, mults_u_len)?,
-            multiplicities_v: self.read_i32_slice(mults_v_ptr, mults_v_len)?,
-            poles: self.read_f64_slice(poles_ptr, poles_len)?,
-            weights: self.read_f64_slice(weights_ptr, weights_len)?,
+            degree_u: self.fn_get_surface_degree_u.call(&mut *reader.store, ())?,
+            degree_v: self.fn_get_surface_degree_v.call(&mut *reader.store, ())?,
+            nb_poles_u: self
+                .fn_get_surface_nb_poles_u
+                .call(&mut *reader.store, ())?,
+            nb_poles_v: self
+                .fn_get_surface_nb_poles_v
+                .call(&mut *reader.store, ())?,
+            periodic_u: self
+                .fn_get_surface_periodic_u
+                .call(&mut *reader.store, ())?
+                != 0,
+            periodic_v: self
+                .fn_get_surface_periodic_v
+                .call(&mut *reader.store, ())?
+                != 0,
+            knots_u: reader.read(&self.buffer_surface_knots_u)?,
+            knots_v: reader.read(&self.buffer_surface_knots_v)?,
+            multiplicities_u: reader.read(&self.buffer_surface_multiplicities_u)?,
+            multiplicities_v: reader.read(&self.buffer_surface_multiplicities_v)?,
+            poles: reader.read(&self.buffer_surface_poles)?,
+            weights: reader.read(&self.buffer_surface_weights)?,
         })
     }
 
     /// Read an evolution data result.
     pub(crate) fn read_evolution_result(&mut self) -> OcctResult<EvolutionData> {
-        let result_id = self.fn_get_evo_result_id.call(&mut self.store, ())?;
-        let (mod_ptr, mod_len) = self.buffer_evo_modified.query(&mut self.store)?;
-        let (gen_ptr, gen_len) = self.buffer_evo_generated.query(&mut self.store)?;
-        let (del_ptr, del_len) = self.buffer_evo_deleted.query(&mut self.store)?;
-        let (edge_mod_ptr, edge_mod_len) = self.buffer_evo_edge_modified.query(&mut self.store)?;
-        let (edge_gen_ptr, edge_gen_len) = self.buffer_evo_edge_generated.query(&mut self.store)?;
-        let (edge_del_ptr, edge_del_len) = self.buffer_evo_edge_deleted.query(&mut self.store)?;
-        let (first_ptr, first_len) = self.buffer_evo_first_shape.query(&mut self.store)?;
-        let (last_ptr, last_len) = self.buffer_evo_last_shape.query(&mut self.store)?;
-        let (spine_ptr, spine_len) = self.buffer_evo_spine_generated.query(&mut self.store)?;
+        let mut reader = ResultReader {
+            memory: self.memory,
+            store: &mut self.store,
+        };
+        let result_id = self.fn_get_evo_result_id.call(&mut *reader.store, ())?;
 
         Ok(EvolutionData {
             result_id,
-            modified: self.read_i32_slice(mod_ptr, mod_len)?,
-            generated: self.read_i32_slice(gen_ptr, gen_len)?,
-            deleted: self.read_i32_slice(del_ptr, del_len)?,
-            edge_modified: self.read_i32_slice(edge_mod_ptr, edge_mod_len)?,
-            edge_generated: self.read_i32_slice(edge_gen_ptr, edge_gen_len)?,
-            edge_deleted: self.read_i32_slice(edge_del_ptr, edge_del_len)?,
-            first_shape: self.read_i32_slice(first_ptr, first_len)?,
-            last_shape: self.read_i32_slice(last_ptr, last_len)?,
-            spine_generated: self.read_i32_slice(spine_ptr, spine_len)?,
+            modified: reader.read(&self.buffer_evo_modified)?,
+            generated: reader.read(&self.buffer_evo_generated)?,
+            deleted: reader.read(&self.buffer_evo_deleted)?,
+            edge_modified: reader.read(&self.buffer_evo_edge_modified)?,
+            edge_generated: reader.read(&self.buffer_evo_edge_generated)?,
+            edge_deleted: reader.read(&self.buffer_evo_edge_deleted)?,
+            first_shape: reader.read(&self.buffer_evo_first_shape)?,
+            last_shape: reader.read(&self.buffer_evo_last_shape)?,
+            spine_generated: reader.read(&self.buffer_evo_spine_generated)?,
         })
     }
 
@@ -815,6 +839,32 @@ impl Drop for OcctKernel {
             let _ = destroy.call(&mut self.store, ());
         }
     }
+}
+
+/// Borrow a byte slice from WASM memory after validating its full range.
+fn read_slice(memory: Memory, store: &Store<HostState>, ptr: u32, len: u32) -> OcctResult<&[u8]> {
+    let mem = memory.data(store);
+    let start = ptr as usize;
+    let end = start
+        .checked_add(len as usize)
+        .ok_or_else(|| OcctError::Memory("read range overflow".to_owned()))?;
+    mem.get(start..end)
+        .ok_or_else(|| OcctError::Memory("read out of bounds".to_owned()))
+}
+
+/// Decode little-endian elements without an intermediate byte allocation.
+fn read_array<const N: usize, T>(
+    memory: Memory,
+    store: &Store<HostState>,
+    ptr: u32,
+    count: u32,
+    decode: impl Fn([u8; N]) -> T,
+) -> OcctResult<Vec<T>> {
+    let width = checked_wasm_len(N, 1)?;
+    let len = checked_wasm_product(count, width)?;
+    let (chunks, remainder) = read_slice(memory, store, ptr, len)?.as_chunks::<N>();
+    debug_assert!(remainder.is_empty());
+    Ok(chunks.iter().copied().map(decode).collect())
 }
 
 /// Instantiate the WASI reactor and initialize its C++ runtime.

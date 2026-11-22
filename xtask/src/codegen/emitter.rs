@@ -453,24 +453,44 @@ fn any_body_calls(methods: &[&MethodSpec], helper: &str) -> bool {
     methods.iter().any(|m| m.setup_code.contains(helper))
 }
 
+/// Emit ordered C++ fragments only when a generated facade body needs them.
+fn emit_referenced_templates(
+    buf: &mut String,
+    methods: &[&MethodSpec],
+    templates: &[(&str, &str)],
+) {
+    for (symbol, source) in templates {
+        if any_body_calls(methods, symbol) {
+            buf.push_str(source);
+            buf.push('\n');
+        }
+    }
+}
+
 /// Emit the geometry readers' helpers, each only if a method body calls it.
 fn emit_geometry_helpers(buf: &mut String, methods: &[&MethodSpec]) {
-    if any_body_calls(methods, "curveKindName(") {
-        buf.push_str(include_str!("templates/curve_kind.cpp.in"));
-        buf.push('\n');
-    }
-    if any_body_calls(methods, "surfaceKindName(") {
-        buf.push_str(include_str!("templates/surface_kind.cpp.in"));
-        buf.push('\n');
-    }
-    if any_body_calls(methods, "toNurbsCurveData(") {
-        buf.push_str(include_str!("templates/nurbs_curve.cpp.in"));
-        buf.push('\n');
-    }
-    if any_body_calls(methods, "toNurbsSurfaceData(") {
-        buf.push_str(include_str!("templates/nurbs_surface.cpp.in"));
-        buf.push('\n');
-    }
+    emit_referenced_templates(
+        buf,
+        methods,
+        &[
+            (
+                "curveKindName(",
+                include_str!("templates/curve_kind.cpp.in"),
+            ),
+            (
+                "surfaceKindName(",
+                include_str!("templates/surface_kind.cpp.in"),
+            ),
+            (
+                "toNurbsCurveData(",
+                include_str!("templates/nurbs_curve.cpp.in"),
+            ),
+            (
+                "toNurbsSurfaceData(",
+                include_str!("templates/nurbs_surface.cpp.in"),
+            ),
+        ],
+    );
 }
 
 /// Emit static helper functions that generated methods depend on.
@@ -550,30 +570,33 @@ fn emit_helper_functions(buf: &mut String, methods: &[&MethodSpec]) {
 
 /// Emit the helpers behind the sweeps' history, each only if a method body calls it.
 fn emit_sweep_helpers(buf: &mut String, methods: &[&MethodSpec]) {
-    if any_body_calls(methods, "buildSweep(") {
-        buf.push_str(include_str!("templates/sweep.cpp.in"));
-        buf.push('\n');
-    }
-    if any_body_calls(methods, "appendSweepCaps(") {
-        buf.push_str(include_str!("templates/sweep_caps.cpp.in"));
-        buf.push('\n');
-    }
-    if any_body_calls(methods, "appendSpineGenerated(") {
-        buf.push_str(include_str!("templates/spine_generated.cpp.in"));
-        buf.push('\n');
-    }
-    if any_body_calls(methods, "RevolHistory ") {
-        buf.push_str(include_str!("templates/revol_history.cpp.in"));
-        buf.push('\n');
-    }
-    if any_body_calls(methods, "PipeHistory ") {
-        buf.push_str(include_str!("templates/pipe_history.cpp.in"));
-        buf.push('\n');
-    }
-    if any_body_calls(methods, "HistoryMaker ") {
-        buf.push_str(include_str!("templates/history_adapter.cpp.in"));
-        buf.push('\n');
-    }
+    emit_referenced_templates(
+        buf,
+        methods,
+        &[
+            ("buildSweep(", include_str!("templates/sweep.cpp.in")),
+            (
+                "appendSweepCaps(",
+                include_str!("templates/sweep_caps.cpp.in"),
+            ),
+            (
+                "appendSpineGenerated(",
+                include_str!("templates/spine_generated.cpp.in"),
+            ),
+            (
+                "RevolHistory ",
+                include_str!("templates/revol_history.cpp.in"),
+            ),
+            (
+                "PipeHistory ",
+                include_str!("templates/pipe_history.cpp.in"),
+            ),
+            (
+                "HistoryMaker ",
+                include_str!("templates/history_adapter.cpp.in"),
+            ),
+        ],
+    );
 }
 
 /// Generate the contents of `facade/generated/kernel.cpp`.
