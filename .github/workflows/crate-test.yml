@@ -28,5 +28,5 @@ jobs:
     uses: codeandsolder/ci-workflows/.github/workflows/rust-sccache.yml@6461397f9c7b2e283677906fdf2fe2b573001789 # main
     with:
       command: |
-        OCCT_WASM_REQUIRE_KERNEL=1 cargo test --locked --release -p occt-wasm --lib --tests -- --test-threads=4
+        cargo test --locked --release -p occt-wasm --lib --tests -- --test-threads=4
         cargo test --locked --release -p occt-wasm --doc

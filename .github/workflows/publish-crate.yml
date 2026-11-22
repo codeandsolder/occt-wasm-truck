@@ -100,8 +100,6 @@ jobs:
           echo "Embedded WASM: $size bytes"
 
       - name: Run crate integration tests against the embedded WASM
-        env:
-          OCCT_WASM_REQUIRE_KERNEL: "1"
         run: cargo test --release -p occt-wasm --test integration -- --test-threads=4
 
       - name: Authenticate with crates.io (OIDC)

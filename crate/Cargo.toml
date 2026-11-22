@@ -44,5 +44,9 @@ wasmtime = { version = "48.0.6", default-features = false, features = [
 brotli = "9"
 thiserror = "2"
 
+[package.metadata.rust-skills2]
+allow-test-panics = true
+allow-test-panics-reason = "CAD integration tests use fail-fast assertions on kernel construction and geometry operations; production remains strict"
+
 [lints]
 workspace = true
