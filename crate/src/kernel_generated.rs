@@ -381,310 +381,310 @@ impl GeneratedFuncs {
     #[allow(clippy::too_many_lines)]
     pub(crate) fn resolve<T: 'static>(
         instance: &wasmtime::Instance,
-        mut store: &mut wasmtime::Store<T>,
+        store: &mut wasmtime::Store<T>,
     ) -> OcctResult<Self> {
         Ok(Self {
-            fn_make_box: instance.get_typed_func(&mut store, "occt_make_box")?,
+            fn_make_box: instance.get_typed_func(&mut *store, "occt_make_box")?,
             fn_make_box_from_corners: instance
-                .get_typed_func(&mut store, "occt_make_box_from_corners")?,
-            fn_make_cylinder: instance.get_typed_func(&mut store, "occt_make_cylinder")?,
-            fn_make_sphere: instance.get_typed_func(&mut store, "occt_make_sphere")?,
-            fn_make_cone: instance.get_typed_func(&mut store, "occt_make_cone")?,
-            fn_make_torus: instance.get_typed_func(&mut store, "occt_make_torus")?,
-            fn_make_ellipsoid: instance.get_typed_func(&mut store, "occt_make_ellipsoid")?,
-            fn_half_space: instance.get_typed_func(&mut store, "occt_half_space")?,
-            fn_make_rectangle: instance.get_typed_func(&mut store, "occt_make_rectangle")?,
-            fn_fuse: instance.get_typed_func(&mut store, "occt_fuse")?,
-            fn_cut: instance.get_typed_func(&mut store, "occt_cut")?,
-            fn_common: instance.get_typed_func(&mut store, "occt_common")?,
-            fn_section: instance.get_typed_func(&mut store, "occt_section")?,
-            fn_section_plane: instance.get_typed_func(&mut store, "occt_section_plane")?,
-            fn_intersect: instance.get_typed_func(&mut store, "occt_intersect")?,
-            fn_fuse_all: instance.get_typed_func(&mut store, "occt_fuse_all")?,
+                .get_typed_func(&mut *store, "occt_make_box_from_corners")?,
+            fn_make_cylinder: instance.get_typed_func(&mut *store, "occt_make_cylinder")?,
+            fn_make_sphere: instance.get_typed_func(&mut *store, "occt_make_sphere")?,
+            fn_make_cone: instance.get_typed_func(&mut *store, "occt_make_cone")?,
+            fn_make_torus: instance.get_typed_func(&mut *store, "occt_make_torus")?,
+            fn_make_ellipsoid: instance.get_typed_func(&mut *store, "occt_make_ellipsoid")?,
+            fn_half_space: instance.get_typed_func(&mut *store, "occt_half_space")?,
+            fn_make_rectangle: instance.get_typed_func(&mut *store, "occt_make_rectangle")?,
+            fn_fuse: instance.get_typed_func(&mut *store, "occt_fuse")?,
+            fn_cut: instance.get_typed_func(&mut *store, "occt_cut")?,
+            fn_common: instance.get_typed_func(&mut *store, "occt_common")?,
+            fn_section: instance.get_typed_func(&mut *store, "occt_section")?,
+            fn_section_plane: instance.get_typed_func(&mut *store, "occt_section_plane")?,
+            fn_intersect: instance.get_typed_func(&mut *store, "occt_intersect")?,
+            fn_fuse_all: instance.get_typed_func(&mut *store, "occt_fuse_all")?,
             fn_intersection_cells: instance
-                .get_typed_func(&mut store, "occt_intersection_cells")?,
-            fn_cut_all: instance.get_typed_func(&mut store, "occt_cut_all")?,
-            fn_boolean_op: instance.get_typed_func(&mut store, "occt_boolean_op")?,
-            fn_boolean_pipeline: instance.get_typed_func(&mut store, "occt_boolean_pipeline")?,
-            fn_split: instance.get_typed_func(&mut store, "occt_split")?,
-            fn_extrude: instance.get_typed_func(&mut store, "occt_extrude")?,
-            fn_revolve: instance.get_typed_func(&mut store, "occt_revolve")?,
-            fn_fillet: instance.get_typed_func(&mut store, "occt_fillet")?,
-            fn_chamfer: instance.get_typed_func(&mut store, "occt_chamfer")?,
+                .get_typed_func(&mut *store, "occt_intersection_cells")?,
+            fn_cut_all: instance.get_typed_func(&mut *store, "occt_cut_all")?,
+            fn_boolean_op: instance.get_typed_func(&mut *store, "occt_boolean_op")?,
+            fn_boolean_pipeline: instance.get_typed_func(&mut *store, "occt_boolean_pipeline")?,
+            fn_split: instance.get_typed_func(&mut *store, "occt_split")?,
+            fn_extrude: instance.get_typed_func(&mut *store, "occt_extrude")?,
+            fn_revolve: instance.get_typed_func(&mut *store, "occt_revolve")?,
+            fn_fillet: instance.get_typed_func(&mut *store, "occt_fillet")?,
+            fn_chamfer: instance.get_typed_func(&mut *store, "occt_chamfer")?,
             fn_chamfer_dist_angle: instance
-                .get_typed_func(&mut store, "occt_chamfer_dist_angle")?,
+                .get_typed_func(&mut *store, "occt_chamfer_dist_angle")?,
             fn_chamfer_asymmetric: instance
-                .get_typed_func(&mut store, "occt_chamfer_asymmetric")?,
-            fn_fillet_radii: instance.get_typed_func(&mut store, "occt_fillet_radii")?,
-            fn_chamfer_distances: instance.get_typed_func(&mut store, "occt_chamfer_distances")?,
+                .get_typed_func(&mut *store, "occt_chamfer_asymmetric")?,
+            fn_fillet_radii: instance.get_typed_func(&mut *store, "occt_fillet_radii")?,
+            fn_chamfer_distances: instance.get_typed_func(&mut *store, "occt_chamfer_distances")?,
             fn_chamfer_dist_angles: instance
-                .get_typed_func(&mut store, "occt_chamfer_dist_angles")?,
-            fn_shell: instance.get_typed_func(&mut store, "occt_shell")?,
-            fn_offset: instance.get_typed_func(&mut store, "occt_offset")?,
-            fn_shell_with_join: instance.get_typed_func(&mut store, "occt_shell_with_join")?,
-            fn_offset_with_join: instance.get_typed_func(&mut store, "occt_offset_with_join")?,
-            fn_draft: instance.get_typed_func(&mut store, "occt_draft")?,
-            fn_draft_faces: instance.get_typed_func(&mut store, "occt_draft_faces")?,
-            fn_thicken: instance.get_typed_func(&mut store, "occt_thicken")?,
-            fn_defeature: instance.get_typed_func(&mut store, "occt_defeature")?,
-            fn_reverse_shape: instance.get_typed_func(&mut store, "occt_reverse_shape")?,
-            fn_simplify: instance.get_typed_func(&mut store, "occt_simplify")?,
-            fn_fillet_variable: instance.get_typed_func(&mut store, "occt_fillet_variable")?,
-            fn_fillet_batch: instance.get_typed_func(&mut store, "occt_fillet_batch")?,
-            fn_offset_wire2_d: instance.get_typed_func(&mut store, "occt_offset_wire2_d")?,
-            fn_translate: instance.get_typed_func(&mut store, "occt_translate")?,
-            fn_rotate: instance.get_typed_func(&mut store, "occt_rotate")?,
-            fn_scale: instance.get_typed_func(&mut store, "occt_scale")?,
-            fn_mirror: instance.get_typed_func(&mut store, "occt_mirror")?,
-            fn_copy: instance.get_typed_func(&mut store, "occt_copy")?,
-            fn_linear_pattern: instance.get_typed_func(&mut store, "occt_linear_pattern")?,
-            fn_circular_pattern: instance.get_typed_func(&mut store, "occt_circular_pattern")?,
-            fn_transform: instance.get_typed_func(&mut store, "occt_transform")?,
-            fn_located: instance.get_typed_func(&mut store, "occt_located")?,
-            fn_general_transform: instance.get_typed_func(&mut store, "occt_general_transform")?,
-            fn_translate_batch: instance.get_typed_func(&mut store, "occt_translate_batch")?,
-            fn_compose_transform: instance.get_typed_func(&mut store, "occt_compose_transform")?,
-            fn_transform_batch: instance.get_typed_func(&mut store, "occt_transform_batch")?,
-            fn_rotate_batch: instance.get_typed_func(&mut store, "occt_rotate_batch")?,
-            fn_scale_batch: instance.get_typed_func(&mut store, "occt_scale_batch")?,
-            fn_mirror_batch: instance.get_typed_func(&mut store, "occt_mirror_batch")?,
-            fn_make_vertex: instance.get_typed_func(&mut store, "occt_make_vertex")?,
-            fn_make_edge: instance.get_typed_func(&mut store, "occt_make_edge")?,
-            fn_make_wire: instance.get_typed_func(&mut store, "occt_make_wire")?,
-            fn_make_face: instance.get_typed_func(&mut store, "occt_make_face")?,
+                .get_typed_func(&mut *store, "occt_chamfer_dist_angles")?,
+            fn_shell: instance.get_typed_func(&mut *store, "occt_shell")?,
+            fn_offset: instance.get_typed_func(&mut *store, "occt_offset")?,
+            fn_shell_with_join: instance.get_typed_func(&mut *store, "occt_shell_with_join")?,
+            fn_offset_with_join: instance.get_typed_func(&mut *store, "occt_offset_with_join")?,
+            fn_draft: instance.get_typed_func(&mut *store, "occt_draft")?,
+            fn_draft_faces: instance.get_typed_func(&mut *store, "occt_draft_faces")?,
+            fn_thicken: instance.get_typed_func(&mut *store, "occt_thicken")?,
+            fn_defeature: instance.get_typed_func(&mut *store, "occt_defeature")?,
+            fn_reverse_shape: instance.get_typed_func(&mut *store, "occt_reverse_shape")?,
+            fn_simplify: instance.get_typed_func(&mut *store, "occt_simplify")?,
+            fn_fillet_variable: instance.get_typed_func(&mut *store, "occt_fillet_variable")?,
+            fn_fillet_batch: instance.get_typed_func(&mut *store, "occt_fillet_batch")?,
+            fn_offset_wire2_d: instance.get_typed_func(&mut *store, "occt_offset_wire2_d")?,
+            fn_translate: instance.get_typed_func(&mut *store, "occt_translate")?,
+            fn_rotate: instance.get_typed_func(&mut *store, "occt_rotate")?,
+            fn_scale: instance.get_typed_func(&mut *store, "occt_scale")?,
+            fn_mirror: instance.get_typed_func(&mut *store, "occt_mirror")?,
+            fn_copy: instance.get_typed_func(&mut *store, "occt_copy")?,
+            fn_linear_pattern: instance.get_typed_func(&mut *store, "occt_linear_pattern")?,
+            fn_circular_pattern: instance.get_typed_func(&mut *store, "occt_circular_pattern")?,
+            fn_transform: instance.get_typed_func(&mut *store, "occt_transform")?,
+            fn_located: instance.get_typed_func(&mut *store, "occt_located")?,
+            fn_general_transform: instance.get_typed_func(&mut *store, "occt_general_transform")?,
+            fn_translate_batch: instance.get_typed_func(&mut *store, "occt_translate_batch")?,
+            fn_compose_transform: instance.get_typed_func(&mut *store, "occt_compose_transform")?,
+            fn_transform_batch: instance.get_typed_func(&mut *store, "occt_transform_batch")?,
+            fn_rotate_batch: instance.get_typed_func(&mut *store, "occt_rotate_batch")?,
+            fn_scale_batch: instance.get_typed_func(&mut *store, "occt_scale_batch")?,
+            fn_mirror_batch: instance.get_typed_func(&mut *store, "occt_mirror_batch")?,
+            fn_make_vertex: instance.get_typed_func(&mut *store, "occt_make_vertex")?,
+            fn_make_edge: instance.get_typed_func(&mut *store, "occt_make_edge")?,
+            fn_make_wire: instance.get_typed_func(&mut *store, "occt_make_wire")?,
+            fn_make_face: instance.get_typed_func(&mut *store, "occt_make_face")?,
             fn_make_face_on_surface: instance
-                .get_typed_func(&mut store, "occt_make_face_on_surface")?,
-            fn_make_solid: instance.get_typed_func(&mut store, "occt_make_solid")?,
-            fn_sew: instance.get_typed_func(&mut store, "occt_sew")?,
-            fn_make_compound: instance.get_typed_func(&mut store, "occt_make_compound")?,
-            fn_make_line_edge: instance.get_typed_func(&mut store, "occt_make_line_edge")?,
-            fn_make_circle_edge: instance.get_typed_func(&mut store, "occt_make_circle_edge")?,
-            fn_make_circle_arc: instance.get_typed_func(&mut store, "occt_make_circle_arc")?,
-            fn_make_arc_edge: instance.get_typed_func(&mut store, "occt_make_arc_edge")?,
-            fn_make_ellipse_edge: instance.get_typed_func(&mut store, "occt_make_ellipse_edge")?,
-            fn_make_bezier_edge: instance.get_typed_func(&mut store, "occt_make_bezier_edge")?,
+                .get_typed_func(&mut *store, "occt_make_face_on_surface")?,
+            fn_make_solid: instance.get_typed_func(&mut *store, "occt_make_solid")?,
+            fn_sew: instance.get_typed_func(&mut *store, "occt_sew")?,
+            fn_make_compound: instance.get_typed_func(&mut *store, "occt_make_compound")?,
+            fn_make_line_edge: instance.get_typed_func(&mut *store, "occt_make_line_edge")?,
+            fn_make_circle_edge: instance.get_typed_func(&mut *store, "occt_make_circle_edge")?,
+            fn_make_circle_arc: instance.get_typed_func(&mut *store, "occt_make_circle_arc")?,
+            fn_make_arc_edge: instance.get_typed_func(&mut *store, "occt_make_arc_edge")?,
+            fn_make_ellipse_edge: instance.get_typed_func(&mut *store, "occt_make_ellipse_edge")?,
+            fn_make_bezier_edge: instance.get_typed_func(&mut *store, "occt_make_bezier_edge")?,
             fn_make_b_spline_edge: instance
-                .get_typed_func(&mut store, "occt_make_b_spline_edge")?,
-            fn_make_ellipse_arc: instance.get_typed_func(&mut store, "occt_make_ellipse_arc")?,
+                .get_typed_func(&mut *store, "occt_make_b_spline_edge")?,
+            fn_make_ellipse_arc: instance.get_typed_func(&mut *store, "occt_make_ellipse_arc")?,
             fn_make_ellipse_arc_oriented: instance
-                .get_typed_func(&mut store, "occt_make_ellipse_arc_oriented")?,
-            fn_make_helix_wire: instance.get_typed_func(&mut store, "occt_make_helix_wire")?,
+                .get_typed_func(&mut *store, "occt_make_ellipse_arc_oriented")?,
+            fn_make_helix_wire: instance.get_typed_func(&mut *store, "occt_make_helix_wire")?,
             fn_make_helix_wire_handed: instance
-                .get_typed_func(&mut store, "occt_make_helix_wire_handed")?,
-            fn_thread_groove: instance.get_typed_func(&mut store, "occt_thread_groove")?,
+                .get_typed_func(&mut *store, "occt_make_helix_wire_handed")?,
+            fn_thread_groove: instance.get_typed_func(&mut *store, "occt_thread_groove")?,
             fn_make_non_planar_face: instance
-                .get_typed_func(&mut store, "occt_make_non_planar_face")?,
-            fn_fill_surface: instance.get_typed_func(&mut store, "occt_fill_surface")?,
-            fn_edge_on_surface: instance.get_typed_func(&mut store, "occt_edge_on_surface")?,
-            fn_add_holes_in_face: instance.get_typed_func(&mut store, "occt_add_holes_in_face")?,
+                .get_typed_func(&mut *store, "occt_make_non_planar_face")?,
+            fn_fill_surface: instance.get_typed_func(&mut *store, "occt_fill_surface")?,
+            fn_edge_on_surface: instance.get_typed_func(&mut *store, "occt_edge_on_surface")?,
+            fn_add_holes_in_face: instance.get_typed_func(&mut *store, "occt_add_holes_in_face")?,
             fn_remove_holes_from_face: instance
-                .get_typed_func(&mut store, "occt_remove_holes_from_face")?,
-            fn_solid_from_shell: instance.get_typed_func(&mut store, "occt_solid_from_shell")?,
+                .get_typed_func(&mut *store, "occt_remove_holes_from_face")?,
+            fn_solid_from_shell: instance.get_typed_func(&mut *store, "occt_solid_from_shell")?,
             fn_build_solid_from_faces: instance
-                .get_typed_func(&mut store, "occt_build_solid_from_faces")?,
-            fn_sew_and_solidify: instance.get_typed_func(&mut store, "occt_sew_and_solidify")?,
-            fn_build_tri_face: instance.get_typed_func(&mut store, "occt_build_tri_face")?,
-            fn_make_tangent_arc: instance.get_typed_func(&mut store, "occt_make_tangent_arc")?,
-            fn_bspline_surface: instance.get_typed_func(&mut store, "occt_bspline_surface")?,
-            fn_nurbs_surface: instance.get_typed_func(&mut store, "occt_nurbs_surface")?,
-            fn_get_shape_type: instance.get_typed_func(&mut store, "occt_get_shape_type")?,
-            fn_get_sub_shapes: instance.get_typed_func(&mut store, "occt_get_sub_shapes")?,
-            fn_sub_shape_count: instance.get_typed_func(&mut store, "occt_sub_shape_count")?,
-            fn_sub_shape_hashes: instance.get_typed_func(&mut store, "occt_sub_shape_hashes")?,
-            fn_distance_between: instance.get_typed_func(&mut store, "occt_distance_between")?,
-            fn_is_same: instance.get_typed_func(&mut store, "occt_is_same")?,
-            fn_is_equal: instance.get_typed_func(&mut store, "occt_is_equal")?,
-            fn_is_null: instance.get_typed_func(&mut store, "occt_is_null")?,
-            fn_hash_code: instance.get_typed_func(&mut store, "occt_hash_code")?,
-            fn_shape_orientation: instance.get_typed_func(&mut store, "occt_shape_orientation")?,
-            fn_iter_shapes: instance.get_typed_func(&mut store, "occt_iter_shapes")?,
-            fn_edge_to_face_map: instance.get_typed_func(&mut store, "occt_edge_to_face_map")?,
-            fn_downcast: instance.get_typed_func(&mut store, "occt_downcast")?,
-            fn_adjacent_faces: instance.get_typed_func(&mut store, "occt_adjacent_faces")?,
-            fn_shared_edges: instance.get_typed_func(&mut store, "occt_shared_edges")?,
-            fn_get_bounding_box: instance.get_typed_func(&mut store, "occt_get_bounding_box")?,
+                .get_typed_func(&mut *store, "occt_build_solid_from_faces")?,
+            fn_sew_and_solidify: instance.get_typed_func(&mut *store, "occt_sew_and_solidify")?,
+            fn_build_tri_face: instance.get_typed_func(&mut *store, "occt_build_tri_face")?,
+            fn_make_tangent_arc: instance.get_typed_func(&mut *store, "occt_make_tangent_arc")?,
+            fn_bspline_surface: instance.get_typed_func(&mut *store, "occt_bspline_surface")?,
+            fn_nurbs_surface: instance.get_typed_func(&mut *store, "occt_nurbs_surface")?,
+            fn_get_shape_type: instance.get_typed_func(&mut *store, "occt_get_shape_type")?,
+            fn_get_sub_shapes: instance.get_typed_func(&mut *store, "occt_get_sub_shapes")?,
+            fn_sub_shape_count: instance.get_typed_func(&mut *store, "occt_sub_shape_count")?,
+            fn_sub_shape_hashes: instance.get_typed_func(&mut *store, "occt_sub_shape_hashes")?,
+            fn_distance_between: instance.get_typed_func(&mut *store, "occt_distance_between")?,
+            fn_is_same: instance.get_typed_func(&mut *store, "occt_is_same")?,
+            fn_is_equal: instance.get_typed_func(&mut *store, "occt_is_equal")?,
+            fn_is_null: instance.get_typed_func(&mut *store, "occt_is_null")?,
+            fn_hash_code: instance.get_typed_func(&mut *store, "occt_hash_code")?,
+            fn_shape_orientation: instance.get_typed_func(&mut *store, "occt_shape_orientation")?,
+            fn_iter_shapes: instance.get_typed_func(&mut *store, "occt_iter_shapes")?,
+            fn_edge_to_face_map: instance.get_typed_func(&mut *store, "occt_edge_to_face_map")?,
+            fn_downcast: instance.get_typed_func(&mut *store, "occt_downcast")?,
+            fn_adjacent_faces: instance.get_typed_func(&mut *store, "occt_adjacent_faces")?,
+            fn_shared_edges: instance.get_typed_func(&mut *store, "occt_shared_edges")?,
+            fn_get_bounding_box: instance.get_typed_func(&mut *store, "occt_get_bounding_box")?,
             fn_get_bounding_box_loose: instance
-                .get_typed_func(&mut store, "occt_get_bounding_box_loose")?,
-            fn_get_volume: instance.get_typed_func(&mut store, "occt_get_volume")?,
-            fn_get_surface_area: instance.get_typed_func(&mut store, "occt_get_surface_area")?,
-            fn_get_length: instance.get_typed_func(&mut store, "occt_get_length")?,
+                .get_typed_func(&mut *store, "occt_get_bounding_box_loose")?,
+            fn_get_volume: instance.get_typed_func(&mut *store, "occt_get_volume")?,
+            fn_get_surface_area: instance.get_typed_func(&mut *store, "occt_get_surface_area")?,
+            fn_get_length: instance.get_typed_func(&mut *store, "occt_get_length")?,
             fn_get_center_of_mass: instance
-                .get_typed_func(&mut store, "occt_get_center_of_mass")?,
-            fn_get_inertia: instance.get_typed_func(&mut store, "occt_get_inertia")?,
-            fn_contains_point: instance.get_typed_func(&mut store, "occt_contains_point")?,
+                .get_typed_func(&mut *store, "occt_get_center_of_mass")?,
+            fn_get_inertia: instance.get_typed_func(&mut *store, "occt_get_inertia")?,
+            fn_contains_point: instance.get_typed_func(&mut *store, "occt_contains_point")?,
             fn_get_surface_center_of_mass: instance
-                .get_typed_func(&mut store, "occt_get_surface_center_of_mass")?,
-            fn_vertex_position: instance.get_typed_func(&mut store, "occt_vertex_position")?,
-            fn_surface_type: instance.get_typed_func(&mut store, "occt_surface_type")?,
-            fn_surface_data: instance.get_typed_func(&mut store, "occt_surface_data")?,
-            fn_surface_normal: instance.get_typed_func(&mut store, "occt_surface_normal")?,
-            fn_point_on_surface: instance.get_typed_func(&mut store, "occt_point_on_surface")?,
-            fn_outer_wire: instance.get_typed_func(&mut store, "occt_outer_wire")?,
+                .get_typed_func(&mut *store, "occt_get_surface_center_of_mass")?,
+            fn_vertex_position: instance.get_typed_func(&mut *store, "occt_vertex_position")?,
+            fn_surface_type: instance.get_typed_func(&mut *store, "occt_surface_type")?,
+            fn_surface_data: instance.get_typed_func(&mut *store, "occt_surface_data")?,
+            fn_surface_normal: instance.get_typed_func(&mut *store, "occt_surface_normal")?,
+            fn_point_on_surface: instance.get_typed_func(&mut *store, "occt_point_on_surface")?,
+            fn_outer_wire: instance.get_typed_func(&mut *store, "occt_outer_wire")?,
             fn_get_linear_center_of_mass: instance
-                .get_typed_func(&mut store, "occt_get_linear_center_of_mass")?,
-            fn_surface_curvature: instance.get_typed_func(&mut store, "occt_surface_curvature")?,
-            fn_uv_bounds: instance.get_typed_func(&mut store, "occt_uv_bounds")?,
+                .get_typed_func(&mut *store, "occt_get_linear_center_of_mass")?,
+            fn_surface_curvature: instance.get_typed_func(&mut *store, "occt_surface_curvature")?,
+            fn_uv_bounds: instance.get_typed_func(&mut *store, "occt_uv_bounds")?,
             fn_get_face_cylinder_data: instance
-                .get_typed_func(&mut store, "occt_get_face_cylinder_data")?,
-            fn_reverse_surface_u: instance.get_typed_func(&mut store, "occt_reverse_surface_u")?,
-            fn_uv_from_point: instance.get_typed_func(&mut store, "occt_uv_from_point")?,
+                .get_typed_func(&mut *store, "occt_get_face_cylinder_data")?,
+            fn_reverse_surface_u: instance.get_typed_func(&mut *store, "occt_reverse_surface_u")?,
+            fn_uv_from_point: instance.get_typed_func(&mut *store, "occt_uv_from_point")?,
             fn_project_point_on_face: instance
-                .get_typed_func(&mut store, "occt_project_point_on_face")?,
+                .get_typed_func(&mut *store, "occt_project_point_on_face")?,
             fn_classify_point_on_face: instance
-                .get_typed_func(&mut store, "occt_classify_point_on_face")?,
-            fn_curve_type: instance.get_typed_func(&mut store, "occt_curve_type")?,
-            fn_curve_data: instance.get_typed_func(&mut store, "occt_curve_data")?,
+                .get_typed_func(&mut *store, "occt_classify_point_on_face")?,
+            fn_curve_type: instance.get_typed_func(&mut *store, "occt_curve_type")?,
+            fn_curve_data: instance.get_typed_func(&mut *store, "occt_curve_data")?,
             fn_curve_point_at_param: instance
-                .get_typed_func(&mut store, "occt_curve_point_at_param")?,
-            fn_curve_tangent: instance.get_typed_func(&mut store, "occt_curve_tangent")?,
-            fn_curve_parameters: instance.get_typed_func(&mut store, "occt_curve_parameters")?,
-            fn_curve_is_closed: instance.get_typed_func(&mut store, "occt_curve_is_closed")?,
-            fn_curve_length: instance.get_typed_func(&mut store, "occt_curve_length")?,
+                .get_typed_func(&mut *store, "occt_curve_point_at_param")?,
+            fn_curve_tangent: instance.get_typed_func(&mut *store, "occt_curve_tangent")?,
+            fn_curve_parameters: instance.get_typed_func(&mut *store, "occt_curve_parameters")?,
+            fn_curve_is_closed: instance.get_typed_func(&mut *store, "occt_curve_is_closed")?,
+            fn_curve_length: instance.get_typed_func(&mut *store, "occt_curve_length")?,
             fn_interpolate_points: instance
-                .get_typed_func(&mut store, "occt_interpolate_points")?,
+                .get_typed_func(&mut *store, "occt_interpolate_points")?,
             fn_interpolate_points_with_tangents: instance
-                .get_typed_func(&mut store, "occt_interpolate_points_with_tangents")?,
+                .get_typed_func(&mut *store, "occt_interpolate_points_with_tangents")?,
             fn_project_point_on_edge: instance
-                .get_typed_func(&mut store, "occt_project_point_on_edge")?,
-            fn_curve_is_periodic: instance.get_typed_func(&mut store, "occt_curve_is_periodic")?,
+                .get_typed_func(&mut *store, "occt_project_point_on_edge")?,
+            fn_curve_is_periodic: instance.get_typed_func(&mut *store, "occt_curve_is_periodic")?,
             fn_approximate_points: instance
-                .get_typed_func(&mut store, "occt_approximate_points")?,
+                .get_typed_func(&mut *store, "occt_approximate_points")?,
             fn_lift_curve2d_to_plane: instance
-                .get_typed_func(&mut store, "occt_lift_curve2d_to_plane")?,
+                .get_typed_func(&mut *store, "occt_lift_curve2d_to_plane")?,
             fn_get_nurbs_curve_data: instance
-                .get_typed_func(&mut store, "occt_get_nurbs_curve_data")?,
+                .get_typed_func(&mut *store, "occt_get_nurbs_curve_data")?,
             fn_curve_degree_elevate: instance
-                .get_typed_func(&mut store, "occt_curve_degree_elevate")?,
-            fn_curve_knot_insert: instance.get_typed_func(&mut store, "occt_curve_knot_insert")?,
-            fn_curve_knot_remove: instance.get_typed_func(&mut store, "occt_curve_knot_remove")?,
-            fn_curve_split: instance.get_typed_func(&mut store, "occt_curve_split")?,
-            fn_has_triangulation: instance.get_typed_func(&mut store, "occt_has_triangulation")?,
-            fn_query_batch: instance.get_typed_func(&mut store, "occt_query_batch")?,
-            fn_pipe: instance.get_typed_func(&mut store, "occt_pipe")?,
-            fn_simple_pipe: instance.get_typed_func(&mut store, "occt_simple_pipe")?,
-            fn_revolve_vec: instance.get_typed_func(&mut store, "occt_revolve_vec")?,
-            fn_loft: instance.get_typed_func(&mut store, "occt_loft")?,
+                .get_typed_func(&mut *store, "occt_curve_degree_elevate")?,
+            fn_curve_knot_insert: instance.get_typed_func(&mut *store, "occt_curve_knot_insert")?,
+            fn_curve_knot_remove: instance.get_typed_func(&mut *store, "occt_curve_knot_remove")?,
+            fn_curve_split: instance.get_typed_func(&mut *store, "occt_curve_split")?,
+            fn_has_triangulation: instance.get_typed_func(&mut *store, "occt_has_triangulation")?,
+            fn_query_batch: instance.get_typed_func(&mut *store, "occt_query_batch")?,
+            fn_pipe: instance.get_typed_func(&mut *store, "occt_pipe")?,
+            fn_simple_pipe: instance.get_typed_func(&mut *store, "occt_simple_pipe")?,
+            fn_revolve_vec: instance.get_typed_func(&mut *store, "occt_revolve_vec")?,
+            fn_loft: instance.get_typed_func(&mut *store, "occt_loft")?,
             fn_loft_with_vertices: instance
-                .get_typed_func(&mut store, "occt_loft_with_vertices")?,
-            fn_sweep: instance.get_typed_func(&mut store, "occt_sweep")?,
-            fn_sweep_pipe_shell: instance.get_typed_func(&mut store, "occt_sweep_pipe_shell")?,
-            fn_sweep_oriented: instance.get_typed_func(&mut store, "occt_sweep_oriented")?,
-            fn_sweep_advanced: instance.get_typed_func(&mut store, "occt_sweep_advanced")?,
-            fn_draft_prism: instance.get_typed_func(&mut store, "occt_draft_prism")?,
-            fn_fix_shape: instance.get_typed_func(&mut store, "occt_fix_shape")?,
-            fn_unify_same_domain: instance.get_typed_func(&mut store, "occt_unify_same_domain")?,
+                .get_typed_func(&mut *store, "occt_loft_with_vertices")?,
+            fn_sweep: instance.get_typed_func(&mut *store, "occt_sweep")?,
+            fn_sweep_pipe_shell: instance.get_typed_func(&mut *store, "occt_sweep_pipe_shell")?,
+            fn_sweep_oriented: instance.get_typed_func(&mut *store, "occt_sweep_oriented")?,
+            fn_sweep_advanced: instance.get_typed_func(&mut *store, "occt_sweep_advanced")?,
+            fn_draft_prism: instance.get_typed_func(&mut *store, "occt_draft_prism")?,
+            fn_fix_shape: instance.get_typed_func(&mut *store, "occt_fix_shape")?,
+            fn_unify_same_domain: instance.get_typed_func(&mut *store, "occt_unify_same_domain")?,
             fn_unify_same_domain_within: instance
-                .get_typed_func(&mut store, "occt_unify_same_domain_within")?,
-            fn_is_valid: instance.get_typed_func(&mut store, "occt_is_valid")?,
-            fn_heal_solid: instance.get_typed_func(&mut store, "occt_heal_solid")?,
-            fn_heal_face: instance.get_typed_func(&mut store, "occt_heal_face")?,
-            fn_heal_wire: instance.get_typed_func(&mut store, "occt_heal_wire")?,
+                .get_typed_func(&mut *store, "occt_unify_same_domain_within")?,
+            fn_is_valid: instance.get_typed_func(&mut *store, "occt_is_valid")?,
+            fn_heal_solid: instance.get_typed_func(&mut *store, "occt_heal_solid")?,
+            fn_heal_face: instance.get_typed_func(&mut *store, "occt_heal_face")?,
+            fn_heal_wire: instance.get_typed_func(&mut *store, "occt_heal_wire")?,
             fn_fix_face_orientations: instance
-                .get_typed_func(&mut store, "occt_fix_face_orientations")?,
-            fn_build_curves3d: instance.get_typed_func(&mut store, "occt_build_curves3d")?,
-            fn_fix_wire_on_face: instance.get_typed_func(&mut store, "occt_fix_wire_on_face")?,
+                .get_typed_func(&mut *store, "occt_fix_face_orientations")?,
+            fn_build_curves3d: instance.get_typed_func(&mut *store, "occt_build_curves3d")?,
+            fn_fix_wire_on_face: instance.get_typed_func(&mut *store, "occt_fix_wire_on_face")?,
             fn_remove_degenerate_edges: instance
-                .get_typed_func(&mut store, "occt_remove_degenerate_edges")?,
-            fn_import_step: instance.get_typed_func(&mut store, "occt_import_step")?,
-            fn_export_step: instance.get_typed_func(&mut store, "occt_export_step")?,
+                .get_typed_func(&mut *store, "occt_remove_degenerate_edges")?,
+            fn_import_step: instance.get_typed_func(&mut *store, "occt_import_step")?,
+            fn_export_step: instance.get_typed_func(&mut *store, "occt_export_step")?,
             fn_export_step_with_unit: instance
-                .get_typed_func(&mut store, "occt_export_step_with_unit")?,
+                .get_typed_func(&mut *store, "occt_export_step_with_unit")?,
             fn_export_step_with_options: instance
-                .get_typed_func(&mut store, "occt_export_step_with_options")?,
-            fn_export_stl: instance.get_typed_func(&mut store, "occt_export_stl")?,
-            fn_import_stl: instance.get_typed_func(&mut store, "occt_import_stl")?,
-            fn_export_stl_binary: instance.get_typed_func(&mut store, "occt_export_stl_binary")?,
-            fn_import_stl_binary: instance.get_typed_func(&mut store, "occt_import_stl_binary")?,
-            fn_to_brep: instance.get_typed_func(&mut store, "occt_to_brep")?,
-            fn_from_brep: instance.get_typed_func(&mut store, "occt_from_brep")?,
-            fn_to_brep_binary: instance.get_typed_func(&mut store, "occt_to_brep_binary")?,
-            fn_from_brep_binary: instance.get_typed_func(&mut store, "occt_from_brep_binary")?,
+                .get_typed_func(&mut *store, "occt_export_step_with_options")?,
+            fn_export_stl: instance.get_typed_func(&mut *store, "occt_export_stl")?,
+            fn_import_stl: instance.get_typed_func(&mut *store, "occt_import_stl")?,
+            fn_export_stl_binary: instance.get_typed_func(&mut *store, "occt_export_stl_binary")?,
+            fn_import_stl_binary: instance.get_typed_func(&mut *store, "occt_import_stl_binary")?,
+            fn_to_brep: instance.get_typed_func(&mut *store, "occt_to_brep")?,
+            fn_from_brep: instance.get_typed_func(&mut *store, "occt_from_brep")?,
+            fn_to_brep_binary: instance.get_typed_func(&mut *store, "occt_to_brep_binary")?,
+            fn_from_brep_binary: instance.get_typed_func(&mut *store, "occt_from_brep_binary")?,
             fn_extrude_with_history: instance
-                .get_typed_func(&mut store, "occt_extrude_with_history")?,
+                .get_typed_func(&mut *store, "occt_extrude_with_history")?,
             fn_revolve_with_history: instance
-                .get_typed_func(&mut store, "occt_revolve_with_history")?,
-            fn_pipe_with_history: instance.get_typed_func(&mut store, "occt_pipe_with_history")?,
+                .get_typed_func(&mut *store, "occt_revolve_with_history")?,
+            fn_pipe_with_history: instance.get_typed_func(&mut *store, "occt_pipe_with_history")?,
             fn_sweep_with_history: instance
-                .get_typed_func(&mut store, "occt_sweep_with_history")?,
-            fn_loft_with_history: instance.get_typed_func(&mut store, "occt_loft_with_history")?,
+                .get_typed_func(&mut *store, "occt_sweep_with_history")?,
+            fn_loft_with_history: instance.get_typed_func(&mut *store, "occt_loft_with_history")?,
             fn_unify_same_domain_with_history: instance
-                .get_typed_func(&mut store, "occt_unify_same_domain_with_history")?,
+                .get_typed_func(&mut *store, "occt_unify_same_domain_with_history")?,
             fn_transform_with_history: instance
-                .get_typed_func(&mut store, "occt_transform_with_history")?,
+                .get_typed_func(&mut *store, "occt_transform_with_history")?,
             fn_translate_with_history: instance
-                .get_typed_func(&mut store, "occt_translate_with_history")?,
-            fn_fuse_with_history: instance.get_typed_func(&mut store, "occt_fuse_with_history")?,
-            fn_cut_with_history: instance.get_typed_func(&mut store, "occt_cut_with_history")?,
+                .get_typed_func(&mut *store, "occt_translate_with_history")?,
+            fn_fuse_with_history: instance.get_typed_func(&mut *store, "occt_fuse_with_history")?,
+            fn_cut_with_history: instance.get_typed_func(&mut *store, "occt_cut_with_history")?,
             fn_fillet_with_history: instance
-                .get_typed_func(&mut store, "occt_fillet_with_history")?,
+                .get_typed_func(&mut *store, "occt_fillet_with_history")?,
             fn_rotate_with_history: instance
-                .get_typed_func(&mut store, "occt_rotate_with_history")?,
+                .get_typed_func(&mut *store, "occt_rotate_with_history")?,
             fn_mirror_with_history: instance
-                .get_typed_func(&mut store, "occt_mirror_with_history")?,
+                .get_typed_func(&mut *store, "occt_mirror_with_history")?,
             fn_scale_with_history: instance
-                .get_typed_func(&mut store, "occt_scale_with_history")?,
+                .get_typed_func(&mut *store, "occt_scale_with_history")?,
             fn_intersect_with_history: instance
-                .get_typed_func(&mut store, "occt_intersect_with_history")?,
+                .get_typed_func(&mut *store, "occt_intersect_with_history")?,
             fn_chamfer_with_history: instance
-                .get_typed_func(&mut store, "occt_chamfer_with_history")?,
+                .get_typed_func(&mut *store, "occt_chamfer_with_history")?,
             fn_fillet_radii_with_history: instance
-                .get_typed_func(&mut store, "occt_fillet_radii_with_history")?,
+                .get_typed_func(&mut *store, "occt_fillet_radii_with_history")?,
             fn_chamfer_distances_with_history: instance
-                .get_typed_func(&mut store, "occt_chamfer_distances_with_history")?,
+                .get_typed_func(&mut *store, "occt_chamfer_distances_with_history")?,
             fn_chamfer_dist_angles_with_history: instance
-                .get_typed_func(&mut store, "occt_chamfer_dist_angles_with_history")?,
+                .get_typed_func(&mut *store, "occt_chamfer_dist_angles_with_history")?,
             fn_shell_with_history: instance
-                .get_typed_func(&mut store, "occt_shell_with_history")?,
+                .get_typed_func(&mut *store, "occt_shell_with_history")?,
             fn_offset_with_history: instance
-                .get_typed_func(&mut store, "occt_offset_with_history")?,
+                .get_typed_func(&mut *store, "occt_offset_with_history")?,
             fn_shell_with_history_and_join: instance
-                .get_typed_func(&mut store, "occt_shell_with_history_and_join")?,
+                .get_typed_func(&mut *store, "occt_shell_with_history_and_join")?,
             fn_offset_with_history_and_join: instance
-                .get_typed_func(&mut store, "occt_offset_with_history_and_join")?,
+                .get_typed_func(&mut *store, "occt_offset_with_history_and_join")?,
             fn_thicken_with_history: instance
-                .get_typed_func(&mut store, "occt_thicken_with_history")?,
-            fn_tessellate: instance.get_typed_func(&mut store, "occt_tessellate")?,
+                .get_typed_func(&mut *store, "occt_thicken_with_history")?,
+            fn_tessellate: instance.get_typed_func(&mut *store, "occt_tessellate")?,
             fn_tessellate_relative: instance
-                .get_typed_func(&mut store, "occt_tessellate_relative")?,
-            fn_mesh_shape: instance.get_typed_func(&mut store, "occt_mesh_shape")?,
-            fn_mesh_batch: instance.get_typed_func(&mut store, "occt_mesh_batch")?,
-            fn_wireframe: instance.get_typed_func(&mut store, "occt_wireframe")?,
-            fn_project_edges: instance.get_typed_func(&mut store, "occt_project_edges")?,
-            fn_release: instance.get_typed_func(&mut store, "occt_release")?,
-            fn_release_all: instance.get_typed_func(&mut store, "occt_release_all")?,
-            fn_checkpoint: instance.get_typed_func(&mut store, "occt_checkpoint")?,
-            fn_release_since: instance.get_typed_func(&mut store, "occt_release_since")?,
-            fn_get_shape_count: instance.get_typed_func(&mut store, "occt_get_shape_count")?,
-            fn_make_null_shape: instance.get_typed_func(&mut store, "occt_make_null_shape")?,
-            fn_xcaf_new_document: instance.get_typed_func(&mut store, "occt_xcaf_new_document")?,
-            fn_xcaf_close: instance.get_typed_func(&mut store, "occt_xcaf_close")?,
-            fn_xcaf_add_shape: instance.get_typed_func(&mut store, "occt_xcaf_add_shape")?,
-            fn_xcaf_add_assembly: instance.get_typed_func(&mut store, "occt_xcaf_add_assembly")?,
+                .get_typed_func(&mut *store, "occt_tessellate_relative")?,
+            fn_mesh_shape: instance.get_typed_func(&mut *store, "occt_mesh_shape")?,
+            fn_mesh_batch: instance.get_typed_func(&mut *store, "occt_mesh_batch")?,
+            fn_wireframe: instance.get_typed_func(&mut *store, "occt_wireframe")?,
+            fn_project_edges: instance.get_typed_func(&mut *store, "occt_project_edges")?,
+            fn_release: instance.get_typed_func(&mut *store, "occt_release")?,
+            fn_release_all: instance.get_typed_func(&mut *store, "occt_release_all")?,
+            fn_checkpoint: instance.get_typed_func(&mut *store, "occt_checkpoint")?,
+            fn_release_since: instance.get_typed_func(&mut *store, "occt_release_since")?,
+            fn_get_shape_count: instance.get_typed_func(&mut *store, "occt_get_shape_count")?,
+            fn_make_null_shape: instance.get_typed_func(&mut *store, "occt_make_null_shape")?,
+            fn_xcaf_new_document: instance.get_typed_func(&mut *store, "occt_xcaf_new_document")?,
+            fn_xcaf_close: instance.get_typed_func(&mut *store, "occt_xcaf_close")?,
+            fn_xcaf_add_shape: instance.get_typed_func(&mut *store, "occt_xcaf_add_shape")?,
+            fn_xcaf_add_assembly: instance.get_typed_func(&mut *store, "occt_xcaf_add_assembly")?,
             fn_xcaf_add_component: instance
-                .get_typed_func(&mut store, "occt_xcaf_add_component")?,
-            fn_xcaf_set_color: instance.get_typed_func(&mut store, "occt_xcaf_set_color")?,
-            fn_xcaf_set_name: instance.get_typed_func(&mut store, "occt_xcaf_set_name")?,
+                .get_typed_func(&mut *store, "occt_xcaf_add_component")?,
+            fn_xcaf_set_color: instance.get_typed_func(&mut *store, "occt_xcaf_set_color")?,
+            fn_xcaf_set_name: instance.get_typed_func(&mut *store, "occt_xcaf_set_name")?,
             fn_xcaf_get_label_info: instance
-                .get_typed_func(&mut store, "occt_xcaf_get_label_info")?,
+                .get_typed_func(&mut *store, "occt_xcaf_get_label_info")?,
             fn_xcaf_get_child_labels: instance
-                .get_typed_func(&mut store, "occt_xcaf_get_child_labels")?,
+                .get_typed_func(&mut *store, "occt_xcaf_get_child_labels")?,
             fn_xcaf_get_root_labels: instance
-                .get_typed_func(&mut store, "occt_xcaf_get_root_labels")?,
+                .get_typed_func(&mut *store, "occt_xcaf_get_root_labels")?,
             fn_xcaf_get_referred_label: instance
-                .get_typed_func(&mut store, "occt_xcaf_get_referred_label")?,
+                .get_typed_func(&mut *store, "occt_xcaf_get_referred_label")?,
             fn_xcaf_get_label_location: instance
-                .get_typed_func(&mut store, "occt_xcaf_get_label_location")?,
+                .get_typed_func(&mut *store, "occt_xcaf_get_label_location")?,
             fn_xcaf_get_sub_shape_labels: instance
-                .get_typed_func(&mut store, "occt_xcaf_get_sub_shape_labels")?,
+                .get_typed_func(&mut *store, "occt_xcaf_get_sub_shape_labels")?,
             fn_xcaf_add_sub_shape: instance
-                .get_typed_func(&mut store, "occt_xcaf_add_sub_shape")?,
-            fn_xcaf_export_step: instance.get_typed_func(&mut store, "occt_xcaf_export_step")?,
+                .get_typed_func(&mut *store, "occt_xcaf_add_sub_shape")?,
+            fn_xcaf_export_step: instance.get_typed_func(&mut *store, "occt_xcaf_export_step")?,
             fn_xcaf_export_step_with_unit: instance
-                .get_typed_func(&mut store, "occt_xcaf_export_step_with_unit")?,
+                .get_typed_func(&mut *store, "occt_xcaf_export_step_with_unit")?,
             fn_xcaf_export_step_with_options: instance
-                .get_typed_func(&mut store, "occt_xcaf_export_step_with_options")?,
-            fn_xcaf_import_step: instance.get_typed_func(&mut store, "occt_xcaf_import_step")?,
-            fn_xcaf_export_glb: instance.get_typed_func(&mut store, "occt_xcaf_export_glb")?,
+                .get_typed_func(&mut *store, "occt_xcaf_export_step_with_options")?,
+            fn_xcaf_import_step: instance.get_typed_func(&mut *store, "occt_xcaf_import_step")?,
+            fn_xcaf_export_glb: instance.get_typed_func(&mut *store, "occt_xcaf_export_glb")?,
         })
     }
 }
@@ -692,8 +692,13 @@ impl GeneratedFuncs {
 /// Generated kernel methods.
 ///
 /// All facade methods wrapped as safe Rust functions.
-#[allow(missing_docs, clippy::too_many_arguments, clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 impl crate::kernel::OcctKernel {
+    /// Call the `makeBox` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_box(&mut self, dx: f64, dy: f64, dz: f64) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -706,6 +711,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeBoxFromCorners` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_box_from_corners(
         &mut self,
         x1: f64,
@@ -726,6 +736,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeCylinder` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_cylinder(&mut self, radius: f64, height: f64) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -738,6 +753,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeSphere` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_sphere(&mut self, radius: f64) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -750,6 +770,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeCone` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_cone(&mut self, r1: f64, r2: f64, height: f64) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -762,6 +787,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeTorus` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_torus(&mut self, major_radius: f64, minor_radius: f64) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -774,6 +804,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeEllipsoid` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_ellipsoid(&mut self, rx: f64, ry: f64, rz: f64) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -786,6 +821,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `halfSpace` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn half_space(
         &mut self,
         ox: f64,
@@ -806,6 +846,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeRectangle` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_rectangle(&mut self, width: f64, height: f64) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -818,6 +863,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `fuse` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn fuse(&mut self, a: ShapeHandle, b: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self.generated.fn_fuse.call(&mut self.store, (a.0, b.0))?;
         self.check_error("fuse")?;
@@ -827,6 +877,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `cut` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn cut(&mut self, a: ShapeHandle, b: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self.generated.fn_cut.call(&mut self.store, (a.0, b.0))?;
         self.check_error("cut")?;
@@ -836,6 +891,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `common` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn common(&mut self, a: ShapeHandle, b: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self.generated.fn_common.call(&mut self.store, (a.0, b.0))?;
         self.check_error("common")?;
@@ -845,6 +905,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `section` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn section(&mut self, a: ShapeHandle, b: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -857,6 +922,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `sectionPlane` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn section_plane(
         &mut self,
         shape_id: ShapeHandle,
@@ -878,6 +948,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `intersect` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn intersect(&mut self, a: ShapeHandle, b: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -890,6 +965,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `fuseAll` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn fuse_all(&mut self, shape_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
         let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
         let shape_ids_ptr = self.write_bytes(&shape_ids_bytes)?;
@@ -907,6 +987,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `intersectionCells` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn intersection_cells(&mut self, shape_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
         let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
         let shape_ids_ptr = self.write_bytes(&shape_ids_bytes)?;
@@ -924,6 +1009,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `cutAll` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn cut_all(
         &mut self,
         shape_id: ShapeHandle,
@@ -945,6 +1035,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `booleanOp` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn boolean_op(
         &mut self,
         op_code: i32,
@@ -1007,6 +1102,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `booleanPipeline` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn boolean_pipeline(
         &mut self,
         base_id: ShapeHandle,
@@ -1045,6 +1145,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `split` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn split(
         &mut self,
         shape_id: ShapeHandle,
@@ -1066,6 +1171,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `extrude` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn extrude(
         &mut self,
         shape_id: ShapeHandle,
@@ -1084,6 +1194,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `revolve` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn revolve(
         &mut self,
         shape_id: ShapeHandle,
@@ -1106,6 +1221,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `fillet` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn fillet(
         &mut self,
         solid_id: ShapeHandle,
@@ -1128,6 +1248,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `chamfer` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn chamfer(
         &mut self,
         solid_id: ShapeHandle,
@@ -1155,6 +1280,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `chamferDistAngle` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn chamfer_dist_angle(
         &mut self,
         solid_id: ShapeHandle,
@@ -1184,6 +1314,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `chamferAsymmetric` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn chamfer_asymmetric(
         &mut self,
         solid_id: ShapeHandle,
@@ -1209,6 +1344,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `filletRadii` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn fillet_radii(
         &mut self,
         solid_id: ShapeHandle,
@@ -1261,6 +1401,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `chamferDistances` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn chamfer_distances(
         &mut self,
         solid_id: ShapeHandle,
@@ -1331,6 +1476,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `chamferDistAngles` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn chamfer_dist_angles(
         &mut self,
         solid_id: ShapeHandle,
@@ -1401,6 +1551,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `shell` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn shell(
         &mut self,
         solid_id: ShapeHandle,
@@ -1430,6 +1585,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `offset` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn offset(
         &mut self,
         solid_id: ShapeHandle,
@@ -1447,6 +1607,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `shellWithJoin` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn shell_with_join(
         &mut self,
         solid_id: ShapeHandle,
@@ -1478,6 +1643,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `offsetWithJoin` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn offset_with_join(
         &mut self,
         solid_id: ShapeHandle,
@@ -1496,6 +1666,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `draft` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn draft(
         &mut self,
         shape_id: ShapeHandle,
@@ -1516,6 +1691,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `draftFaces` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn draft_faces(
         &mut self,
         shape_id: ShapeHandle,
@@ -1572,6 +1752,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `thicken` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn thicken(
         &mut self,
         shape_id: ShapeHandle,
@@ -1589,6 +1774,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `defeature` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn defeature(
         &mut self,
         shape_id: ShapeHandle,
@@ -1616,6 +1806,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `reverseShape` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn reverse_shape(&mut self, id: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -1628,6 +1823,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `simplify` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn simplify(&mut self, id: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self.generated.fn_simplify.call(&mut self.store, (id.0,))?;
         self.check_error("simplify")?;
@@ -1637,6 +1837,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `filletVariable` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn fillet_variable(
         &mut self,
         solid_id: ShapeHandle,
@@ -1655,6 +1860,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `filletBatch` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn fillet_batch(
         &mut self,
         solid_ids: &[ShapeHandle],
@@ -1722,6 +1932,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_shape_result()
     }
 
+    /// Call the `offsetWire2D` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn offset_wire2_d(
         &mut self,
         wire_id: ShapeHandle,
@@ -1739,6 +1954,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `translate` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn translate(
         &mut self,
         id: ShapeHandle,
@@ -1757,6 +1977,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `rotate` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn rotate(
         &mut self,
         id: ShapeHandle,
@@ -1779,6 +2004,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `scale` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn scale(
         &mut self,
         id: ShapeHandle,
@@ -1798,6 +2028,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `mirror` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn mirror(
         &mut self,
         id: ShapeHandle,
@@ -1819,6 +2054,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `copy` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn copy(&mut self, id: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self.generated.fn_copy.call(&mut self.store, (id.0,))?;
         self.check_error("copy")?;
@@ -1828,6 +2068,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `linearPattern` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn linear_pattern(
         &mut self,
         id: ShapeHandle,
@@ -1848,6 +2093,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `circularPattern` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn circular_pattern(
         &mut self,
         id: ShapeHandle,
@@ -1871,6 +2121,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `transform` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn transform(&mut self, id: ShapeHandle, matrix: &[f64]) -> OcctResult<ShapeHandle> {
         let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
         let matrix_ptr = self.write_bytes(&matrix_bytes)?;
@@ -1888,6 +2143,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `located` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn located(&mut self, id: ShapeHandle, matrix: &[f64]) -> OcctResult<ShapeHandle> {
         let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
         let matrix_ptr = self.write_bytes(&matrix_bytes)?;
@@ -1905,6 +2165,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `generalTransform` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn general_transform(
         &mut self,
         id: ShapeHandle,
@@ -1926,6 +2191,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `translateBatch` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn translate_batch(
         &mut self,
         ids: &[ShapeHandle],
@@ -1961,6 +2231,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_shape_result()
     }
 
+    /// Call the `composeTransform` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn compose_transform(&mut self, m1: &[f64], m2: &[f64]) -> OcctResult<Vec<f64>> {
         let m1_bytes: Vec<u8> = m1.iter().flat_map(|v| v.to_le_bytes()).collect();
         let m1_ptr = self.write_bytes(&m1_bytes)?;
@@ -1987,6 +2262,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `transformBatch` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn transform_batch(
         &mut self,
         ids: &[ShapeHandle],
@@ -2022,6 +2302,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_shape_result()
     }
 
+    /// Call the `rotateBatch` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn rotate_batch(
         &mut self,
         ids: &[ShapeHandle],
@@ -2057,6 +2342,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_shape_result()
     }
 
+    /// Call the `scaleBatch` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn scale_batch(
         &mut self,
         ids: &[ShapeHandle],
@@ -2092,6 +2382,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_shape_result()
     }
 
+    /// Call the `mirrorBatch` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn mirror_batch(
         &mut self,
         ids: &[ShapeHandle],
@@ -2127,6 +2422,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_shape_result()
     }
 
+    /// Call the `makeVertex` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_vertex(&mut self, x: f64, y: f64, z: f64) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -2139,6 +2439,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeEdge` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_edge(&mut self, v1: ShapeHandle, v2: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -2151,6 +2456,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeWire` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_wire(&mut self, edge_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
         let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
         let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
@@ -2168,6 +2478,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeFace` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_face(&mut self, wire_id: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -2180,6 +2495,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeFaceOnSurface` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_face_on_surface(
         &mut self,
         face_id: ShapeHandle,
@@ -2196,6 +2516,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeSolid` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_solid(&mut self, shell_id: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -2208,6 +2533,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `sew` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn sew(&mut self, shape_ids: &[ShapeHandle], tolerance: f64) -> OcctResult<ShapeHandle> {
         let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
         let shape_ids_ptr = self.write_bytes(&shape_ids_bytes)?;
@@ -2225,6 +2555,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeCompound` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_compound(&mut self, shape_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
         let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
         let shape_ids_ptr = self.write_bytes(&shape_ids_bytes)?;
@@ -2242,6 +2577,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeLineEdge` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_line_edge(
         &mut self,
         x1: f64,
@@ -2262,6 +2602,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeCircleEdge` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_circle_edge(
         &mut self,
         cx: f64,
@@ -2283,6 +2628,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeCircleArc` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_circle_arc(
         &mut self,
         cx: f64,
@@ -2306,6 +2656,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeArcEdge` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_arc_edge(
         &mut self,
         x1: f64,
@@ -2329,6 +2684,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeEllipseEdge` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_ellipse_edge(
         &mut self,
         cx: f64,
@@ -2351,6 +2711,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeBezierEdge` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_bezier_edge(&mut self, flat_points: &[f64]) -> OcctResult<ShapeHandle> {
         let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
         let flat_points_ptr = self.write_bytes(&flat_points_bytes)?;
@@ -2368,6 +2733,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeBSplineEdge` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_b_spline_edge(
         &mut self,
         poles: &[f64],
@@ -2440,6 +2810,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeEllipseArc` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_ellipse_arc(
         &mut self,
         cx: f64,
@@ -2475,6 +2850,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeEllipseArcOriented` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_ellipse_arc_oriented(
         &mut self,
         cx: f64,
@@ -2516,6 +2896,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeHelixWire` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_helix_wire(
         &mut self,
         px: f64,
@@ -2539,6 +2924,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeHelixWireHanded` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_helix_wire_handed(
         &mut self,
         px: f64,
@@ -2574,6 +2964,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `threadGroove` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn thread_groove(
         &mut self,
         px: f64,
@@ -2615,6 +3010,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeNonPlanarFace` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_non_planar_face(&mut self, wire_id: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -2627,6 +3027,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `fillSurface` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn fill_surface(
         &mut self,
         free_edge_ids: &[ShapeHandle],
@@ -2760,6 +3165,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `edgeOnSurface` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn edge_on_surface(
         &mut self,
         face_id: ShapeHandle,
@@ -2789,6 +3199,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `addHolesInFace` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn add_holes_in_face(
         &mut self,
         face_id: ShapeHandle,
@@ -2817,6 +3232,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `removeHolesFromFace` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn remove_holes_from_face(
         &mut self,
         face_id: ShapeHandle,
@@ -2839,6 +3259,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `solidFromShell` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn solid_from_shell(&mut self, shell_id: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -2851,6 +3276,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `buildSolidFromFaces` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn build_solid_from_faces(
         &mut self,
         face_ids: &[ShapeHandle],
@@ -2872,6 +3302,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `sewAndSolidify` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn sew_and_solidify(
         &mut self,
         face_ids: &[ShapeHandle],
@@ -2893,6 +3328,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `buildTriFace` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn build_tri_face(
         &mut self,
         ax: f64,
@@ -2916,6 +3356,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `makeTangentArc` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_tangent_arc(
         &mut self,
         x1: f64,
@@ -2939,6 +3384,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `bsplineSurface` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn bspline_surface(
         &mut self,
         flat_points: &[f64],
@@ -2961,6 +3411,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `nurbsSurface` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn nurbs_surface(
         &mut self,
         flat_poles: &[f64],
@@ -3077,6 +3532,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `getShapeType` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_shape_type(&mut self, id: ShapeHandle) -> OcctResult<String> {
         let len = self
             .generated
@@ -3088,6 +3548,11 @@ impl crate::kernel::OcctKernel {
         self.read_string_result()
     }
 
+    /// Call the `getSubShapes` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_sub_shapes(
         &mut self,
         id: ShapeHandle,
@@ -3107,6 +3572,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_shape_result()
     }
 
+    /// Call the `subShapeCount` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn sub_shape_count(&mut self, id: ShapeHandle, shape_type: &str) -> OcctResult<i32> {
         let shape_type_ptr = self.write_bytes(shape_type.as_bytes())?;
         let shape_type_len = shape_type.len() as u32;
@@ -3120,6 +3590,11 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `subShapeHashes` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn sub_shape_hashes(
         &mut self,
         id: ShapeHandle,
@@ -3145,6 +3620,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_i32_result()
     }
 
+    /// Call the `distanceBetween` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn distance_between(&mut self, a: ShapeHandle, b: ShapeHandle) -> OcctResult<f64> {
         let result = self
             .generated
@@ -3154,6 +3634,11 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `isSame` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn is_same(&mut self, a: ShapeHandle, b: ShapeHandle) -> OcctResult<bool> {
         let result = self
             .generated
@@ -3165,6 +3650,11 @@ impl crate::kernel::OcctKernel {
         Ok(result != 0)
     }
 
+    /// Call the `isEqual` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn is_equal(&mut self, a: ShapeHandle, b: ShapeHandle) -> OcctResult<bool> {
         let result = self
             .generated
@@ -3176,6 +3666,11 @@ impl crate::kernel::OcctKernel {
         Ok(result != 0)
     }
 
+    /// Call the `isNull` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn is_null(&mut self, id: ShapeHandle) -> OcctResult<bool> {
         let result = self.generated.fn_is_null.call(&mut self.store, (id.0,))?;
         if result < 0 {
@@ -3184,6 +3679,11 @@ impl crate::kernel::OcctKernel {
         Ok(result != 0)
     }
 
+    /// Call the `hashCode` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn hash_code(&mut self, id: ShapeHandle, upper_bound: i32) -> OcctResult<i32> {
         let result = self
             .generated
@@ -3193,6 +3693,11 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `shapeOrientation` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn shape_orientation(&mut self, id: ShapeHandle) -> OcctResult<String> {
         let len = self
             .generated
@@ -3204,6 +3709,11 @@ impl crate::kernel::OcctKernel {
         self.read_string_result()
     }
 
+    /// Call the `iterShapes` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn iter_shapes(&mut self, id: ShapeHandle) -> OcctResult<Vec<ShapeHandle>> {
         let len = self
             .generated
@@ -3215,6 +3725,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_shape_result()
     }
 
+    /// Call the `edgeToFaceMap` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn edge_to_face_map(
         &mut self,
         id: ShapeHandle,
@@ -3230,6 +3745,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_i32_result()
     }
 
+    /// Call the `downcast` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn downcast(&mut self, id: ShapeHandle, target_type: &str) -> OcctResult<ShapeHandle> {
         let target_type_ptr = self.write_bytes(target_type.as_bytes())?;
         let target_type_len = target_type.len() as u32;
@@ -3246,6 +3766,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `adjacentFaces` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn adjacent_faces(
         &mut self,
         shape_id: ShapeHandle,
@@ -3261,6 +3786,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_shape_result()
     }
 
+    /// Call the `sharedEdges` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn shared_edges(
         &mut self,
         face_a: ShapeHandle,
@@ -3276,6 +3806,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_shape_result()
     }
 
+    /// Call the `getBoundingBox` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_bounding_box(
         &mut self,
         id: ShapeHandle,
@@ -3291,6 +3826,11 @@ impl crate::kernel::OcctKernel {
         self.read_bbox_result()
     }
 
+    /// Call the `getBoundingBoxLoose` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_bounding_box_loose(
         &mut self,
         id: ShapeHandle,
@@ -3306,6 +3846,11 @@ impl crate::kernel::OcctKernel {
         self.read_bbox_result()
     }
 
+    /// Call the `getVolume` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_volume(&mut self, id: ShapeHandle) -> OcctResult<f64> {
         let result = self
             .generated
@@ -3315,6 +3860,11 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `getSurfaceArea` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_surface_area(&mut self, id: ShapeHandle) -> OcctResult<f64> {
         let result = self
             .generated
@@ -3324,6 +3874,11 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `getLength` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_length(&mut self, id: ShapeHandle) -> OcctResult<f64> {
         let result = self
             .generated
@@ -3333,6 +3888,11 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `getCenterOfMass` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_center_of_mass(&mut self, id: ShapeHandle) -> OcctResult<Vec<f64>> {
         let len = self
             .generated
@@ -3344,6 +3904,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `getInertia` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_inertia(&mut self, id: ShapeHandle) -> OcctResult<Vec<f64>> {
         let len = self
             .generated
@@ -3355,6 +3920,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `containsPoint` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn contains_point(
         &mut self,
         id: ShapeHandle,
@@ -3373,6 +3943,11 @@ impl crate::kernel::OcctKernel {
         Ok(result != 0)
     }
 
+    /// Call the `getSurfaceCenterOfMass` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_surface_center_of_mass(&mut self, face_id: ShapeHandle) -> OcctResult<Vec<f64>> {
         let len = self
             .generated
@@ -3384,6 +3959,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `vertexPosition` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn vertex_position(&mut self, vertex_id: ShapeHandle) -> OcctResult<Vec<f64>> {
         let len = self
             .generated
@@ -3395,6 +3975,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `surfaceType` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn surface_type(&mut self, face_id: ShapeHandle) -> OcctResult<String> {
         let len = self
             .generated
@@ -3406,6 +3991,11 @@ impl crate::kernel::OcctKernel {
         self.read_string_result()
     }
 
+    /// Call the `surfaceData` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn surface_data(&mut self, face_id: ShapeHandle) -> OcctResult<SurfaceData> {
         let status = self
             .generated
@@ -3417,6 +4007,11 @@ impl crate::kernel::OcctKernel {
         self.read_surface_result()
     }
 
+    /// Call the `surfaceNormal` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn surface_normal(&mut self, face_id: ShapeHandle, u: f64, v: f64) -> OcctResult<Vec<f64>> {
         let len = self
             .generated
@@ -3428,6 +4023,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `pointOnSurface` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn point_on_surface(
         &mut self,
         face_id: ShapeHandle,
@@ -3444,6 +4044,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `outerWire` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn outer_wire(&mut self, face_id: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -3456,6 +4061,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `getLinearCenterOfMass` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_linear_center_of_mass(&mut self, id: ShapeHandle) -> OcctResult<Vec<f64>> {
         let len = self
             .generated
@@ -3467,6 +4077,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `surfaceCurvature` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn surface_curvature(
         &mut self,
         face_id: ShapeHandle,
@@ -3483,6 +4098,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `uvBounds` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn uv_bounds(&mut self, face_id: ShapeHandle) -> OcctResult<Vec<f64>> {
         let len = self
             .generated
@@ -3494,6 +4114,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `getFaceCylinderData` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_face_cylinder_data(&mut self, face_id: ShapeHandle) -> OcctResult<Vec<f64>> {
         let len = self
             .generated
@@ -3505,6 +4130,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `reverseSurfaceU` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn reverse_surface_u(&mut self, face_id: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -3517,6 +4147,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `uvFromPoint` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn uv_from_point(
         &mut self,
         face_id: ShapeHandle,
@@ -3534,6 +4169,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `projectPointOnFace` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn project_point_on_face(
         &mut self,
         face_id: ShapeHandle,
@@ -3551,6 +4191,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `classifyPointOnFace` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn classify_point_on_face(
         &mut self,
         face_id: ShapeHandle,
@@ -3567,6 +4212,11 @@ impl crate::kernel::OcctKernel {
         self.read_string_result()
     }
 
+    /// Call the `curveType` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn curve_type(&mut self, id: ShapeHandle) -> OcctResult<String> {
         let len = self
             .generated
@@ -3578,6 +4228,11 @@ impl crate::kernel::OcctKernel {
         self.read_string_result()
     }
 
+    /// Call the `curveData` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn curve_data(&mut self, edge_id: ShapeHandle) -> OcctResult<CurveData> {
         let status = self
             .generated
@@ -3589,6 +4244,11 @@ impl crate::kernel::OcctKernel {
         self.read_curve_result()
     }
 
+    /// Call the `curvePointAtParam` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn curve_point_at_param(&mut self, id: ShapeHandle, param: f64) -> OcctResult<Vec<f64>> {
         let len = self
             .generated
@@ -3600,6 +4260,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `curveTangent` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn curve_tangent(&mut self, id: ShapeHandle, param: f64) -> OcctResult<Vec<f64>> {
         let len = self
             .generated
@@ -3611,6 +4276,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `curveParameters` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn curve_parameters(&mut self, id: ShapeHandle) -> OcctResult<Vec<f64>> {
         let len = self
             .generated
@@ -3622,6 +4292,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `curveIsClosed` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn curve_is_closed(&mut self, id: ShapeHandle) -> OcctResult<bool> {
         let result = self
             .generated
@@ -3633,6 +4308,11 @@ impl crate::kernel::OcctKernel {
         Ok(result != 0)
     }
 
+    /// Call the `curveLength` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn curve_length(&mut self, id: ShapeHandle) -> OcctResult<f64> {
         let result = self
             .generated
@@ -3642,6 +4322,11 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `interpolatePoints` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn interpolate_points(
         &mut self,
         flat_points: &[f64],
@@ -3667,6 +4352,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `interpolatePointsWithTangents` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn interpolate_points_with_tangents(
         &mut self,
         flat_points: &[f64],
@@ -3702,6 +4392,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `projectPointOnEdge` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn project_point_on_edge(
         &mut self,
         edge_id: ShapeHandle,
@@ -3719,6 +4414,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `curveIsPeriodic` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn curve_is_periodic(&mut self, id: ShapeHandle) -> OcctResult<bool> {
         let result = self
             .generated
@@ -3730,6 +4430,11 @@ impl crate::kernel::OcctKernel {
         Ok(result != 0)
     }
 
+    /// Call the `approximatePoints` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn approximate_points(
         &mut self,
         flat_points: &[f64],
@@ -3751,6 +4456,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `liftCurve2dToPlane` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn lift_curve2d_to_plane(
         &mut self,
         flat_points2d: &[f64],
@@ -3793,6 +4503,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `getNurbsCurveData` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_nurbs_curve_data(&mut self, edge_id: ShapeHandle) -> OcctResult<NurbsCurveData> {
         let status = self
             .generated
@@ -3804,6 +4519,11 @@ impl crate::kernel::OcctKernel {
         self.read_nurbs_result()
     }
 
+    /// Call the `curveDegreeElevate` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn curve_degree_elevate(
         &mut self,
         edge_id: ShapeHandle,
@@ -3820,6 +4540,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `curveKnotInsert` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn curve_knot_insert(
         &mut self,
         edge_id: ShapeHandle,
@@ -3837,6 +4562,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `curveKnotRemove` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn curve_knot_remove(
         &mut self,
         edge_id: ShapeHandle,
@@ -3854,6 +4584,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `curveSplit` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn curve_split(
         &mut self,
         edge_id: ShapeHandle,
@@ -3869,6 +4604,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_shape_result()
     }
 
+    /// Call the `hasTriangulation` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn has_triangulation(&mut self, id: ShapeHandle) -> OcctResult<bool> {
         let result = self
             .generated
@@ -3880,6 +4620,11 @@ impl crate::kernel::OcctKernel {
         Ok(result != 0)
     }
 
+    /// Call the `queryBatch` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn query_batch(&mut self, ids: &[ShapeHandle]) -> OcctResult<Vec<f64>> {
         let ids_bytes: Vec<u8> = ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
         let ids_ptr = self.write_bytes(&ids_bytes)?;
@@ -3896,6 +4641,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `pipe` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn pipe(
         &mut self,
         profile_id: ShapeHandle,
@@ -3912,6 +4662,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `simplePipe` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn simple_pipe(
         &mut self,
         profile_id: ShapeHandle,
@@ -3928,6 +4683,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `revolveVec` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn revolve_vec(
         &mut self,
         shape_id: ShapeHandle,
@@ -3950,6 +4710,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `loft` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn loft(
         &mut self,
         wire_ids: &[ShapeHandle],
@@ -3977,6 +4742,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `loftWithVertices` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn loft_with_vertices(
         &mut self,
         wire_ids: &[ShapeHandle],
@@ -4008,6 +4778,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `sweep` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn sweep(
         &mut self,
         wire_id: ShapeHandle,
@@ -4025,6 +4800,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `sweepPipeShell` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn sweep_pipe_shell(
         &mut self,
         profile_id: ShapeHandle,
@@ -4048,6 +4828,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `sweepOriented` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn sweep_oriented(
         &mut self,
         profile_id: ShapeHandle,
@@ -4087,6 +4872,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `sweepAdvanced` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn sweep_advanced(
         &mut self,
         profile_id: ShapeHandle,
@@ -4132,6 +4922,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `draftPrism` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn draft_prism(
         &mut self,
         shape_id: ShapeHandle,
@@ -4151,6 +4946,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `fixShape` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn fix_shape(&mut self, id: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self.generated.fn_fix_shape.call(&mut self.store, (id.0,))?;
         self.check_error("fix_shape")?;
@@ -4160,6 +4960,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `unifySameDomain` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn unify_same_domain(&mut self, id: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -4172,6 +4977,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `unifySameDomainWithin` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn unify_same_domain_within(
         &mut self,
         id: ShapeHandle,
@@ -4189,6 +4999,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `isValid` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn is_valid(&mut self, id: ShapeHandle) -> OcctResult<bool> {
         let result = self.generated.fn_is_valid.call(&mut self.store, (id.0,))?;
         if result < 0 {
@@ -4197,6 +5012,11 @@ impl crate::kernel::OcctKernel {
         Ok(result != 0)
     }
 
+    /// Call the `healSolid` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn heal_solid(&mut self, id: ShapeHandle, tolerance: f64) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -4209,6 +5029,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `healFace` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn heal_face(&mut self, id: ShapeHandle, tolerance: f64) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -4221,6 +5046,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `healWire` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn heal_wire(&mut self, id: ShapeHandle, tolerance: f64) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -4233,6 +5063,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `fixFaceOrientations` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn fix_face_orientations(&mut self, id: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -4245,6 +5080,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `buildCurves3d` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn build_curves3d(&mut self, wire_id: ShapeHandle) -> OcctResult<()> {
         let result = self
             .generated
@@ -4256,6 +5096,11 @@ impl crate::kernel::OcctKernel {
         Ok(())
     }
 
+    /// Call the `fixWireOnFace` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn fix_wire_on_face(
         &mut self,
         wire_id: ShapeHandle,
@@ -4273,6 +5118,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `removeDegenerateEdges` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn remove_degenerate_edges(&mut self, id: ShapeHandle) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -4285,6 +5135,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `importStep` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn import_step(&mut self, data: &str) -> OcctResult<ShapeHandle> {
         let data_ptr = self.write_bytes(data.as_bytes())?;
         let data_len = data.len() as u32;
@@ -4301,6 +5156,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `exportStep` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn export_step(&mut self, id: ShapeHandle) -> OcctResult<String> {
         let len = self
             .generated
@@ -4312,6 +5172,11 @@ impl crate::kernel::OcctKernel {
         self.read_string_result()
     }
 
+    /// Call the `exportStepWithUnit` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn export_step_with_unit(&mut self, id: ShapeHandle, unit: &str) -> OcctResult<String> {
         let unit_ptr = self.write_bytes(unit.as_bytes())?;
         let unit_len = unit.len() as u32;
@@ -4327,6 +5192,11 @@ impl crate::kernel::OcctKernel {
         self.read_string_result()
     }
 
+    /// Call the `exportStepWithOptions` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn export_step_with_options(
         &mut self,
         id: ShapeHandle,
@@ -4362,6 +5232,11 @@ impl crate::kernel::OcctKernel {
         self.read_string_result()
     }
 
+    /// Call the `exportStl` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn export_stl(
         &mut self,
         id: ShapeHandle,
@@ -4378,6 +5253,11 @@ impl crate::kernel::OcctKernel {
         self.read_string_result()
     }
 
+    /// Call the `importStl` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn import_stl(&mut self, data: &str) -> OcctResult<ShapeHandle> {
         let data_ptr = self.write_bytes(data.as_bytes())?;
         let data_len = data.len() as u32;
@@ -4394,6 +5274,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `exportStlBinary` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn export_stl_binary(
         &mut self,
         id: ShapeHandle,
@@ -4409,6 +5294,11 @@ impl crate::kernel::OcctKernel {
         self.read_bytes_result()
     }
 
+    /// Call the `importStlBinary` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn import_stl_binary(&mut self, data: &[u8]) -> OcctResult<ShapeHandle> {
         let data_ptr = self.write_bytes(data)?;
         let data_len = data.len() as u32;
@@ -4425,6 +5315,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `toBREP` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn to_brep(&mut self, id: ShapeHandle) -> OcctResult<String> {
         let len = self.generated.fn_to_brep.call(&mut self.store, (id.0,))?;
         if len < 0 {
@@ -4433,6 +5328,11 @@ impl crate::kernel::OcctKernel {
         self.read_string_result()
     }
 
+    /// Call the `fromBREP` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn from_brep(&mut self, data: &str) -> OcctResult<ShapeHandle> {
         let data_ptr = self.write_bytes(data.as_bytes())?;
         let data_len = data.len() as u32;
@@ -4449,6 +5349,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `toBREPBinary` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn to_brep_binary(&mut self, id: ShapeHandle) -> OcctResult<Vec<u8>> {
         let len = self
             .generated
@@ -4460,6 +5365,11 @@ impl crate::kernel::OcctKernel {
         self.read_bytes_result()
     }
 
+    /// Call the `fromBREPBinary` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn from_brep_binary(&mut self, data: &[u8]) -> OcctResult<ShapeHandle> {
         let data_ptr = self.write_bytes(data)?;
         let data_len = data.len() as u32;
@@ -4476,6 +5386,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `extrudeWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn extrude_with_history(
         &mut self,
         shape_id: ShapeHandle,
@@ -4511,6 +5426,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `revolveWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn revolve_with_history(
         &mut self,
         shape_id: ShapeHandle,
@@ -4554,6 +5474,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `pipeWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn pipe_with_history(
         &mut self,
         profile_id: ShapeHandle,
@@ -4585,6 +5510,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `sweepWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn sweep_with_history(
         &mut self,
         profile_id: ShapeHandle,
@@ -4633,6 +5563,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `loftWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn loft_with_history(
         &mut self,
         wire_ids: &[ShapeHandle],
@@ -4681,6 +5616,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `unifySameDomainWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn unify_same_domain_with_history(
         &mut self,
         id: ShapeHandle,
@@ -4710,6 +5650,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `transformWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn transform_with_history(
         &mut self,
         id: ShapeHandle,
@@ -4752,6 +5697,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `translateWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn translate_with_history(
         &mut self,
         id: ShapeHandle,
@@ -4787,6 +5737,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `fuseWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn fuse_with_history(
         &mut self,
         a: ShapeHandle,
@@ -4818,6 +5773,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `cutWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn cut_with_history(
         &mut self,
         a: ShapeHandle,
@@ -4849,6 +5809,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `filletWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn fillet_with_history(
         &mut self,
         solid_id: ShapeHandle,
@@ -4893,6 +5858,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `rotateWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn rotate_with_history(
         &mut self,
         id: ShapeHandle,
@@ -4936,6 +5906,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `mirrorWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn mirror_with_history(
         &mut self,
         id: ShapeHandle,
@@ -4977,6 +5952,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `scaleWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn scale_with_history(
         &mut self,
         id: ShapeHandle,
@@ -5014,6 +5994,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `intersectWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn intersect_with_history(
         &mut self,
         a: ShapeHandle,
@@ -5045,6 +6030,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `chamferWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn chamfer_with_history(
         &mut self,
         solid_id: ShapeHandle,
@@ -5089,6 +6079,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `filletRadiiWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn fillet_radii_with_history(
         &mut self,
         solid_id: ShapeHandle,
@@ -5160,6 +6155,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `chamferDistancesWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn chamfer_distances_with_history(
         &mut self,
         solid_id: ShapeHandle,
@@ -5250,6 +6250,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `chamferDistAnglesWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn chamfer_dist_angles_with_history(
         &mut self,
         solid_id: ShapeHandle,
@@ -5340,6 +6345,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `shellWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn shell_with_history(
         &mut self,
         solid_id: ShapeHandle,
@@ -5386,6 +6396,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `offsetWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn offset_with_history(
         &mut self,
         solid_id: ShapeHandle,
@@ -5419,6 +6434,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `shellWithHistoryAndJoin` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn shell_with_history_and_join(
         &mut self,
         solid_id: ShapeHandle,
@@ -5467,6 +6487,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `offsetWithHistoryAndJoin` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn offset_with_history_and_join(
         &mut self,
         solid_id: ShapeHandle,
@@ -5502,6 +6527,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `thickenWithHistory` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn thicken_with_history(
         &mut self,
         shape_id: ShapeHandle,
@@ -5535,6 +6565,11 @@ impl crate::kernel::OcctKernel {
         self.read_evolution_result()
     }
 
+    /// Call the `tessellate` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn tessellate(
         &mut self,
         id: ShapeHandle,
@@ -5551,6 +6586,11 @@ impl crate::kernel::OcctKernel {
         self.read_mesh_result()
     }
 
+    /// Call the `tessellateRelative` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn tessellate_relative(
         &mut self,
         id: ShapeHandle,
@@ -5567,6 +6607,11 @@ impl crate::kernel::OcctKernel {
         self.read_mesh_result()
     }
 
+    /// Call the `meshShape` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn mesh_shape(
         &mut self,
         id: ShapeHandle,
@@ -5583,6 +6628,11 @@ impl crate::kernel::OcctKernel {
         self.read_mesh_result()
     }
 
+    /// Call the `meshBatch` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn mesh_batch(
         &mut self,
         ids: &[ShapeHandle],
@@ -5609,6 +6659,11 @@ impl crate::kernel::OcctKernel {
         self.read_mesh_batch_result()
     }
 
+    /// Call the `wireframe` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn wireframe(
         &mut self,
         id: ShapeHandle,
@@ -5625,6 +6680,11 @@ impl crate::kernel::OcctKernel {
         self.read_edge_result()
     }
 
+    /// Call the `projectEdges` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn project_edges(
         &mut self,
         shape_id: ShapeHandle,
@@ -5661,6 +6721,11 @@ impl crate::kernel::OcctKernel {
         self.read_projection_result()
     }
 
+    /// Call the `release` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn release(&mut self, id: ShapeHandle) -> OcctResult<()> {
         let result = self.generated.fn_release.call(&mut self.store, (id.0,))?;
         if result < 0 {
@@ -5669,6 +6734,11 @@ impl crate::kernel::OcctKernel {
         Ok(())
     }
 
+    /// Call the `releaseAll` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn release_all(&mut self) -> OcctResult<()> {
         let result = self.generated.fn_release_all.call(&mut self.store, ())?;
         if result < 0 {
@@ -5677,12 +6747,22 @@ impl crate::kernel::OcctKernel {
         Ok(())
     }
 
+    /// Call the `checkpoint` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn checkpoint(&mut self) -> OcctResult<u32> {
         let result = self.generated.fn_checkpoint.call(&mut self.store, ())?;
         self.check_error("checkpoint")?;
         Ok(result)
     }
 
+    /// Call the `releaseSince` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn release_since(&mut self, mark: u32) -> OcctResult<()> {
         let result = self
             .generated
@@ -5694,6 +6774,11 @@ impl crate::kernel::OcctKernel {
         Ok(())
     }
 
+    /// Call the `getShapeCount` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn get_shape_count(&mut self) -> OcctResult<u32> {
         let result = self
             .generated
@@ -5703,6 +6788,11 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `makeNullShape` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn make_null_shape(&mut self) -> OcctResult<ShapeHandle> {
         let result = self
             .generated
@@ -5715,6 +6805,11 @@ impl crate::kernel::OcctKernel {
         Ok(ShapeHandle(result))
     }
 
+    /// Call the `xcafNewDocument` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_new_document(&mut self) -> OcctResult<DocumentHandle> {
         let result = self
             .generated
@@ -5724,6 +6819,11 @@ impl crate::kernel::OcctKernel {
         Ok(DocumentHandle(result))
     }
 
+    /// Call the `xcafClose` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_close(&mut self, doc_id: DocumentHandle) -> OcctResult<()> {
         let result = self
             .generated
@@ -5735,6 +6835,11 @@ impl crate::kernel::OcctKernel {
         Ok(())
     }
 
+    /// Call the `xcafAddShape` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_add_shape(
         &mut self,
         doc_id: DocumentHandle,
@@ -5748,6 +6853,11 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `xcafAddAssembly` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_add_assembly(
         &mut self,
         doc_id: DocumentHandle,
@@ -5761,6 +6871,11 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `xcafAddComponent` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_add_component(
         &mut self,
         doc_id: DocumentHandle,
@@ -5791,6 +6906,11 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `xcafSetColor` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_set_color(
         &mut self,
         doc_id: DocumentHandle,
@@ -5809,6 +6929,11 @@ impl crate::kernel::OcctKernel {
         Ok(())
     }
 
+    /// Call the `xcafSetName` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_set_name(
         &mut self,
         doc_id: DocumentHandle,
@@ -5829,6 +6954,11 @@ impl crate::kernel::OcctKernel {
         Ok(())
     }
 
+    /// Call the `xcafGetLabelInfo` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_get_label_info(
         &mut self,
         doc_id: DocumentHandle,
@@ -5844,6 +6974,11 @@ impl crate::kernel::OcctKernel {
         self.read_label_info_result()
     }
 
+    /// Call the `xcafGetChildLabels` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_get_child_labels(
         &mut self,
         doc_id: DocumentHandle,
@@ -5859,6 +6994,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_i32_result()
     }
 
+    /// Call the `xcafGetRootLabels` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_get_root_labels(&mut self, doc_id: DocumentHandle) -> OcctResult<Vec<i32>> {
         let len = self
             .generated
@@ -5870,6 +7010,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_i32_result()
     }
 
+    /// Call the `xcafGetReferredLabel` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_get_referred_label(
         &mut self,
         doc_id: DocumentHandle,
@@ -5883,6 +7028,11 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `xcafGetLabelLocation` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_get_label_location(
         &mut self,
         doc_id: DocumentHandle,
@@ -5898,6 +7048,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_f64_result()
     }
 
+    /// Call the `xcafGetSubShapeLabels` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_get_sub_shape_labels(
         &mut self,
         doc_id: DocumentHandle,
@@ -5913,6 +7068,11 @@ impl crate::kernel::OcctKernel {
         self.read_vec_i32_result()
     }
 
+    /// Call the `xcafAddSubShape` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_add_sub_shape(
         &mut self,
         doc_id: DocumentHandle,
@@ -5927,6 +7087,11 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    /// Call the `xcafExportSTEP` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_export_step(&mut self, doc_id: DocumentHandle) -> OcctResult<String> {
         let len = self
             .generated
@@ -5938,6 +7103,11 @@ impl crate::kernel::OcctKernel {
         self.read_string_result()
     }
 
+    /// Call the `xcafExportSTEPWithUnit` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_export_step_with_unit(
         &mut self,
         doc_id: DocumentHandle,
@@ -5957,6 +7127,11 @@ impl crate::kernel::OcctKernel {
         self.read_string_result()
     }
 
+    /// Call the `xcafExportSTEPWithOptions` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_export_step_with_options(
         &mut self,
         doc_id: DocumentHandle,
@@ -5992,6 +7167,11 @@ impl crate::kernel::OcctKernel {
         self.read_string_result()
     }
 
+    /// Call the `xcafImportSTEP` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_import_step(&mut self, step_data: &str) -> OcctResult<DocumentHandle> {
         let step_data_ptr = self.write_bytes(step_data.as_bytes())?;
         let step_data_len = step_data.len() as u32;
@@ -6005,6 +7185,11 @@ impl crate::kernel::OcctKernel {
         Ok(DocumentHandle(result))
     }
 
+    /// Call the `xcafExportGLB` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
     pub fn xcaf_export_glb(
         &mut self,
         doc_id: DocumentHandle,

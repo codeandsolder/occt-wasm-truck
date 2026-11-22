@@ -328,6 +328,21 @@ fn emit_rust_method(buf: &mut String, spec: &MethodSpec) {
 
     let _ = writeln!(
         buf,
+        "    /// Call the `{}` OCCT facade operation.",
+        spec.name
+    );
+    let _ = writeln!(buf, "    ///");
+    let _ = writeln!(buf, "    /// # Errors");
+    let _ = writeln!(
+        buf,
+        "    /// Returns an error if the WASM call traps, the operation fails,"
+    );
+    let _ = writeln!(
+        buf,
+        "    /// or marshalling its arguments or results fails."
+    );
+    let _ = writeln!(
+        buf,
         "    pub fn {snake_name}({params_str}) -> {rust_ret} {{"
     );
 
@@ -564,7 +579,7 @@ fn emit_func_lookups(buf: &mut String, methods: &[&MethodSpec]) {
         let snake_name = camel_to_snake(spec.name);
         let _ = writeln!(
             buf,
-            "            fn_{snake_name}: instance.get_typed_func(&mut store, \"occt_{snake_name}\")?,",
+            "            fn_{snake_name}: instance.get_typed_func(&mut *store, \"occt_{snake_name}\")?,",
         );
     }
 }
@@ -631,7 +646,7 @@ pub fn emit_rust_host(methods: &[&MethodSpec]) -> String {
     let _ = writeln!(buf, "    #[allow(clippy::too_many_lines)]");
     let _ = writeln!(buf, "    pub(crate) fn resolve<T: 'static>(");
     let _ = writeln!(buf, "        instance: &wasmtime::Instance,");
-    let _ = writeln!(buf, "        mut store: &mut wasmtime::Store<T>,");
+    let _ = writeln!(buf, "        store: &mut wasmtime::Store<T>,");
     let _ = writeln!(buf, "    ) -> OcctResult<Self> {{");
     let _ = writeln!(buf, "        Ok(Self {{");
     emit_func_lookups(&mut buf, methods);
@@ -651,7 +666,7 @@ pub fn emit_rust_host(methods: &[&MethodSpec]) -> String {
     // several of them outgrows the line limit without being complex.
     let _ = writeln!(
         buf,
-        "#[allow(missing_docs, clippy::too_many_arguments, clippy::too_many_lines)]"
+        "#[allow(clippy::too_many_arguments, clippy::too_many_lines)]"
     );
     let _ = writeln!(buf, "impl crate::kernel::OcctKernel {{");
 
@@ -745,6 +760,8 @@ mod tests {
         assert!(output.contains(
             "pub fn make_box(&mut self, dx: f64, dy: f64, dz: f64) -> OcctResult<ShapeHandle>"
         ));
+        assert!(output.contains("/// Call the `makeBox` OCCT facade operation."));
+        assert!(output.contains("/// # Errors"));
         assert!(output.contains("fn_make_box"));
         assert!(output.contains("ShapeHandle(result)"));
     }
@@ -769,7 +786,7 @@ mod tests {
     #[test]
     fn generates_func_lookups() {
         let output = emit_rust_host(&[&MAKE_BOX]);
-        assert!(output.contains("instance.get_typed_func(&mut store, \"occt_make_box\")"));
+        assert!(output.contains("instance.get_typed_func(&mut *store, \"occt_make_box\")"));
     }
 
     #[test]
