@@ -121,7 +121,33 @@ fn validation_step_byte_import_roundtrips() -> Result<(), Box<dyn std::error::Er
     let shape = kernel.make_box(2., 3., 4.)?;
     let step = kernel.export_step(shape)?;
     let imported = kernel.import_step_bytes(step.as_bytes())?;
-    assert!((kernel.get_volume(imported)? - 24.).abs() < 1e-10);
+    assert_eq!(imported.roots, 1);
+    assert_eq!(imported.transferred, 1);
+    assert!((kernel.get_volume(imported.shape)? - 24.).abs() < 1e-10);
     assert!(kernel.import_step_bytes(b"not STEP\xff").is_err());
+    Ok(())
+}
+
+#[test]
+fn validation_native_mass_property_record() -> Result<(), Box<dyn std::error::Error>> {
+    let mut kernel = kernel()?;
+    let shape = kernel.make_box(2., 3., 4.)?;
+    let properties = kernel.get_b_rep_properties(shape)?;
+    assert!((properties.volume - 24.).abs() < 1e-10);
+    assert!((properties.area - 52.).abs() < 1e-10);
+    assert!((properties.edge_length - 72.).abs() < 1e-10);
+    for (actual, expected) in properties.center_of_mass.into_iter().zip([1., 1.5, 2.]) {
+        assert!((actual - expected).abs() < 1e-10);
+    }
+    for (row, expected) in
+        properties
+            .inertia
+            .into_iter()
+            .zip([[50., 0., 0.], [0., 40., 0.], [0., 0., 26.]])
+    {
+        for (actual, expected) in row.into_iter().zip(expected) {
+            assert!((actual - expected).abs() < 1e-10);
+        }
+    }
     Ok(())
 }

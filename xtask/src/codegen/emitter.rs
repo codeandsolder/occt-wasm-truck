@@ -222,8 +222,10 @@ const fn cpp_return_type(ret: ReturnType) -> &'static str {
         ReturnType::ShapeId | ReturnType::DocId | ReturnType::Uint32 => "uint32_t",
         ReturnType::Bool => "bool",
         ReturnType::Void => "void",
-        ReturnType::VectorUint32 | ReturnType::VectorShapeIds => "std::vector<uint32_t>",
-        ReturnType::VectorDouble => "std::vector<double>",
+        ReturnType::VectorUint32 | ReturnType::VectorShapeIds | ReturnType::StepImport => {
+            "std::vector<uint32_t>"
+        }
+        ReturnType::VectorDouble | ReturnType::BRepProperties => "std::vector<double>",
         ReturnType::Double => "double",
         ReturnType::String | ReturnType::Bytes => "std::string",
         ReturnType::Int => "int",

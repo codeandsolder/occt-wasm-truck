@@ -19,7 +19,12 @@
 
 class gp_Pnt;
 
-TopoDS_Shape readStepShape(const std::string& data);
+struct StepReadData {
+    TopoDS_Shape shape;
+    uint32_t roots;
+    uint32_t transferred;
+};
+StepReadData readStepShape(const std::string& data);
 
 TopAbs_ShapeEnum parseShapeType(const std::string& type);
 std::vector<double> tessellateTriangleCoordinates(const TopoDS_Shape& shape, double linearDeflection, double angularDeflection);
@@ -501,7 +506,7 @@ class OcctKernel {
 
     // --- I/O ---
     uint32_t importStep(const std::string& data);
-    uint32_t importStepBytes(const std::string& data);
+    std::vector<uint32_t> importStepBytes(const std::string& data);
     std::string exportStep(uint32_t id);
     std::string exportStepWithUnit(uint32_t id, const std::string& unit);
     std::string exportStepWithOptions(uint32_t id, const std::string& unit,
@@ -525,6 +530,8 @@ class OcctKernel {
     std::vector<double> getSignedFaceVolumeIntegrals(uint32_t id, double x, double y, double z, double epsilon);
     // 0=outside, 1=inside, 2=boundary, 3=unknown.
     int classifySolidPoint(uint32_t id, double x, double y, double z, double tolerance);
+    // Plain BRepGProp defaults, matching native validation.
+    std::vector<double> getBRepProperties(uint32_t id);
     double getVolume(uint32_t id);
     double getSurfaceArea(uint32_t id);
     double getLength(uint32_t id);

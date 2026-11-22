@@ -1655,15 +1655,16 @@ std::vector<double> tessellateTriangleCoordinates(const TopoDS_Shape& shape,
 }
 
 // STEP Part 21 streams are byte sequences, not necessarily UTF-8.
-TopoDS_Shape readStepShape(const std::string& data) {
+StepReadData readStepShape(const std::string& data) {
     STEPControl_Reader reader;
     std::istringstream stream(data, std::ios::binary);
     if (reader.ReadStream("import.step", stream) != IFSelect_RetDone) {
         throw std::runtime_error("importStep: failed to read STEP data");
     }
-    reader.TransferRoots();
-    if (reader.NbShapes() == 0) {
+    const int roots = reader.NbRootsForTransfer();
+    const int transferred = reader.TransferRoots();
+    if (reader.NbShapes() == 0 || roots < 0 || transferred < 0 || transferred > roots) {
         throw std::runtime_error("importStep: no shapes found in STEP data");
     }
-    return reader.OneShape();
+    return {reader.OneShape(), static_cast<uint32_t>(roots), static_cast<uint32_t>(transferred)};
 }

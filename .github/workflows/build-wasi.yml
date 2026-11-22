@@ -54,6 +54,7 @@ jobs:
       - name: Link pre-built OCCT libs from builder image
         run: |
           set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           test "$(git rev-parse HEAD:occt)" = c7f60ffe85f28c67358d1771454044f0521f2fdd
           rmdir occt
           ln -s /workspace/occt occt

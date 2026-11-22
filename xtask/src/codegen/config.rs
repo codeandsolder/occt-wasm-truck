@@ -3263,6 +3263,29 @@ switch (classifier.State()) {
         return_type: ReturnType::Int,
     },
     MethodSpec {
+        name: "getBRepProperties",
+        kind: MethodKind::CustomBody,
+        params: &[FacadeParam::ShapeId("id")],
+        occt_class: "",
+        ctor_args: "",
+        setup_code: "\
+const auto& shape = get(id);
+GProp_GProps volume, surface, linear;
+BRepGProp::VolumeProperties(shape, volume);
+BRepGProp::SurfaceProperties(shape, surface);
+BRepGProp::LinearProperties(shape, linear);
+const gp_Pnt center = volume.CentreOfMass();
+const gp_Mat inertia = volume.MatrixOfInertia();
+return {volume.Mass(), surface.Mass(), linear.Mass(),
+        center.X(), center.Y(), center.Z(),
+        inertia(1,1), inertia(1,2), inertia(1,3),
+        inertia(2,1), inertia(2,2), inertia(2,3),
+        inertia(3,1), inertia(3,2), inertia(3,3)};",
+        includes: &["BRepGProp.hxx", "GProp_GProps.hxx", "gp_Pnt.hxx", "gp_Mat.hxx"],
+        category: "query",
+        return_type: ReturnType::BRepProperties,
+    },
+    MethodSpec {
         name: "getVolume",
         kind: MethodKind::CustomBody,
         params: &[FacadeParam::ShapeId("id")],
@@ -5148,7 +5171,7 @@ return store(fixer.Shape());",
         occt_class: "",
         ctor_args: "",
         setup_code: "\
-return store(readStepShape(data));",
+return store(readStepShape(data).shape);",
         includes: &["IFSelect_ReturnStatus.hxx", "STEPControl_Reader.hxx"],
         category: "io",
         return_type: ReturnType::ShapeId,
@@ -5159,10 +5182,14 @@ return store(readStepShape(data));",
         params: &[FacadeParam::Bytes("data")],
         occt_class: "",
         ctor_args: "",
-        setup_code: "return store(readStepShape(data));",
+        setup_code: "
+const auto imported = readStepShape(data);
+std::vector<uint32_t> result{0, imported.roots, imported.transferred};
+result[0] = store(imported.shape);
+return result;",
         includes: &[],
         category: "io",
-        return_type: ReturnType::ShapeId,
+        return_type: ReturnType::StepImport,
     },
     MethodSpec {
         name: "exportStep",

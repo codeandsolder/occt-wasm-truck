@@ -18,6 +18,32 @@ impl ShapeHandle {
     }
 }
 
+/// Result of importing a STEP byte stream with OCCT transfer diagnostics.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StepImport {
+    /// Arena handle to the imported OneShape result; release when finished.
+    pub shape: ShapeHandle,
+    /// Number of roots eligible for transfer.
+    pub roots: u32,
+    /// Number of roots successfully transferred.
+    pub transferred: u32,
+}
+
+/// Native BRepGProp properties using OCCT's default integration routines.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BRepProperties {
+    /// Signed material volume.
+    pub volume: f64,
+    /// Surface area.
+    pub area: f64,
+    /// Total edge length, including repeated occurrences.
+    pub edge_length: f64,
+    /// Center of mass.
+    pub center_of_mass: [f64; 3],
+    /// Row-major inertia matrix about the center of mass.
+    pub inertia: [[f64; 3]; 3],
+}
+
 /// Handle to an XCAF document owned by the kernel.
 ///
 /// Returned by `xcaf_new_document` and `xcaf_import_step`, and taken by every
