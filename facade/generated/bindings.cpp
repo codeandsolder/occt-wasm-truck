@@ -259,6 +259,8 @@ EMSCRIPTEN_BINDINGS(occt_wasm) {
         .function("getShapeType", &OcctKernel::getShapeType)
         .function("getSubShapes", &OcctKernel::getSubShapes)
         .function("subShapeCount", &OcctKernel::subShapeCount)
+        .function("getSubShapeOccurrences", &OcctKernel::getSubShapeOccurrences)
+        .function("subShapeOccurrenceCount", &OcctKernel::subShapeOccurrenceCount)
         .function("subShapeHashes", &OcctKernel::subShapeHashes)
         .function("distanceBetween", &OcctKernel::distanceBetween)
         .function("isSame", &OcctKernel::isSame)
@@ -275,6 +277,10 @@ EMSCRIPTEN_BINDINGS(occt_wasm) {
         // query
         .function("getBoundingBox", &OcctKernel::getBoundingBox)
         .function("getBoundingBoxLoose", &OcctKernel::getBoundingBoxLoose)
+        .function("getOptimalBounds", &OcctKernel::getOptimalBounds)
+        .function("getSignedFaceVolumeIntegrals", &OcctKernel::getSignedFaceVolumeIntegrals)
+        .function("classifySolidPoint", &OcctKernel::classifySolidPoint)
+        .function("getBRepProperties", &OcctKernel::getBRepProperties)
         .function("getVolume", &OcctKernel::getVolume)
         .function("getSurfaceArea", &OcctKernel::getSurfaceArea)
         .function("getLength", &OcctKernel::getLength)
@@ -345,6 +351,7 @@ EMSCRIPTEN_BINDINGS(occt_wasm) {
 
         // io
         .function("importStep", &OcctKernel::importStep)
+        .function("importStepBytes", &OcctKernel::importStepBytes)
         .function("exportStep", &OcctKernel::exportStep)
         .function("exportStepWithUnit", &OcctKernel::exportStepWithUnit)
         .function("exportStepWithOptions", &OcctKernel::exportStepWithOptions)
@@ -399,6 +406,7 @@ EMSCRIPTEN_BINDINGS(occt_wasm) {
 
         // tessellate
         .function("tessellate", &OcctKernel::tessellate)
+        .function("tessellateTriangles64", &OcctKernel::tessellateTriangles64)
         .function("tessellateRelative", &OcctKernel::tessellateRelative)
         .function("meshShape", &OcctKernel::meshShape)
         .function("meshBatch", &OcctKernel::meshBatch)

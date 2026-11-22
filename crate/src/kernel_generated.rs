@@ -5,8 +5,8 @@ use wasmtime::TypedFunc;
 
 use crate::error::OcctResult;
 use crate::types::{
-    BoundingBox, CurveData, DocumentHandle, EdgeData, EvolutionData, LabelInfo, Mesh, MeshBatch,
-    NurbsCurveData, ProjectionData, ShapeHandle, SurfaceData,
+    BRepProperties, BoundingBox, CurveData, DocumentHandle, EdgeData, EvolutionData, LabelInfo,
+    Mesh, MeshBatch, NurbsCurveData, ProjectionData, ShapeHandle, StepImport, SurfaceData,
 };
 
 /// Cached WASM function handles for kernel methods.
@@ -208,6 +208,8 @@ pub(crate) struct GeneratedFuncs {
     fn_get_shape_type: TypedFunc<(u32,), i32>,
     fn_get_sub_shapes: TypedFunc<(u32, i32, i32), i32>,
     fn_sub_shape_count: TypedFunc<(u32, i32, i32), i32>,
+    fn_get_sub_shape_occurrences: TypedFunc<(u32, i32, i32), i32>,
+    fn_sub_shape_occurrence_count: TypedFunc<(u32, i32, i32), i32>,
     fn_sub_shape_hashes: TypedFunc<(u32, i32, i32, i32), i32>,
     fn_distance_between: TypedFunc<(u32, u32), f64>,
     fn_is_same: TypedFunc<(u32, u32), i32>,
@@ -222,6 +224,10 @@ pub(crate) struct GeneratedFuncs {
     fn_shared_edges: TypedFunc<(u32, u32), i32>,
     fn_get_bounding_box: TypedFunc<(u32, i32), i32>,
     fn_get_bounding_box_loose: TypedFunc<(u32, i32), i32>,
+    fn_get_optimal_bounds: TypedFunc<(u32, i32, i32), i32>,
+    fn_get_signed_face_volume_integrals: TypedFunc<(u32, f64, f64, f64, f64), i32>,
+    fn_classify_solid_point: TypedFunc<(u32, f64, f64, f64, f64), i32>,
+    fn_get_b_rep_properties: TypedFunc<(u32,), i32>,
     fn_get_volume: TypedFunc<(u32,), f64>,
     fn_get_surface_area: TypedFunc<(u32,), f64>,
     fn_get_length: TypedFunc<(u32,), f64>,
@@ -305,6 +311,7 @@ pub(crate) struct GeneratedFuncs {
     fn_fix_wire_on_face: TypedFunc<(u32, u32, f64), u32>,
     fn_remove_degenerate_edges: TypedFunc<(u32,), u32>,
     fn_import_step: TypedFunc<(i32, i32), u32>,
+    fn_import_step_bytes: TypedFunc<(i32, i32), i32>,
     fn_export_step: TypedFunc<(u32,), i32>,
     fn_export_step_with_unit: TypedFunc<(u32, i32, i32), i32>,
     fn_export_step_with_options: TypedFunc<(u32, i32, i32, i32, i32), i32>,
@@ -345,6 +352,7 @@ pub(crate) struct GeneratedFuncs {
     fn_offset_with_history_and_join: TypedFunc<(u32, f64, f64, i32, i32, i32, i32), i32>,
     fn_thicken_with_history: TypedFunc<(u32, f64, f64, i32, i32, i32), i32>,
     fn_tessellate: TypedFunc<(u32, f64, f64), i32>,
+    fn_tessellate_triangles64: TypedFunc<(u32, f64, f64), i32>,
     fn_tessellate_relative: TypedFunc<(u32, f64, f64), i32>,
     fn_mesh_shape: TypedFunc<(u32, f64, f64), i32>,
     fn_mesh_batch: TypedFunc<(i32, i32, f64, f64), i32>,
@@ -490,6 +498,10 @@ impl GeneratedFuncs {
             fn_get_shape_type: instance.get_typed_func(&mut store, "occt_get_shape_type")?,
             fn_get_sub_shapes: instance.get_typed_func(&mut store, "occt_get_sub_shapes")?,
             fn_sub_shape_count: instance.get_typed_func(&mut store, "occt_sub_shape_count")?,
+            fn_get_sub_shape_occurrences: instance
+                .get_typed_func(&mut store, "occt_get_sub_shape_occurrences")?,
+            fn_sub_shape_occurrence_count: instance
+                .get_typed_func(&mut store, "occt_sub_shape_occurrence_count")?,
             fn_sub_shape_hashes: instance.get_typed_func(&mut store, "occt_sub_shape_hashes")?,
             fn_distance_between: instance.get_typed_func(&mut store, "occt_distance_between")?,
             fn_is_same: instance.get_typed_func(&mut store, "occt_is_same")?,
@@ -505,6 +517,14 @@ impl GeneratedFuncs {
             fn_get_bounding_box: instance.get_typed_func(&mut store, "occt_get_bounding_box")?,
             fn_get_bounding_box_loose: instance
                 .get_typed_func(&mut store, "occt_get_bounding_box_loose")?,
+            fn_get_optimal_bounds: instance
+                .get_typed_func(&mut store, "occt_get_optimal_bounds")?,
+            fn_get_signed_face_volume_integrals: instance
+                .get_typed_func(&mut store, "occt_get_signed_face_volume_integrals")?,
+            fn_classify_solid_point: instance
+                .get_typed_func(&mut store, "occt_classify_solid_point")?,
+            fn_get_b_rep_properties: instance
+                .get_typed_func(&mut store, "occt_get_b_rep_properties")?,
             fn_get_volume: instance.get_typed_func(&mut store, "occt_get_volume")?,
             fn_get_surface_area: instance.get_typed_func(&mut store, "occt_get_surface_area")?,
             fn_get_length: instance.get_typed_func(&mut store, "occt_get_length")?,
@@ -586,6 +606,7 @@ impl GeneratedFuncs {
             fn_remove_degenerate_edges: instance
                 .get_typed_func(&mut store, "occt_remove_degenerate_edges")?,
             fn_import_step: instance.get_typed_func(&mut store, "occt_import_step")?,
+            fn_import_step_bytes: instance.get_typed_func(&mut store, "occt_import_step_bytes")?,
             fn_export_step: instance.get_typed_func(&mut store, "occt_export_step")?,
             fn_export_step_with_unit: instance
                 .get_typed_func(&mut store, "occt_export_step_with_unit")?,
@@ -644,6 +665,8 @@ impl GeneratedFuncs {
             fn_thicken_with_history: instance
                 .get_typed_func(&mut store, "occt_thicken_with_history")?,
             fn_tessellate: instance.get_typed_func(&mut store, "occt_tessellate")?,
+            fn_tessellate_triangles64: instance
+                .get_typed_func(&mut store, "occt_tessellate_triangles64")?,
             fn_tessellate_relative: instance
                 .get_typed_func(&mut store, "occt_tessellate_relative")?,
             fn_mesh_shape: instance.get_typed_func(&mut store, "occt_mesh_shape")?,
@@ -3120,6 +3143,42 @@ impl crate::kernel::OcctKernel {
         Ok(result)
     }
 
+    pub fn get_sub_shape_occurrences(
+        &mut self,
+        id: ShapeHandle,
+        shape_type: &str,
+    ) -> OcctResult<Vec<ShapeHandle>> {
+        let shape_type_ptr = self.write_bytes(shape_type.as_bytes())?;
+        let shape_type_len = shape_type.len() as u32;
+        let len = self.generated.fn_get_sub_shape_occurrences.call(
+            &mut self.store,
+            (id.0, shape_type_ptr as i32, shape_type_len as i32),
+        );
+        self.free_bytes(shape_type_ptr)?;
+        let len = len?;
+        if len < 0 {
+            return Err(self.read_last_error("get_sub_shape_occurrences"));
+        }
+        self.read_vec_shape_result()
+    }
+
+    pub fn sub_shape_occurrence_count(
+        &mut self,
+        id: ShapeHandle,
+        shape_type: &str,
+    ) -> OcctResult<i32> {
+        let shape_type_ptr = self.write_bytes(shape_type.as_bytes())?;
+        let shape_type_len = shape_type.len() as u32;
+        let result = self.generated.fn_sub_shape_occurrence_count.call(
+            &mut self.store,
+            (id.0, shape_type_ptr as i32, shape_type_len as i32),
+        );
+        self.free_bytes(shape_type_ptr)?;
+        let result = result?;
+        self.check_error("sub_shape_occurrence_count")?;
+        Ok(result)
+    }
+
     pub fn sub_shape_hashes(
         &mut self,
         id: ShapeHandle,
@@ -3304,6 +3363,71 @@ impl crate::kernel::OcctKernel {
             return Err(self.read_last_error("get_bounding_box_loose"));
         }
         self.read_bbox_result()
+    }
+
+    pub fn get_optimal_bounds(
+        &mut self,
+        id: ShapeHandle,
+        use_triangulation: bool,
+        use_shape_tolerance: bool,
+    ) -> OcctResult<BoundingBox> {
+        let status = self.generated.fn_get_optimal_bounds.call(
+            &mut self.store,
+            (
+                id.0,
+                i32::from(use_triangulation),
+                i32::from(use_shape_tolerance),
+            ),
+        )?;
+        if status < 0 {
+            return Err(self.read_last_error("get_optimal_bounds"));
+        }
+        self.read_bbox_result()
+    }
+
+    pub fn get_signed_face_volume_integrals(
+        &mut self,
+        id: ShapeHandle,
+        x: f64,
+        y: f64,
+        z: f64,
+        epsilon: f64,
+    ) -> OcctResult<Vec<f64>> {
+        let len = self
+            .generated
+            .fn_get_signed_face_volume_integrals
+            .call(&mut self.store, (id.0, x, y, z, epsilon))?;
+        if len < 0 {
+            return Err(self.read_last_error("get_signed_face_volume_integrals"));
+        }
+        self.read_vec_f64_result()
+    }
+
+    pub fn classify_solid_point(
+        &mut self,
+        id: ShapeHandle,
+        x: f64,
+        y: f64,
+        z: f64,
+        tolerance: f64,
+    ) -> OcctResult<i32> {
+        let result = self
+            .generated
+            .fn_classify_solid_point
+            .call(&mut self.store, (id.0, x, y, z, tolerance))?;
+        self.check_error("classify_solid_point")?;
+        Ok(result)
+    }
+
+    pub fn get_b_rep_properties(&mut self, id: ShapeHandle) -> OcctResult<BRepProperties> {
+        let len = self
+            .generated
+            .fn_get_b_rep_properties
+            .call(&mut self.store, (id.0,))?;
+        if len < 0 {
+            return Err(self.read_last_error("get_b_rep_properties"));
+        }
+        self.read_brep_properties_result()
     }
 
     pub fn get_volume(&mut self, id: ShapeHandle) -> OcctResult<f64> {
@@ -4299,6 +4423,21 @@ impl crate::kernel::OcctKernel {
             return Err(self.read_last_error("import_step"));
         }
         Ok(ShapeHandle(result))
+    }
+
+    pub fn import_step_bytes(&mut self, data: &[u8]) -> OcctResult<StepImport> {
+        let data_ptr = self.write_bytes(data)?;
+        let data_len = data.len() as u32;
+        let len = self
+            .generated
+            .fn_import_step_bytes
+            .call(&mut self.store, (data_ptr as i32, data_len as i32));
+        self.free_bytes(data_ptr)?;
+        let len = len?;
+        if len < 0 {
+            return Err(self.read_last_error("import_step_bytes"));
+        }
+        self.read_step_import_result()
     }
 
     pub fn export_step(&mut self, id: ShapeHandle) -> OcctResult<String> {
@@ -5549,6 +5688,22 @@ impl crate::kernel::OcctKernel {
             return Err(self.read_last_error("tessellate"));
         }
         self.read_mesh_result()
+    }
+
+    pub fn tessellate_triangles64(
+        &mut self,
+        id: ShapeHandle,
+        linear_deflection: f64,
+        angular_deflection: f64,
+    ) -> OcctResult<Vec<f64>> {
+        let len = self.generated.fn_tessellate_triangles64.call(
+            &mut self.store,
+            (id.0, linear_deflection, angular_deflection),
+        )?;
+        if len < 0 {
+            return Err(self.read_last_error("tessellate_triangles64"));
+        }
+        self.read_vec_f64_result()
     }
 
     pub fn tessellate_relative(

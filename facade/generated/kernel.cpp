@@ -185,6 +185,7 @@
 #include <gp_Torus.hxx>
 #include <gp_Trsf.hxx>
 #include <gp_Vec.hxx>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <thread_groove.h>
@@ -3617,18 +3618,7 @@ std::string OcctKernel::getShapeType(uint32_t id) {
 
 std::vector<uint32_t> OcctKernel::getSubShapes(uint32_t id, const std::string& shapeType) {
     try {
-        auto parseType = [](const std::string& t) -> TopAbs_ShapeEnum {
-            if (t == "vertex") return TopAbs_VERTEX;
-            if (t == "edge") return TopAbs_EDGE;
-            if (t == "wire") return TopAbs_WIRE;
-            if (t == "face") return TopAbs_FACE;
-            if (t == "shell") return TopAbs_SHELL;
-            if (t == "solid") return TopAbs_SOLID;
-            if (t == "compsolid") return TopAbs_COMPSOLID;
-            if (t == "compound") return TopAbs_COMPOUND;
-            throw std::runtime_error("Unknown shape type: " + t);
-        };
-        TopAbs_ShapeEnum toExplore = parseType(shapeType);
+        TopAbs_ShapeEnum toExplore = parseShapeType(shapeType);
         NCollection_IndexedMap<TopoDS_Shape, TopTools_ShapeMapHasher> map;
         TopExp::MapShapes(get(id), toExplore, map);
         BatchScope result(*this, static_cast<size_t>(map.Extent()));
@@ -3643,22 +3633,41 @@ std::vector<uint32_t> OcctKernel::getSubShapes(uint32_t id, const std::string& s
 
 int OcctKernel::subShapeCount(uint32_t id, const std::string& shapeType) {
     try {
-        auto parseType = [](const std::string& t) -> TopAbs_ShapeEnum {
-            if (t == "vertex") return TopAbs_VERTEX;
-            if (t == "edge") return TopAbs_EDGE;
-            if (t == "wire") return TopAbs_WIRE;
-            if (t == "face") return TopAbs_FACE;
-            if (t == "shell") return TopAbs_SHELL;
-            if (t == "solid") return TopAbs_SOLID;
-            if (t == "compsolid") return TopAbs_COMPSOLID;
-            if (t == "compound") return TopAbs_COMPOUND;
-            throw std::runtime_error("Unknown shape type: " + t);
-        };
         NCollection_IndexedMap<TopoDS_Shape, TopTools_ShapeMapHasher> map;
-        TopExp::MapShapes(get(id), parseType(shapeType), map);
+        TopExp::MapShapes(get(id), parseShapeType(shapeType), map);
         return map.Extent();
     } catch (const Standard_Failure& e) {
         throw std::runtime_error(std::string("subShapeCount: ") + e.what());
+    }
+}
+
+std::vector<uint32_t> OcctKernel::getSubShapeOccurrences(uint32_t id, const std::string& shapeType) {
+    try {
+        TopAbs_ShapeEnum type = parseShapeType(shapeType);
+        const auto& shape = get(id);
+        BatchScope result(*this, 0);
+        for (TopExp_Explorer ex(shape, type); ex.More(); ex.Next()) {
+            result.add(ex.Current());
+        }
+        return result.take();
+    } catch (const Standard_Failure& e) {
+        throw std::runtime_error(std::string("getSubShapeOccurrences: ") + e.what());
+    }
+}
+
+int OcctKernel::subShapeOccurrenceCount(uint32_t id, const std::string& shapeType) {
+    try {
+        TopAbs_ShapeEnum type = parseShapeType(shapeType);
+        int count = 0;
+        for (TopExp_Explorer ex(get(id), type); ex.More(); ex.Next()) {
+            if (count == std::numeric_limits<int>::max()) {
+                throw std::runtime_error("subShapeOccurrenceCount: count overflow");
+            }
+            ++count;
+        }
+        return count;
+    } catch (const Standard_Failure& e) {
+        throw std::runtime_error(std::string("subShapeOccurrenceCount: ") + e.what());
     }
 }
 
@@ -3902,6 +3911,68 @@ BBoxData OcctKernel::getBoundingBoxLoose(uint32_t id, bool useTriangulation) {
         return result;
     } catch (const Standard_Failure& e) {
         throw std::runtime_error(std::string("getBoundingBoxLoose: ") + e.what());
+    }
+}
+
+BBoxData OcctKernel::getOptimalBounds(uint32_t id, bool useTriangulation, bool useShapeTolerance) {
+    try {
+        Bnd_Box box;
+        BRepBndLib::AddOptimal(get(id), box, useTriangulation, useShapeTolerance);
+        if (box.IsVoid() || box.IsOpen()) {
+            throw std::runtime_error("getOptimalBounds: shape has no finite bounds");
+        }
+        BBoxData result{};
+        box.Get(result.xmin, result.ymin, result.zmin, result.xmax, result.ymax, result.zmax);
+        return result;
+    } catch (const Standard_Failure& e) {
+        throw std::runtime_error(std::string("getOptimalBounds: ") + e.what());
+    }
+}
+
+std::vector<double> OcctKernel::getSignedFaceVolumeIntegrals(uint32_t id, double x, double y, double z, double epsilon) {
+    try {
+        return signedFaceVolumeIntegrals(get(id), gp_Pnt(x, y, z), epsilon);
+    } catch (const Standard_Failure& e) {
+        throw std::runtime_error(std::string("getSignedFaceVolumeIntegrals: ") + e.what());
+    }
+}
+
+int OcctKernel::classifySolidPoint(uint32_t id, double x, double y, double z, double tolerance) {
+    try {
+        const auto& shape = get(id);
+        if (shape.ShapeType() != TopAbs_SOLID || !std::isfinite(x) || !std::isfinite(y) ||
+            !std::isfinite(z) || !std::isfinite(tolerance) || tolerance < 0.0) {
+            throw std::runtime_error("classifySolidPoint: invalid solid or coordinates/tolerance");
+        }
+        BRepClass3d_SolidClassifier classifier(shape);
+        classifier.Perform(gp_Pnt(x, y, z), tolerance);
+        switch (classifier.State()) {
+            case TopAbs_OUT: return 0;
+            case TopAbs_IN: return 1;
+            case TopAbs_ON: return 2;
+            default: return 3;
+        }
+    } catch (const Standard_Failure& e) {
+        throw std::runtime_error(std::string("classifySolidPoint: ") + e.what());
+    }
+}
+
+std::vector<double> OcctKernel::getBRepProperties(uint32_t id) {
+    try {
+        const auto& shape = get(id);
+        GProp_GProps volume, surface, linear;
+        BRepGProp::VolumeProperties(shape, volume);
+        BRepGProp::SurfaceProperties(shape, surface);
+        BRepGProp::LinearProperties(shape, linear);
+        const gp_Pnt center = volume.CentreOfMass();
+        const gp_Mat inertia = volume.MatrixOfInertia();
+        return {volume.Mass(), surface.Mass(), linear.Mass(),
+                center.X(), center.Y(), center.Z(),
+                inertia(1,1), inertia(1,2), inertia(1,3),
+                inertia(2,1), inertia(2,2), inertia(2,3),
+                inertia(3,1), inertia(3,2), inertia(3,3)};
+    } catch (const Standard_Failure& e) {
+        throw std::runtime_error(std::string("getBRepProperties: ") + e.what());
     }
 }
 
@@ -5153,22 +5224,20 @@ uint32_t OcctKernel::removeDegenerateEdges(uint32_t id) {
 
 uint32_t OcctKernel::importStep(const std::string& data) {
     try {
-        STEPControl_Reader reader;
-        // Streams, not files: the standalone WASI build the crate embeds has no filesystem.
-        std::istringstream iss(data);
-        IFSelect_ReturnStatus status = reader.ReadStream("import.step", iss);
-        if (status != IFSelect_RetDone) {
-            throw std::runtime_error("importStep: failed to read STEP data");
-        }
-        
-        reader.TransferRoots();
-        if (reader.NbShapes() == 0) {
-            throw std::runtime_error("importStep: no shapes found in STEP data");
-        }
-        
-        return store(reader.OneShape());
+        return store(readStepShape(data).shape);
     } catch (const Standard_Failure& e) {
         throw std::runtime_error(std::string("importStep: ") + e.what());
+    }
+}
+
+std::vector<uint32_t> OcctKernel::importStepBytes(const std::string& data) {
+    try {
+        const auto imported = readStepShape(data);
+        std::vector<uint32_t> result{0, imported.roots, imported.transferred};
+        result[0] = store(imported.shape);
+        return result;
+    } catch (const Standard_Failure& e) {
+        throw std::runtime_error(std::string("importStepBytes: ") + e.what());
     }
 }
 
@@ -5985,6 +6054,14 @@ MeshData OcctKernel::tessellate(uint32_t id, double linearDeflection, double ang
         return buildMeshData(get(id), linearDeflection, angularDeflection, false);
     } catch (const Standard_Failure& e) {
         throw std::runtime_error(std::string("tessellate: ") + e.what());
+    }
+}
+
+std::vector<double> OcctKernel::tessellateTriangles64(uint32_t id, double linearDeflection, double angularDeflection) {
+    try {
+        return tessellateTriangleCoordinates(get(id), linearDeflection, angularDeflection);
+    } catch (const Standard_Failure& e) {
+        throw std::runtime_error(std::string("tessellateTriangles64: ") + e.what());
     }
 }
 

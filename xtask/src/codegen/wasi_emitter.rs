@@ -123,6 +123,8 @@ const fn c_return_type(rt: ReturnType) -> &'static str {
         | ReturnType::String
         | ReturnType::Bytes
         | ReturnType::VectorUint32
+        | ReturnType::StepImport
+        | ReturnType::BRepProperties
         | ReturnType::VectorShapeIds
         | ReturnType::VectorDouble
         | ReturnType::VectorInt
@@ -154,6 +156,8 @@ const fn error_sentinel(rt: ReturnType) -> &'static str {
         | ReturnType::String
         | ReturnType::Bytes
         | ReturnType::VectorUint32
+        | ReturnType::StepImport
+        | ReturnType::BRepProperties
         | ReturnType::VectorShapeIds
         | ReturnType::VectorDouble
         | ReturnType::VectorInt
@@ -218,7 +222,7 @@ fn emit_wasi_method(buf: &mut String, spec: &MethodSpec) {
                 "        return static_cast<int32_t>(g_string_buf.size());"
             );
         }
-        ReturnType::VectorUint32 | ReturnType::VectorShapeIds => {
+        ReturnType::VectorUint32 | ReturnType::VectorShapeIds | ReturnType::StepImport => {
             let _ = writeln!(
                 buf,
                 "        g_vec_u32_buf = g_kernel->{name}({args});",
@@ -229,7 +233,7 @@ fn emit_wasi_method(buf: &mut String, spec: &MethodSpec) {
                 "        return static_cast<int32_t>(g_vec_u32_buf.size());"
             );
         }
-        ReturnType::VectorDouble => {
+        ReturnType::VectorDouble | ReturnType::BRepProperties => {
             let _ = writeln!(
                 buf,
                 "        g_vec_f64_buf = g_kernel->{name}({args});",
