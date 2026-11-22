@@ -94,86 +94,53 @@ fn heap_param_names(params: &[FacadeParam]) -> Vec<String> {
 /// if a later `write_bytes` fails, previously allocated buffers are freed before
 /// propagating the error.
 fn emit_wasm_call_setup(buf: &mut String, params: &[FacadeParam]) {
-    // Track which allocations have been completed so far (for cleanup-on-error).
-    let mut allocated_so_far: Vec<String> = Vec::new();
-
+    // Validate all lengths before allocating anything in guest memory.
     for param in params {
-        match param {
-            FacadeParam::String(name) => {
-                let rname = rust_param_name(name);
-                // Use match instead of ? to clean up prior allocations on error
-                if allocated_so_far.is_empty() {
-                    let _ = writeln!(
-                        buf,
-                        "        let {rname}_ptr = self.write_bytes({rname}.as_bytes())?;"
-                    );
+        let width = match param {
+            FacadeParam::String(_) | FacadeParam::Bytes(_) => 1,
+            FacadeParam::VectorShapeIds(_) | FacadeParam::VectorInt(_) => 4,
+            FacadeParam::VectorDouble(_) => 8,
+            _ => continue,
+        };
+        let rname = rust_param_name(param.name());
+        let _ = writeln!(
+            buf,
+            "        let {rname}_len = checked_wasm_len({rname}.len(), {width})?;"
+        );
+    }
+
+    // Track allocations so a failed later write can release earlier buffers.
+    let mut allocated_so_far = Vec::new();
+    for param in params {
+        let rname = rust_param_name(param.name());
+        let data_expr = match param {
+            FacadeParam::String(_) => format!("{rname}.as_bytes()"),
+            FacadeParam::Bytes(_) => rname.clone(),
+            FacadeParam::VectorShapeIds(_)
+            | FacadeParam::VectorDouble(_)
+            | FacadeParam::VectorInt(_) => {
+                let value = if matches!(param, FacadeParam::VectorShapeIds(_)) {
+                    "v.0"
                 } else {
-                    emit_guarded_write_bytes(
-                        buf,
-                        &rname,
-                        &format!("{rname}.as_bytes()"),
-                        &allocated_so_far,
-                    );
-                }
-                let _ = writeln!(buf, "        let {rname}_len = {rname}.len() as u32;");
-                allocated_so_far.push(rname);
-            }
-            FacadeParam::Bytes(name) => {
-                let rname = rust_param_name(name);
-                if allocated_so_far.is_empty() {
-                    let _ = writeln!(buf, "        let {rname}_ptr = self.write_bytes({rname})?;");
-                } else {
-                    emit_guarded_write_bytes(buf, &rname, &rname, &allocated_so_far);
-                }
-                let _ = writeln!(buf, "        let {rname}_len = {rname}.len() as u32;");
-                allocated_so_far.push(rname);
-            }
-            FacadeParam::VectorShapeIds(name) => {
-                let rname = rust_param_name(name);
+                    "v"
+                };
                 let _ = writeln!(
                     buf,
-                    "        let {rname}_bytes: Vec<u8> = {rname}.iter().flat_map(|h| h.0.to_le_bytes()).collect();"
+                    "        let {rname}_bytes: Vec<u8> = {rname}.iter().flat_map(|v| {value}.to_le_bytes()).collect();"
                 );
-                if allocated_so_far.is_empty() {
-                    let _ = writeln!(
-                        buf,
-                        "        let {rname}_ptr = self.write_bytes(&{rname}_bytes)?;"
-                    );
-                } else {
-                    emit_guarded_write_bytes(
-                        buf,
-                        &rname,
-                        &format!("&{rname}_bytes"),
-                        &allocated_so_far,
-                    );
-                }
-                let _ = writeln!(buf, "        let {rname}_len = {rname}.len() as u32;");
-                allocated_so_far.push(rname);
+                format!("&{rname}_bytes")
             }
-            FacadeParam::VectorDouble(name) | FacadeParam::VectorInt(name) => {
-                let rname = rust_param_name(name);
-                let _ = writeln!(
-                    buf,
-                    "        let {rname}_bytes: Vec<u8> = {rname}.iter().flat_map(|v| v.to_le_bytes()).collect();"
-                );
-                if allocated_so_far.is_empty() {
-                    let _ = writeln!(
-                        buf,
-                        "        let {rname}_ptr = self.write_bytes(&{rname}_bytes)?;"
-                    );
-                } else {
-                    emit_guarded_write_bytes(
-                        buf,
-                        &rname,
-                        &format!("&{rname}_bytes"),
-                        &allocated_so_far,
-                    );
-                }
-                let _ = writeln!(buf, "        let {rname}_len = {rname}.len() as u32;");
-                allocated_so_far.push(rname);
-            }
-            _ => {} // scalar types don't need setup
+            _ => continue,
+        };
+        if allocated_so_far.is_empty() {
+            let _ = writeln!(
+                buf,
+                "        let {rname}_ptr = self.write_bytes({data_expr})?;"
+            );
+        } else {
+            emit_guarded_write_bytes(buf, &rname, &data_expr, &allocated_so_far);
         }
+        allocated_so_far.push(rname);
     }
 }
 
@@ -219,7 +186,7 @@ fn emit_wasm_call_args(params: &[FacadeParam]) -> String {
             | FacadeParam::VectorDouble(name)
             | FacadeParam::VectorInt(name) => {
                 let rname = rust_param_name(name);
-                vec![format!("{rname}_ptr as i32"), format!("{rname}_len as i32")]
+                vec![format!("{rname}_ptr"), format!("{rname}_len")]
             }
         })
         .collect();
@@ -274,7 +241,7 @@ fn wasm_typed_func_type(spec: &MethodSpec) -> String {
             | FacadeParam::Bytes(_)
             | FacadeParam::VectorShapeIds(_)
             | FacadeParam::VectorDouble(_)
-            | FacadeParam::VectorInt(_) => vec!["i32", "i32"],
+            | FacadeParam::VectorInt(_) => vec!["u32", "u32"],
         })
         .collect();
 
@@ -606,6 +573,7 @@ pub fn emit_rust_host(methods: &[&MethodSpec]) -> String {
     let _ = writeln!(buf, "use wasmtime::TypedFunc;");
     let _ = writeln!(buf);
     let _ = writeln!(buf, "use crate::error::OcctResult;");
+    let _ = writeln!(buf, "use crate::kernel::checked_wasm_len;");
     let _ = writeln!(buf, "use crate::types::{{");
     let _ = writeln!(
         buf,
@@ -840,8 +808,35 @@ mod tests {
         let output = emit_rust_host(&[&IMPORT_BYTES]);
         assert!(output.contains("data: &[u8]"));
         assert!(output.contains("self.write_bytes(data)?"));
+        assert!(output.contains("checked_wasm_len(data.len(), 1)?"));
+        assert!(!output.contains("data.len() as u32"));
+        assert!(!output.contains("data_ptr as i32"));
         assert!(output.contains("self.free_bytes(data_ptr)"));
-        assert!(output.contains("fn_import_stl_binary: TypedFunc<(i32, i32), u32>"));
+        assert!(output.contains("fn_import_stl_binary: TypedFunc<(u32, u32), u32>"));
+    }
+
+    #[test]
+    fn all_heap_lengths_are_checked_before_any_allocation() {
+        let mut output = String::new();
+        emit_wasm_call_setup(
+            &mut output,
+            &[
+                FacadeParam::VectorShapeIds("shapes"),
+                FacadeParam::VectorDouble("values"),
+                FacadeParam::VectorInt("indices"),
+                FacadeParam::String("name"),
+            ],
+        );
+        let preflight = concat!(
+            "        let shapes_len = checked_wasm_len(shapes.len(), 4)?;\n",
+            "        let values_len = checked_wasm_len(values.len(), 8)?;\n",
+            "        let indices_len = checked_wasm_len(indices.len(), 4)?;\n",
+            "        let name_len = checked_wasm_len(name.len(), 1)?;\n",
+        );
+        assert!(output.starts_with(preflight));
+        assert!(output.contains("self.free_bytes(shapes_ptr)"));
+        assert!(output.contains("self.free_bytes(values_ptr)"));
+        assert!(output.contains("self.free_bytes(indices_ptr)"));
     }
 
     #[test]

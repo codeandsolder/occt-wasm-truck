@@ -4,6 +4,7 @@
 use wasmtime::TypedFunc;
 
 use crate::error::OcctResult;
+use crate::kernel::checked_wasm_len;
 use crate::types::{
     BoundingBox, CurveData, DocumentHandle, EdgeData, EvolutionData, LabelInfo, Mesh, MeshBatch,
     NurbsCurveData, ProjectionData, ShapeHandle, SurfaceData,
@@ -40,33 +41,33 @@ pub(crate) struct GeneratedFuncs {
     fn_section: TypedFunc<(u32, u32), u32>,
     fn_section_plane: TypedFunc<(u32, f64, f64, f64, f64, f64, f64), u32>,
     fn_intersect: TypedFunc<(u32, u32), u32>,
-    fn_fuse_all: TypedFunc<(i32, i32), u32>,
-    fn_intersection_cells: TypedFunc<(i32, i32), u32>,
-    fn_cut_all: TypedFunc<(u32, i32, i32), u32>,
-    fn_boolean_op: TypedFunc<(i32, i32, i32, i32, i32, i32, f64, f64, i32, i32, i32), i32>,
-    fn_boolean_pipeline: TypedFunc<(u32, i32, i32, i32, i32), u32>,
-    fn_split: TypedFunc<(u32, i32, i32), u32>,
+    fn_fuse_all: TypedFunc<(u32, u32), u32>,
+    fn_intersection_cells: TypedFunc<(u32, u32), u32>,
+    fn_cut_all: TypedFunc<(u32, u32, u32), u32>,
+    fn_boolean_op: TypedFunc<(i32, u32, u32, u32, u32, i32, f64, f64, u32, u32, i32), i32>,
+    fn_boolean_pipeline: TypedFunc<(u32, u32, u32, u32, u32), u32>,
+    fn_split: TypedFunc<(u32, u32, u32), u32>,
     fn_extrude: TypedFunc<(u32, f64, f64, f64), u32>,
     fn_revolve: TypedFunc<(u32, f64, f64, f64, f64, f64, f64, f64), u32>,
-    fn_fillet: TypedFunc<(u32, i32, i32, f64), u32>,
-    fn_chamfer: TypedFunc<(u32, i32, i32, f64), u32>,
-    fn_chamfer_dist_angle: TypedFunc<(u32, i32, i32, f64, f64), u32>,
+    fn_fillet: TypedFunc<(u32, u32, u32, f64), u32>,
+    fn_chamfer: TypedFunc<(u32, u32, u32, f64), u32>,
+    fn_chamfer_dist_angle: TypedFunc<(u32, u32, u32, f64, f64), u32>,
     fn_chamfer_asymmetric: TypedFunc<(u32, u32, f64, f64, u32), u32>,
-    fn_fillet_radii: TypedFunc<(u32, i32, i32, i32, i32, i32, i32), u32>,
-    fn_chamfer_distances: TypedFunc<(u32, i32, i32, i32, i32, i32, i32, i32, i32), u32>,
-    fn_chamfer_dist_angles: TypedFunc<(u32, i32, i32, i32, i32, i32, i32, i32, i32), u32>,
-    fn_shell: TypedFunc<(u32, i32, i32, f64, f64), u32>,
+    fn_fillet_radii: TypedFunc<(u32, u32, u32, u32, u32, u32, u32), u32>,
+    fn_chamfer_distances: TypedFunc<(u32, u32, u32, u32, u32, u32, u32, u32, u32), u32>,
+    fn_chamfer_dist_angles: TypedFunc<(u32, u32, u32, u32, u32, u32, u32, u32, u32), u32>,
+    fn_shell: TypedFunc<(u32, u32, u32, f64, f64), u32>,
     fn_offset: TypedFunc<(u32, f64, f64), u32>,
-    fn_shell_with_join: TypedFunc<(u32, i32, i32, f64, f64, i32), u32>,
+    fn_shell_with_join: TypedFunc<(u32, u32, u32, f64, f64, i32), u32>,
     fn_offset_with_join: TypedFunc<(u32, f64, f64, i32), u32>,
     fn_draft: TypedFunc<(u32, u32, f64, f64, f64, f64), u32>,
     fn_draft_faces: TypedFunc<
         (
             u32,
-            i32,
-            i32,
-            i32,
-            i32,
+            u32,
+            u32,
+            u32,
+            u32,
             f64,
             f64,
             f64,
@@ -80,11 +81,11 @@ pub(crate) struct GeneratedFuncs {
         u32,
     >,
     fn_thicken: TypedFunc<(u32, f64, f64), u32>,
-    fn_defeature: TypedFunc<(u32, i32, i32, f64), u32>,
+    fn_defeature: TypedFunc<(u32, u32, u32, f64), u32>,
     fn_reverse_shape: TypedFunc<(u32,), u32>,
     fn_simplify: TypedFunc<(u32,), u32>,
     fn_fillet_variable: TypedFunc<(u32, u32, f64, f64), u32>,
-    fn_fillet_batch: TypedFunc<(i32, i32, i32, i32, i32, i32, i32, i32), i32>,
+    fn_fillet_batch: TypedFunc<(u32, u32, u32, u32, u32, u32, u32, u32), i32>,
     fn_offset_wire2_d: TypedFunc<(u32, f64, i32), u32>,
     fn_translate: TypedFunc<(u32, f64, f64, f64), u32>,
     fn_rotate: TypedFunc<(u32, f64, f64, f64, f64, f64, f64, f64), u32>,
@@ -93,30 +94,30 @@ pub(crate) struct GeneratedFuncs {
     fn_copy: TypedFunc<(u32,), u32>,
     fn_linear_pattern: TypedFunc<(u32, f64, f64, f64, f64, i32), u32>,
     fn_circular_pattern: TypedFunc<(u32, f64, f64, f64, f64, f64, f64, f64, i32), u32>,
-    fn_transform: TypedFunc<(u32, i32, i32), u32>,
-    fn_located: TypedFunc<(u32, i32, i32), u32>,
-    fn_general_transform: TypedFunc<(u32, i32, i32), u32>,
-    fn_translate_batch: TypedFunc<(i32, i32, i32, i32), i32>,
-    fn_compose_transform: TypedFunc<(i32, i32, i32, i32), i32>,
-    fn_transform_batch: TypedFunc<(i32, i32, i32, i32), i32>,
-    fn_rotate_batch: TypedFunc<(i32, i32, i32, i32), i32>,
-    fn_scale_batch: TypedFunc<(i32, i32, i32, i32), i32>,
-    fn_mirror_batch: TypedFunc<(i32, i32, i32, i32), i32>,
+    fn_transform: TypedFunc<(u32, u32, u32), u32>,
+    fn_located: TypedFunc<(u32, u32, u32), u32>,
+    fn_general_transform: TypedFunc<(u32, u32, u32), u32>,
+    fn_translate_batch: TypedFunc<(u32, u32, u32, u32), i32>,
+    fn_compose_transform: TypedFunc<(u32, u32, u32, u32), i32>,
+    fn_transform_batch: TypedFunc<(u32, u32, u32, u32), i32>,
+    fn_rotate_batch: TypedFunc<(u32, u32, u32, u32), i32>,
+    fn_scale_batch: TypedFunc<(u32, u32, u32, u32), i32>,
+    fn_mirror_batch: TypedFunc<(u32, u32, u32, u32), i32>,
     fn_make_vertex: TypedFunc<(f64, f64, f64), u32>,
     fn_make_edge: TypedFunc<(u32, u32), u32>,
-    fn_make_wire: TypedFunc<(i32, i32), u32>,
+    fn_make_wire: TypedFunc<(u32, u32), u32>,
     fn_make_face: TypedFunc<(u32,), u32>,
     fn_make_face_on_surface: TypedFunc<(u32, u32), u32>,
     fn_make_solid: TypedFunc<(u32,), u32>,
-    fn_sew: TypedFunc<(i32, i32, f64), u32>,
-    fn_make_compound: TypedFunc<(i32, i32), u32>,
+    fn_sew: TypedFunc<(u32, u32, f64), u32>,
+    fn_make_compound: TypedFunc<(u32, u32), u32>,
     fn_make_line_edge: TypedFunc<(f64, f64, f64, f64, f64, f64), u32>,
     fn_make_circle_edge: TypedFunc<(f64, f64, f64, f64, f64, f64, f64), u32>,
     fn_make_circle_arc: TypedFunc<(f64, f64, f64, f64, f64, f64, f64, f64, f64), u32>,
     fn_make_arc_edge: TypedFunc<(f64, f64, f64, f64, f64, f64, f64, f64, f64), u32>,
     fn_make_ellipse_edge: TypedFunc<(f64, f64, f64, f64, f64, f64, f64, f64), u32>,
-    fn_make_bezier_edge: TypedFunc<(i32, i32), u32>,
-    fn_make_b_spline_edge: TypedFunc<(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32), u32>,
+    fn_make_bezier_edge: TypedFunc<(u32, u32), u32>,
+    fn_make_b_spline_edge: TypedFunc<(u32, u32, u32, u32, u32, u32, u32, u32, i32, i32), u32>,
     fn_make_ellipse_arc: TypedFunc<(f64, f64, f64, f64, f64, f64, f64, f64, f64, f64), u32>,
     fn_make_ellipse_arc_oriented: TypedFunc<
         (
@@ -159,56 +160,56 @@ pub(crate) struct GeneratedFuncs {
     fn_make_non_planar_face: TypedFunc<(u32,), u32>,
     fn_fill_surface: TypedFunc<
         (
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
             u32,
-            i32,
-            i32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
         ),
         u32,
     >,
-    fn_edge_on_surface: TypedFunc<(u32, i32, i32, f64, i32), u32>,
-    fn_add_holes_in_face: TypedFunc<(u32, i32, i32), u32>,
-    fn_remove_holes_from_face: TypedFunc<(u32, i32, i32), u32>,
+    fn_edge_on_surface: TypedFunc<(u32, u32, u32, f64, i32), u32>,
+    fn_add_holes_in_face: TypedFunc<(u32, u32, u32), u32>,
+    fn_remove_holes_from_face: TypedFunc<(u32, u32, u32), u32>,
     fn_solid_from_shell: TypedFunc<(u32,), u32>,
-    fn_build_solid_from_faces: TypedFunc<(i32, i32, f64), u32>,
-    fn_sew_and_solidify: TypedFunc<(i32, i32, f64), u32>,
+    fn_build_solid_from_faces: TypedFunc<(u32, u32, f64), u32>,
+    fn_sew_and_solidify: TypedFunc<(u32, u32, f64), u32>,
     fn_build_tri_face: TypedFunc<(f64, f64, f64, f64, f64, f64, f64, f64, f64), u32>,
     fn_make_tangent_arc: TypedFunc<(f64, f64, f64, f64, f64, f64, f64, f64, f64), u32>,
-    fn_bspline_surface: TypedFunc<(i32, i32, i32, i32), u32>,
+    fn_bspline_surface: TypedFunc<(u32, u32, i32, i32), u32>,
     fn_nurbs_surface: TypedFunc<
         (
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
-            i32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
         ),
         u32,
     >,
     fn_get_shape_type: TypedFunc<(u32,), i32>,
-    fn_get_sub_shapes: TypedFunc<(u32, i32, i32), i32>,
-    fn_sub_shape_count: TypedFunc<(u32, i32, i32), i32>,
-    fn_sub_shape_hashes: TypedFunc<(u32, i32, i32, i32), i32>,
+    fn_get_sub_shapes: TypedFunc<(u32, u32, u32), i32>,
+    fn_sub_shape_count: TypedFunc<(u32, u32, u32), i32>,
+    fn_sub_shape_hashes: TypedFunc<(u32, u32, u32, i32), i32>,
     fn_distance_between: TypedFunc<(u32, u32), f64>,
     fn_is_same: TypedFunc<(u32, u32), i32>,
     fn_is_equal: TypedFunc<(u32, u32), i32>,
@@ -217,7 +218,7 @@ pub(crate) struct GeneratedFuncs {
     fn_shape_orientation: TypedFunc<(u32,), i32>,
     fn_iter_shapes: TypedFunc<(u32,), i32>,
     fn_edge_to_face_map: TypedFunc<(u32, i32), i32>,
-    fn_downcast: TypedFunc<(u32, i32, i32), u32>,
+    fn_downcast: TypedFunc<(u32, u32, u32), u32>,
     fn_adjacent_faces: TypedFunc<(u32, u32), i32>,
     fn_shared_edges: TypedFunc<(u32, u32), i32>,
     fn_get_bounding_box: TypedFunc<(u32, i32), i32>,
@@ -250,25 +251,25 @@ pub(crate) struct GeneratedFuncs {
     fn_curve_parameters: TypedFunc<(u32,), i32>,
     fn_curve_is_closed: TypedFunc<(u32,), i32>,
     fn_curve_length: TypedFunc<(u32,), f64>,
-    fn_interpolate_points: TypedFunc<(i32, i32, i32), u32>,
-    fn_interpolate_points_with_tangents: TypedFunc<(i32, i32, f64, f64, f64, f64, f64, f64), u32>,
+    fn_interpolate_points: TypedFunc<(u32, u32, i32), u32>,
+    fn_interpolate_points_with_tangents: TypedFunc<(u32, u32, f64, f64, f64, f64, f64, f64), u32>,
     fn_project_point_on_edge: TypedFunc<(u32, f64, f64, f64), i32>,
     fn_curve_is_periodic: TypedFunc<(u32,), i32>,
-    fn_approximate_points: TypedFunc<(i32, i32, f64), u32>,
+    fn_approximate_points: TypedFunc<(u32, u32, f64), u32>,
     fn_lift_curve2d_to_plane:
-        TypedFunc<(i32, i32, f64, f64, f64, f64, f64, f64, f64, f64, f64), u32>,
+        TypedFunc<(u32, u32, f64, f64, f64, f64, f64, f64, f64, f64, f64), u32>,
     fn_get_nurbs_curve_data: TypedFunc<(u32,), i32>,
     fn_curve_degree_elevate: TypedFunc<(u32, i32), u32>,
     fn_curve_knot_insert: TypedFunc<(u32, f64, i32), u32>,
     fn_curve_knot_remove: TypedFunc<(u32, f64, f64), u32>,
     fn_curve_split: TypedFunc<(u32, f64), i32>,
     fn_has_triangulation: TypedFunc<(u32,), i32>,
-    fn_query_batch: TypedFunc<(i32, i32), i32>,
+    fn_query_batch: TypedFunc<(u32, u32), i32>,
     fn_pipe: TypedFunc<(u32, u32), u32>,
     fn_simple_pipe: TypedFunc<(u32, u32), u32>,
     fn_revolve_vec: TypedFunc<(u32, f64, f64, f64, f64, f64, f64, f64), u32>,
-    fn_loft: TypedFunc<(i32, i32, i32, i32), u32>,
-    fn_loft_with_vertices: TypedFunc<(i32, i32, i32, i32, u32, u32), u32>,
+    fn_loft: TypedFunc<(u32, u32, i32, i32), u32>,
+    fn_loft_with_vertices: TypedFunc<(u32, u32, i32, i32, u32, u32), u32>,
     fn_sweep: TypedFunc<(u32, u32, i32), u32>,
     fn_sweep_pipe_shell: TypedFunc<(u32, u32, i32, i32), u32>,
     fn_sweep_oriented: TypedFunc<(u32, u32, i32, f64, f64, f64, u32, i32, i32, f64, f64, f64), u32>,
@@ -304,50 +305,50 @@ pub(crate) struct GeneratedFuncs {
     fn_build_curves3d: TypedFunc<(u32,), i32>,
     fn_fix_wire_on_face: TypedFunc<(u32, u32, f64), u32>,
     fn_remove_degenerate_edges: TypedFunc<(u32,), u32>,
-    fn_import_step: TypedFunc<(i32, i32), u32>,
+    fn_import_step: TypedFunc<(u32, u32), u32>,
     fn_export_step: TypedFunc<(u32,), i32>,
-    fn_export_step_with_unit: TypedFunc<(u32, i32, i32), i32>,
-    fn_export_step_with_options: TypedFunc<(u32, i32, i32, i32, i32), i32>,
+    fn_export_step_with_unit: TypedFunc<(u32, u32, u32), i32>,
+    fn_export_step_with_options: TypedFunc<(u32, u32, u32, u32, u32), i32>,
     fn_export_stl: TypedFunc<(u32, f64, i32), i32>,
-    fn_import_stl: TypedFunc<(i32, i32), u32>,
+    fn_import_stl: TypedFunc<(u32, u32), u32>,
     fn_export_stl_binary: TypedFunc<(u32, f64), i32>,
-    fn_import_stl_binary: TypedFunc<(i32, i32), u32>,
+    fn_import_stl_binary: TypedFunc<(u32, u32), u32>,
     fn_to_brep: TypedFunc<(u32,), i32>,
-    fn_from_brep: TypedFunc<(i32, i32), u32>,
+    fn_from_brep: TypedFunc<(u32, u32), u32>,
     fn_to_brep_binary: TypedFunc<(u32,), i32>,
-    fn_from_brep_binary: TypedFunc<(i32, i32), u32>,
-    fn_extrude_with_history: TypedFunc<(u32, f64, f64, f64, i32, i32, i32), i32>,
+    fn_from_brep_binary: TypedFunc<(u32, u32), u32>,
+    fn_extrude_with_history: TypedFunc<(u32, f64, f64, f64, u32, u32, i32), i32>,
     fn_revolve_with_history:
-        TypedFunc<(u32, f64, f64, f64, f64, f64, f64, f64, i32, i32, i32), i32>,
-    fn_pipe_with_history: TypedFunc<(u32, u32, i32, i32, i32), i32>,
-    fn_sweep_with_history: TypedFunc<(u32, u32, u32, u32, i32, i32, i32, i32, i32), i32>,
-    fn_loft_with_history: TypedFunc<(i32, i32, i32, i32, u32, u32, i32, i32, i32), i32>,
-    fn_unify_same_domain_with_history: TypedFunc<(u32, i32, i32, i32), i32>,
-    fn_transform_with_history: TypedFunc<(u32, i32, i32, i32, i32, i32), i32>,
-    fn_translate_with_history: TypedFunc<(u32, f64, f64, f64, i32, i32, i32), i32>,
-    fn_fuse_with_history: TypedFunc<(u32, u32, i32, i32, i32), i32>,
-    fn_cut_with_history: TypedFunc<(u32, u32, i32, i32, i32), i32>,
-    fn_fillet_with_history: TypedFunc<(u32, i32, i32, f64, i32, i32, i32), i32>,
-    fn_rotate_with_history: TypedFunc<(u32, f64, f64, f64, f64, f64, f64, f64, i32, i32, i32), i32>,
-    fn_mirror_with_history: TypedFunc<(u32, f64, f64, f64, f64, f64, f64, i32, i32, i32), i32>,
-    fn_scale_with_history: TypedFunc<(u32, f64, f64, f64, f64, i32, i32, i32), i32>,
-    fn_intersect_with_history: TypedFunc<(u32, u32, i32, i32, i32), i32>,
-    fn_chamfer_with_history: TypedFunc<(u32, i32, i32, f64, i32, i32, i32), i32>,
+        TypedFunc<(u32, f64, f64, f64, f64, f64, f64, f64, u32, u32, i32), i32>,
+    fn_pipe_with_history: TypedFunc<(u32, u32, u32, u32, i32), i32>,
+    fn_sweep_with_history: TypedFunc<(u32, u32, u32, u32, u32, u32, u32, u32, i32), i32>,
+    fn_loft_with_history: TypedFunc<(u32, u32, i32, i32, u32, u32, u32, u32, i32), i32>,
+    fn_unify_same_domain_with_history: TypedFunc<(u32, u32, u32, i32), i32>,
+    fn_transform_with_history: TypedFunc<(u32, u32, u32, u32, u32, i32), i32>,
+    fn_translate_with_history: TypedFunc<(u32, f64, f64, f64, u32, u32, i32), i32>,
+    fn_fuse_with_history: TypedFunc<(u32, u32, u32, u32, i32), i32>,
+    fn_cut_with_history: TypedFunc<(u32, u32, u32, u32, i32), i32>,
+    fn_fillet_with_history: TypedFunc<(u32, u32, u32, f64, u32, u32, i32), i32>,
+    fn_rotate_with_history: TypedFunc<(u32, f64, f64, f64, f64, f64, f64, f64, u32, u32, i32), i32>,
+    fn_mirror_with_history: TypedFunc<(u32, f64, f64, f64, f64, f64, f64, u32, u32, i32), i32>,
+    fn_scale_with_history: TypedFunc<(u32, f64, f64, f64, f64, u32, u32, i32), i32>,
+    fn_intersect_with_history: TypedFunc<(u32, u32, u32, u32, i32), i32>,
+    fn_chamfer_with_history: TypedFunc<(u32, u32, u32, f64, u32, u32, i32), i32>,
     fn_fillet_radii_with_history:
-        TypedFunc<(u32, i32, i32, i32, i32, i32, i32, i32, i32, i32), i32>,
+        TypedFunc<(u32, u32, u32, u32, u32, u32, u32, u32, u32, i32), i32>,
     fn_chamfer_distances_with_history:
-        TypedFunc<(u32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32), i32>,
+        TypedFunc<(u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, i32), i32>,
     fn_chamfer_dist_angles_with_history:
-        TypedFunc<(u32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32), i32>,
-    fn_shell_with_history: TypedFunc<(u32, i32, i32, f64, f64, i32, i32, i32), i32>,
-    fn_offset_with_history: TypedFunc<(u32, f64, f64, i32, i32, i32), i32>,
-    fn_shell_with_history_and_join: TypedFunc<(u32, i32, i32, f64, f64, i32, i32, i32, i32), i32>,
-    fn_offset_with_history_and_join: TypedFunc<(u32, f64, f64, i32, i32, i32, i32), i32>,
-    fn_thicken_with_history: TypedFunc<(u32, f64, f64, i32, i32, i32), i32>,
+        TypedFunc<(u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, i32), i32>,
+    fn_shell_with_history: TypedFunc<(u32, u32, u32, f64, f64, u32, u32, i32), i32>,
+    fn_offset_with_history: TypedFunc<(u32, f64, f64, u32, u32, i32), i32>,
+    fn_shell_with_history_and_join: TypedFunc<(u32, u32, u32, f64, f64, u32, u32, i32, i32), i32>,
+    fn_offset_with_history_and_join: TypedFunc<(u32, f64, f64, u32, u32, i32, i32), i32>,
+    fn_thicken_with_history: TypedFunc<(u32, f64, f64, u32, u32, i32), i32>,
     fn_tessellate: TypedFunc<(u32, f64, f64), i32>,
     fn_tessellate_relative: TypedFunc<(u32, f64, f64), i32>,
     fn_mesh_shape: TypedFunc<(u32, f64, f64), i32>,
-    fn_mesh_batch: TypedFunc<(i32, i32, f64, f64), i32>,
+    fn_mesh_batch: TypedFunc<(u32, u32, f64, f64), i32>,
     fn_wireframe: TypedFunc<(u32, f64, i32), i32>,
     fn_project_edges: TypedFunc<(u32, f64, f64, f64, f64, f64, f64, f64, f64, f64, i32), i32>,
     fn_release: TypedFunc<(u32,), i32>,
@@ -362,7 +363,7 @@ pub(crate) struct GeneratedFuncs {
     fn_xcaf_add_assembly: TypedFunc<(u32, u32), i32>,
     fn_xcaf_add_component: TypedFunc<(u32, i32, u32, f64, f64, f64, f64, f64, f64), i32>,
     fn_xcaf_set_color: TypedFunc<(u32, i32, f64, f64, f64), i32>,
-    fn_xcaf_set_name: TypedFunc<(u32, i32, i32, i32), i32>,
+    fn_xcaf_set_name: TypedFunc<(u32, i32, u32, u32), i32>,
     fn_xcaf_get_label_info: TypedFunc<(u32, i32), i32>,
     fn_xcaf_get_child_labels: TypedFunc<(u32, i32), i32>,
     fn_xcaf_get_root_labels: TypedFunc<(u32,), i32>,
@@ -371,9 +372,9 @@ pub(crate) struct GeneratedFuncs {
     fn_xcaf_get_sub_shape_labels: TypedFunc<(u32, i32), i32>,
     fn_xcaf_add_sub_shape: TypedFunc<(u32, i32, u32), i32>,
     fn_xcaf_export_step: TypedFunc<(u32,), i32>,
-    fn_xcaf_export_step_with_unit: TypedFunc<(u32, i32, i32), i32>,
-    fn_xcaf_export_step_with_options: TypedFunc<(u32, i32, i32, i32, i32), i32>,
-    fn_xcaf_import_step: TypedFunc<(i32, i32), u32>,
+    fn_xcaf_export_step_with_unit: TypedFunc<(u32, u32, u32), i32>,
+    fn_xcaf_export_step_with_options: TypedFunc<(u32, u32, u32, u32, u32), i32>,
+    fn_xcaf_import_step: TypedFunc<(u32, u32), u32>,
     fn_xcaf_export_glb: TypedFunc<(u32, f64, f64), i32>,
 }
 
@@ -971,13 +972,13 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn fuse_all(&mut self, shape_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
-        let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let shape_ids_len = checked_wasm_len(shape_ids.len(), 4)?;
+        let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let shape_ids_ptr = self.write_bytes(&shape_ids_bytes)?;
-        let shape_ids_len = shape_ids.len() as u32;
-        let result = self.generated.fn_fuse_all.call(
-            &mut self.store,
-            (shape_ids_ptr as i32, shape_ids_len as i32),
-        );
+        let result = self
+            .generated
+            .fn_fuse_all
+            .call(&mut self.store, (shape_ids_ptr, shape_ids_len));
         self.free_bytes(shape_ids_ptr)?;
         let result = result?;
         self.check_error("fuse_all")?;
@@ -993,13 +994,13 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn intersection_cells(&mut self, shape_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
-        let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let shape_ids_len = checked_wasm_len(shape_ids.len(), 4)?;
+        let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let shape_ids_ptr = self.write_bytes(&shape_ids_bytes)?;
-        let shape_ids_len = shape_ids.len() as u32;
-        let result = self.generated.fn_intersection_cells.call(
-            &mut self.store,
-            (shape_ids_ptr as i32, shape_ids_len as i32),
-        );
+        let result = self
+            .generated
+            .fn_intersection_cells
+            .call(&mut self.store, (shape_ids_ptr, shape_ids_len));
         self.free_bytes(shape_ids_ptr)?;
         let result = result?;
         self.check_error("intersection_cells")?;
@@ -1019,13 +1020,13 @@ impl crate::kernel::OcctKernel {
         shape_id: ShapeHandle,
         tool_ids: &[ShapeHandle],
     ) -> OcctResult<ShapeHandle> {
-        let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let tool_ids_len = checked_wasm_len(tool_ids.len(), 4)?;
+        let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let tool_ids_ptr = self.write_bytes(&tool_ids_bytes)?;
-        let tool_ids_len = tool_ids.len() as u32;
-        let result = self.generated.fn_cut_all.call(
-            &mut self.store,
-            (shape_id.0, tool_ids_ptr as i32, tool_ids_len as i32),
-        );
+        let result = self
+            .generated
+            .fn_cut_all
+            .call(&mut self.store, (shape_id.0, tool_ids_ptr, tool_ids_len));
         self.free_bytes(tool_ids_ptr)?;
         let result = result?;
         self.check_error("cut_all")?;
@@ -1051,10 +1052,12 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
-        let arg_ids_bytes: Vec<u8> = arg_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let arg_ids_len = checked_wasm_len(arg_ids.len(), 4)?;
+        let tool_ids_len = checked_wasm_len(tool_ids.len(), 4)?;
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
+        let arg_ids_bytes: Vec<u8> = arg_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let arg_ids_ptr = self.write_bytes(&arg_ids_bytes)?;
-        let arg_ids_len = arg_ids.len() as u32;
-        let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let tool_ids_ptr = match self.write_bytes(&tool_ids_bytes) {
             Ok(ptr) => ptr,
             Err(e) => {
@@ -1062,7 +1065,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let tool_ids_len = tool_ids.len() as u32;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
@@ -1075,20 +1077,19 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_boolean_op.call(
             &mut self.store,
             (
                 op_code,
-                arg_ids_ptr as i32,
-                arg_ids_len as i32,
-                tool_ids_ptr as i32,
-                tool_ids_len as i32,
+                arg_ids_ptr,
+                arg_ids_len,
+                tool_ids_ptr,
+                tool_ids_len,
                 glue,
                 fuzzy_value,
                 simplify_angular_tolerance,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -1113,10 +1114,11 @@ impl crate::kernel::OcctKernel {
         op_codes: &[i32],
         tool_ids: &[ShapeHandle],
     ) -> OcctResult<ShapeHandle> {
+        let op_codes_len = checked_wasm_len(op_codes.len(), 4)?;
+        let tool_ids_len = checked_wasm_len(tool_ids.len(), 4)?;
         let op_codes_bytes: Vec<u8> = op_codes.iter().flat_map(|v| v.to_le_bytes()).collect();
         let op_codes_ptr = self.write_bytes(&op_codes_bytes)?;
-        let op_codes_len = op_codes.len() as u32;
-        let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let tool_ids_ptr = match self.write_bytes(&tool_ids_bytes) {
             Ok(ptr) => ptr,
             Err(e) => {
@@ -1124,15 +1126,14 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let tool_ids_len = tool_ids.len() as u32;
         let result = self.generated.fn_boolean_pipeline.call(
             &mut self.store,
             (
                 base_id.0,
-                op_codes_ptr as i32,
-                op_codes_len as i32,
-                tool_ids_ptr as i32,
-                tool_ids_len as i32,
+                op_codes_ptr,
+                op_codes_len,
+                tool_ids_ptr,
+                tool_ids_len,
             ),
         );
         self.free_bytes(op_codes_ptr)?;
@@ -1155,13 +1156,13 @@ impl crate::kernel::OcctKernel {
         shape_id: ShapeHandle,
         tool_ids: &[ShapeHandle],
     ) -> OcctResult<ShapeHandle> {
-        let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let tool_ids_len = checked_wasm_len(tool_ids.len(), 4)?;
+        let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let tool_ids_ptr = self.write_bytes(&tool_ids_bytes)?;
-        let tool_ids_len = tool_ids.len() as u32;
-        let result = self.generated.fn_split.call(
-            &mut self.store,
-            (shape_id.0, tool_ids_ptr as i32, tool_ids_len as i32),
-        );
+        let result = self
+            .generated
+            .fn_split
+            .call(&mut self.store, (shape_id.0, tool_ids_ptr, tool_ids_len));
         self.free_bytes(tool_ids_ptr)?;
         let result = result?;
         self.check_error("split")?;
@@ -1232,12 +1233,12 @@ impl crate::kernel::OcctKernel {
         edge_ids: &[ShapeHandle],
         radius: f64,
     ) -> OcctResult<ShapeHandle> {
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
+        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let edge_ids_len = edge_ids.len() as u32;
         let result = self.generated.fn_fillet.call(
             &mut self.store,
-            (solid_id.0, edge_ids_ptr as i32, edge_ids_len as i32, radius),
+            (solid_id.0, edge_ids_ptr, edge_ids_len, radius),
         );
         self.free_bytes(edge_ids_ptr)?;
         let result = result?;
@@ -1259,17 +1260,12 @@ impl crate::kernel::OcctKernel {
         edge_ids: &[ShapeHandle],
         distance: f64,
     ) -> OcctResult<ShapeHandle> {
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
+        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let edge_ids_len = edge_ids.len() as u32;
         let result = self.generated.fn_chamfer.call(
             &mut self.store,
-            (
-                solid_id.0,
-                edge_ids_ptr as i32,
-                edge_ids_len as i32,
-                distance,
-            ),
+            (solid_id.0, edge_ids_ptr, edge_ids_len, distance),
         );
         self.free_bytes(edge_ids_ptr)?;
         let result = result?;
@@ -1292,18 +1288,12 @@ impl crate::kernel::OcctKernel {
         distance: f64,
         angle_deg: f64,
     ) -> OcctResult<ShapeHandle> {
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
+        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let edge_ids_len = edge_ids.len() as u32;
         let result = self.generated.fn_chamfer_dist_angle.call(
             &mut self.store,
-            (
-                solid_id.0,
-                edge_ids_ptr as i32,
-                edge_ids_len as i32,
-                distance,
-                angle_deg,
-            ),
+            (solid_id.0, edge_ids_ptr, edge_ids_len, distance, angle_deg),
         );
         self.free_bytes(edge_ids_ptr)?;
         let result = result?;
@@ -1356,9 +1346,11 @@ impl crate::kernel::OcctKernel {
         start_radii: &[f64],
         end_radii: &[f64],
     ) -> OcctResult<ShapeHandle> {
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
+        let start_radii_len = checked_wasm_len(start_radii.len(), 8)?;
+        let end_radii_len = checked_wasm_len(end_radii.len(), 8)?;
+        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let edge_ids_len = edge_ids.len() as u32;
         let start_radii_bytes: Vec<u8> = start_radii.iter().flat_map(|v| v.to_le_bytes()).collect();
         let start_radii_ptr = match self.write_bytes(&start_radii_bytes) {
             Ok(ptr) => ptr,
@@ -1367,7 +1359,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let start_radii_len = start_radii.len() as u32;
         let end_radii_bytes: Vec<u8> = end_radii.iter().flat_map(|v| v.to_le_bytes()).collect();
         let end_radii_ptr = match self.write_bytes(&end_radii_bytes) {
             Ok(ptr) => ptr,
@@ -1377,17 +1368,16 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let end_radii_len = end_radii.len() as u32;
         let result = self.generated.fn_fillet_radii.call(
             &mut self.store,
             (
                 solid_id.0,
-                edge_ids_ptr as i32,
-                edge_ids_len as i32,
-                start_radii_ptr as i32,
-                start_radii_len as i32,
-                end_radii_ptr as i32,
-                end_radii_len as i32,
+                edge_ids_ptr,
+                edge_ids_len,
+                start_radii_ptr,
+                start_radii_len,
+                end_radii_ptr,
+                end_radii_len,
             ),
         );
         self.free_bytes(edge_ids_ptr)?;
@@ -1414,9 +1404,12 @@ impl crate::kernel::OcctKernel {
         distances2: &[f64],
         reference_face_ids: &[ShapeHandle],
     ) -> OcctResult<ShapeHandle> {
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
+        let distances1_len = checked_wasm_len(distances1.len(), 8)?;
+        let distances2_len = checked_wasm_len(distances2.len(), 8)?;
+        let reference_face_ids_len = checked_wasm_len(reference_face_ids.len(), 4)?;
+        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let edge_ids_len = edge_ids.len() as u32;
         let distances1_bytes: Vec<u8> = distances1.iter().flat_map(|v| v.to_le_bytes()).collect();
         let distances1_ptr = match self.write_bytes(&distances1_bytes) {
             Ok(ptr) => ptr,
@@ -1425,7 +1418,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let distances1_len = distances1.len() as u32;
         let distances2_bytes: Vec<u8> = distances2.iter().flat_map(|v| v.to_le_bytes()).collect();
         let distances2_ptr = match self.write_bytes(&distances2_bytes) {
             Ok(ptr) => ptr,
@@ -1435,10 +1427,9 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let distances2_len = distances2.len() as u32;
         let reference_face_ids_bytes: Vec<u8> = reference_face_ids
             .iter()
-            .flat_map(|h| h.0.to_le_bytes())
+            .flat_map(|v| v.0.to_le_bytes())
             .collect();
         let reference_face_ids_ptr = match self.write_bytes(&reference_face_ids_bytes) {
             Ok(ptr) => ptr,
@@ -1449,19 +1440,18 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let reference_face_ids_len = reference_face_ids.len() as u32;
         let result = self.generated.fn_chamfer_distances.call(
             &mut self.store,
             (
                 solid_id.0,
-                edge_ids_ptr as i32,
-                edge_ids_len as i32,
-                distances1_ptr as i32,
-                distances1_len as i32,
-                distances2_ptr as i32,
-                distances2_len as i32,
-                reference_face_ids_ptr as i32,
-                reference_face_ids_len as i32,
+                edge_ids_ptr,
+                edge_ids_len,
+                distances1_ptr,
+                distances1_len,
+                distances2_ptr,
+                distances2_len,
+                reference_face_ids_ptr,
+                reference_face_ids_len,
             ),
         );
         self.free_bytes(edge_ids_ptr)?;
@@ -1489,9 +1479,12 @@ impl crate::kernel::OcctKernel {
         angles_deg: &[f64],
         reference_face_ids: &[ShapeHandle],
     ) -> OcctResult<ShapeHandle> {
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
+        let distances_len = checked_wasm_len(distances.len(), 8)?;
+        let angles_deg_len = checked_wasm_len(angles_deg.len(), 8)?;
+        let reference_face_ids_len = checked_wasm_len(reference_face_ids.len(), 4)?;
+        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let edge_ids_len = edge_ids.len() as u32;
         let distances_bytes: Vec<u8> = distances.iter().flat_map(|v| v.to_le_bytes()).collect();
         let distances_ptr = match self.write_bytes(&distances_bytes) {
             Ok(ptr) => ptr,
@@ -1500,7 +1493,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let distances_len = distances.len() as u32;
         let angles_deg_bytes: Vec<u8> = angles_deg.iter().flat_map(|v| v.to_le_bytes()).collect();
         let angles_deg_ptr = match self.write_bytes(&angles_deg_bytes) {
             Ok(ptr) => ptr,
@@ -1510,10 +1502,9 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let angles_deg_len = angles_deg.len() as u32;
         let reference_face_ids_bytes: Vec<u8> = reference_face_ids
             .iter()
-            .flat_map(|h| h.0.to_le_bytes())
+            .flat_map(|v| v.0.to_le_bytes())
             .collect();
         let reference_face_ids_ptr = match self.write_bytes(&reference_face_ids_bytes) {
             Ok(ptr) => ptr,
@@ -1524,19 +1515,18 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let reference_face_ids_len = reference_face_ids.len() as u32;
         let result = self.generated.fn_chamfer_dist_angles.call(
             &mut self.store,
             (
                 solid_id.0,
-                edge_ids_ptr as i32,
-                edge_ids_len as i32,
-                distances_ptr as i32,
-                distances_len as i32,
-                angles_deg_ptr as i32,
-                angles_deg_len as i32,
-                reference_face_ids_ptr as i32,
-                reference_face_ids_len as i32,
+                edge_ids_ptr,
+                edge_ids_len,
+                distances_ptr,
+                distances_len,
+                angles_deg_ptr,
+                angles_deg_len,
+                reference_face_ids_ptr,
+                reference_face_ids_len,
             ),
         );
         self.free_bytes(edge_ids_ptr)?;
@@ -1563,18 +1553,12 @@ impl crate::kernel::OcctKernel {
         thickness: f64,
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
+        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let face_ids_len = face_ids.len() as u32;
         let result = self.generated.fn_shell.call(
             &mut self.store,
-            (
-                solid_id.0,
-                face_ids_ptr as i32,
-                face_ids_len as i32,
-                thickness,
-                tolerance,
-            ),
+            (solid_id.0, face_ids_ptr, face_ids_len, thickness, tolerance),
         );
         self.free_bytes(face_ids_ptr)?;
         let result = result?;
@@ -1620,15 +1604,15 @@ impl crate::kernel::OcctKernel {
         tolerance: f64,
         join_type: i32,
     ) -> OcctResult<ShapeHandle> {
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
+        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let face_ids_len = face_ids.len() as u32;
         let result = self.generated.fn_shell_with_join.call(
             &mut self.store,
             (
                 solid_id.0,
-                face_ids_ptr as i32,
-                face_ids_len as i32,
+                face_ids_ptr,
+                face_ids_len,
                 thickness,
                 tolerance,
                 join_type,
@@ -1711,9 +1695,10 @@ impl crate::kernel::OcctKernel {
         ny: f64,
         nz: f64,
     ) -> OcctResult<ShapeHandle> {
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
+        let angles_rad_len = checked_wasm_len(angles_rad.len(), 8)?;
+        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let face_ids_len = face_ids.len() as u32;
         let angles_rad_bytes: Vec<u8> = angles_rad.iter().flat_map(|v| v.to_le_bytes()).collect();
         let angles_rad_ptr = match self.write_bytes(&angles_rad_bytes) {
             Ok(ptr) => ptr,
@@ -1722,15 +1707,14 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let angles_rad_len = angles_rad.len() as u32;
         let result = self.generated.fn_draft_faces.call(
             &mut self.store,
             (
                 shape_id.0,
-                face_ids_ptr as i32,
-                face_ids_len as i32,
-                angles_rad_ptr as i32,
-                angles_rad_len as i32,
+                face_ids_ptr,
+                face_ids_len,
+                angles_rad_ptr,
+                angles_rad_len,
                 dx,
                 dy,
                 dz,
@@ -1785,17 +1769,12 @@ impl crate::kernel::OcctKernel {
         face_ids: &[ShapeHandle],
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
+        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let face_ids_len = face_ids.len() as u32;
         let result = self.generated.fn_defeature.call(
             &mut self.store,
-            (
-                shape_id.0,
-                face_ids_ptr as i32,
-                face_ids_len as i32,
-                tolerance,
-            ),
+            (shape_id.0, face_ids_ptr, face_ids_len, tolerance),
         );
         self.free_bytes(face_ids_ptr)?;
         let result = result?;
@@ -1872,9 +1851,12 @@ impl crate::kernel::OcctKernel {
         flat_edge_ids: &[ShapeHandle],
         radii: &[f64],
     ) -> OcctResult<Vec<ShapeHandle>> {
-        let solid_ids_bytes: Vec<u8> = solid_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let solid_ids_len = checked_wasm_len(solid_ids.len(), 4)?;
+        let edge_counts_len = checked_wasm_len(edge_counts.len(), 4)?;
+        let flat_edge_ids_len = checked_wasm_len(flat_edge_ids.len(), 4)?;
+        let radii_len = checked_wasm_len(radii.len(), 8)?;
+        let solid_ids_bytes: Vec<u8> = solid_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let solid_ids_ptr = self.write_bytes(&solid_ids_bytes)?;
-        let solid_ids_len = solid_ids.len() as u32;
         let edge_counts_bytes: Vec<u8> = edge_counts.iter().flat_map(|v| v.to_le_bytes()).collect();
         let edge_counts_ptr = match self.write_bytes(&edge_counts_bytes) {
             Ok(ptr) => ptr,
@@ -1883,10 +1865,9 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let edge_counts_len = edge_counts.len() as u32;
         let flat_edge_ids_bytes: Vec<u8> = flat_edge_ids
             .iter()
-            .flat_map(|h| h.0.to_le_bytes())
+            .flat_map(|v| v.0.to_le_bytes())
             .collect();
         let flat_edge_ids_ptr = match self.write_bytes(&flat_edge_ids_bytes) {
             Ok(ptr) => ptr,
@@ -1896,7 +1877,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let flat_edge_ids_len = flat_edge_ids.len() as u32;
         let radii_bytes: Vec<u8> = radii.iter().flat_map(|v| v.to_le_bytes()).collect();
         let radii_ptr = match self.write_bytes(&radii_bytes) {
             Ok(ptr) => ptr,
@@ -1907,18 +1887,17 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let radii_len = radii.len() as u32;
         let len = self.generated.fn_fillet_batch.call(
             &mut self.store,
             (
-                solid_ids_ptr as i32,
-                solid_ids_len as i32,
-                edge_counts_ptr as i32,
-                edge_counts_len as i32,
-                flat_edge_ids_ptr as i32,
-                flat_edge_ids_len as i32,
-                radii_ptr as i32,
-                radii_len as i32,
+                solid_ids_ptr,
+                solid_ids_len,
+                edge_counts_ptr,
+                edge_counts_len,
+                flat_edge_ids_ptr,
+                flat_edge_ids_len,
+                radii_ptr,
+                radii_len,
             ),
         );
         self.free_bytes(solid_ids_ptr)?;
@@ -2127,13 +2106,13 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn transform(&mut self, id: ShapeHandle, matrix: &[f64]) -> OcctResult<ShapeHandle> {
+        let matrix_len = checked_wasm_len(matrix.len(), 8)?;
         let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
         let matrix_ptr = self.write_bytes(&matrix_bytes)?;
-        let matrix_len = matrix.len() as u32;
-        let result = self.generated.fn_transform.call(
-            &mut self.store,
-            (id.0, matrix_ptr as i32, matrix_len as i32),
-        );
+        let result = self
+            .generated
+            .fn_transform
+            .call(&mut self.store, (id.0, matrix_ptr, matrix_len));
         self.free_bytes(matrix_ptr)?;
         let result = result?;
         self.check_error("transform")?;
@@ -2149,13 +2128,13 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn located(&mut self, id: ShapeHandle, matrix: &[f64]) -> OcctResult<ShapeHandle> {
+        let matrix_len = checked_wasm_len(matrix.len(), 8)?;
         let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
         let matrix_ptr = self.write_bytes(&matrix_bytes)?;
-        let matrix_len = matrix.len() as u32;
-        let result = self.generated.fn_located.call(
-            &mut self.store,
-            (id.0, matrix_ptr as i32, matrix_len as i32),
-        );
+        let result = self
+            .generated
+            .fn_located
+            .call(&mut self.store, (id.0, matrix_ptr, matrix_len));
         self.free_bytes(matrix_ptr)?;
         let result = result?;
         self.check_error("located")?;
@@ -2175,13 +2154,13 @@ impl crate::kernel::OcctKernel {
         id: ShapeHandle,
         matrix: &[f64],
     ) -> OcctResult<ShapeHandle> {
+        let matrix_len = checked_wasm_len(matrix.len(), 8)?;
         let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
         let matrix_ptr = self.write_bytes(&matrix_bytes)?;
-        let matrix_len = matrix.len() as u32;
-        let result = self.generated.fn_general_transform.call(
-            &mut self.store,
-            (id.0, matrix_ptr as i32, matrix_len as i32),
-        );
+        let result = self
+            .generated
+            .fn_general_transform
+            .call(&mut self.store, (id.0, matrix_ptr, matrix_len));
         self.free_bytes(matrix_ptr)?;
         let result = result?;
         self.check_error("general_transform")?;
@@ -2201,9 +2180,10 @@ impl crate::kernel::OcctKernel {
         ids: &[ShapeHandle],
         offsets: &[f64],
     ) -> OcctResult<Vec<ShapeHandle>> {
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let ids_len = checked_wasm_len(ids.len(), 4)?;
+        let offsets_len = checked_wasm_len(offsets.len(), 8)?;
+        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let ids_len = ids.len() as u32;
         let offsets_bytes: Vec<u8> = offsets.iter().flat_map(|v| v.to_le_bytes()).collect();
         let offsets_ptr = match self.write_bytes(&offsets_bytes) {
             Ok(ptr) => ptr,
@@ -2212,15 +2192,9 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let offsets_len = offsets.len() as u32;
         let len = self.generated.fn_translate_batch.call(
             &mut self.store,
-            (
-                ids_ptr as i32,
-                ids_len as i32,
-                offsets_ptr as i32,
-                offsets_len as i32,
-            ),
+            (ids_ptr, ids_len, offsets_ptr, offsets_len),
         );
         self.free_bytes(ids_ptr)?;
         self.free_bytes(offsets_ptr)?;
@@ -2237,9 +2211,10 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn compose_transform(&mut self, m1: &[f64], m2: &[f64]) -> OcctResult<Vec<f64>> {
+        let m1_len = checked_wasm_len(m1.len(), 8)?;
+        let m2_len = checked_wasm_len(m2.len(), 8)?;
         let m1_bytes: Vec<u8> = m1.iter().flat_map(|v| v.to_le_bytes()).collect();
         let m1_ptr = self.write_bytes(&m1_bytes)?;
-        let m1_len = m1.len() as u32;
         let m2_bytes: Vec<u8> = m2.iter().flat_map(|v| v.to_le_bytes()).collect();
         let m2_ptr = match self.write_bytes(&m2_bytes) {
             Ok(ptr) => ptr,
@@ -2248,11 +2223,10 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let m2_len = m2.len() as u32;
-        let len = self.generated.fn_compose_transform.call(
-            &mut self.store,
-            (m1_ptr as i32, m1_len as i32, m2_ptr as i32, m2_len as i32),
-        );
+        let len = self
+            .generated
+            .fn_compose_transform
+            .call(&mut self.store, (m1_ptr, m1_len, m2_ptr, m2_len));
         self.free_bytes(m1_ptr)?;
         self.free_bytes(m2_ptr)?;
         let len = len?;
@@ -2272,9 +2246,10 @@ impl crate::kernel::OcctKernel {
         ids: &[ShapeHandle],
         matrices: &[f64],
     ) -> OcctResult<Vec<ShapeHandle>> {
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let ids_len = checked_wasm_len(ids.len(), 4)?;
+        let matrices_len = checked_wasm_len(matrices.len(), 8)?;
+        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let ids_len = ids.len() as u32;
         let matrices_bytes: Vec<u8> = matrices.iter().flat_map(|v| v.to_le_bytes()).collect();
         let matrices_ptr = match self.write_bytes(&matrices_bytes) {
             Ok(ptr) => ptr,
@@ -2283,15 +2258,9 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let matrices_len = matrices.len() as u32;
         let len = self.generated.fn_transform_batch.call(
             &mut self.store,
-            (
-                ids_ptr as i32,
-                ids_len as i32,
-                matrices_ptr as i32,
-                matrices_len as i32,
-            ),
+            (ids_ptr, ids_len, matrices_ptr, matrices_len),
         );
         self.free_bytes(ids_ptr)?;
         self.free_bytes(matrices_ptr)?;
@@ -2312,9 +2281,10 @@ impl crate::kernel::OcctKernel {
         ids: &[ShapeHandle],
         params: &[f64],
     ) -> OcctResult<Vec<ShapeHandle>> {
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let ids_len = checked_wasm_len(ids.len(), 4)?;
+        let params_len = checked_wasm_len(params.len(), 8)?;
+        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let ids_len = ids.len() as u32;
         let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
         let params_ptr = match self.write_bytes(&params_bytes) {
             Ok(ptr) => ptr,
@@ -2323,16 +2293,10 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let params_len = params.len() as u32;
-        let len = self.generated.fn_rotate_batch.call(
-            &mut self.store,
-            (
-                ids_ptr as i32,
-                ids_len as i32,
-                params_ptr as i32,
-                params_len as i32,
-            ),
-        );
+        let len = self
+            .generated
+            .fn_rotate_batch
+            .call(&mut self.store, (ids_ptr, ids_len, params_ptr, params_len));
         self.free_bytes(ids_ptr)?;
         self.free_bytes(params_ptr)?;
         let len = len?;
@@ -2352,9 +2316,10 @@ impl crate::kernel::OcctKernel {
         ids: &[ShapeHandle],
         params: &[f64],
     ) -> OcctResult<Vec<ShapeHandle>> {
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let ids_len = checked_wasm_len(ids.len(), 4)?;
+        let params_len = checked_wasm_len(params.len(), 8)?;
+        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let ids_len = ids.len() as u32;
         let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
         let params_ptr = match self.write_bytes(&params_bytes) {
             Ok(ptr) => ptr,
@@ -2363,16 +2328,10 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let params_len = params.len() as u32;
-        let len = self.generated.fn_scale_batch.call(
-            &mut self.store,
-            (
-                ids_ptr as i32,
-                ids_len as i32,
-                params_ptr as i32,
-                params_len as i32,
-            ),
-        );
+        let len = self
+            .generated
+            .fn_scale_batch
+            .call(&mut self.store, (ids_ptr, ids_len, params_ptr, params_len));
         self.free_bytes(ids_ptr)?;
         self.free_bytes(params_ptr)?;
         let len = len?;
@@ -2392,9 +2351,10 @@ impl crate::kernel::OcctKernel {
         ids: &[ShapeHandle],
         params: &[f64],
     ) -> OcctResult<Vec<ShapeHandle>> {
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let ids_len = checked_wasm_len(ids.len(), 4)?;
+        let params_len = checked_wasm_len(params.len(), 8)?;
+        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let ids_len = ids.len() as u32;
         let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
         let params_ptr = match self.write_bytes(&params_bytes) {
             Ok(ptr) => ptr,
@@ -2403,16 +2363,10 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let params_len = params.len() as u32;
-        let len = self.generated.fn_mirror_batch.call(
-            &mut self.store,
-            (
-                ids_ptr as i32,
-                ids_len as i32,
-                params_ptr as i32,
-                params_len as i32,
-            ),
-        );
+        let len = self
+            .generated
+            .fn_mirror_batch
+            .call(&mut self.store, (ids_ptr, ids_len, params_ptr, params_len));
         self.free_bytes(ids_ptr)?;
         self.free_bytes(params_ptr)?;
         let len = len?;
@@ -2462,13 +2416,13 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn make_wire(&mut self, edge_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
+        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let edge_ids_len = edge_ids.len() as u32;
         let result = self
             .generated
             .fn_make_wire
-            .call(&mut self.store, (edge_ids_ptr as i32, edge_ids_len as i32));
+            .call(&mut self.store, (edge_ids_ptr, edge_ids_len));
         self.free_bytes(edge_ids_ptr)?;
         let result = result?;
         self.check_error("make_wire")?;
@@ -2539,13 +2493,13 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn sew(&mut self, shape_ids: &[ShapeHandle], tolerance: f64) -> OcctResult<ShapeHandle> {
-        let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let shape_ids_len = checked_wasm_len(shape_ids.len(), 4)?;
+        let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let shape_ids_ptr = self.write_bytes(&shape_ids_bytes)?;
-        let shape_ids_len = shape_ids.len() as u32;
-        let result = self.generated.fn_sew.call(
-            &mut self.store,
-            (shape_ids_ptr as i32, shape_ids_len as i32, tolerance),
-        );
+        let result = self
+            .generated
+            .fn_sew
+            .call(&mut self.store, (shape_ids_ptr, shape_ids_len, tolerance));
         self.free_bytes(shape_ids_ptr)?;
         let result = result?;
         self.check_error("sew")?;
@@ -2561,13 +2515,13 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn make_compound(&mut self, shape_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
-        let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let shape_ids_len = checked_wasm_len(shape_ids.len(), 4)?;
+        let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let shape_ids_ptr = self.write_bytes(&shape_ids_bytes)?;
-        let shape_ids_len = shape_ids.len() as u32;
-        let result = self.generated.fn_make_compound.call(
-            &mut self.store,
-            (shape_ids_ptr as i32, shape_ids_len as i32),
-        );
+        let result = self
+            .generated
+            .fn_make_compound
+            .call(&mut self.store, (shape_ids_ptr, shape_ids_len));
         self.free_bytes(shape_ids_ptr)?;
         let result = result?;
         self.check_error("make_compound")?;
@@ -2717,13 +2671,13 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn make_bezier_edge(&mut self, flat_points: &[f64]) -> OcctResult<ShapeHandle> {
+        let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
         let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
         let flat_points_ptr = self.write_bytes(&flat_points_bytes)?;
-        let flat_points_len = flat_points.len() as u32;
-        let result = self.generated.fn_make_bezier_edge.call(
-            &mut self.store,
-            (flat_points_ptr as i32, flat_points_len as i32),
-        );
+        let result = self
+            .generated
+            .fn_make_bezier_edge
+            .call(&mut self.store, (flat_points_ptr, flat_points_len));
         self.free_bytes(flat_points_ptr)?;
         let result = result?;
         self.check_error("make_bezier_edge")?;
@@ -2747,9 +2701,12 @@ impl crate::kernel::OcctKernel {
         degree: i32,
         periodic: bool,
     ) -> OcctResult<ShapeHandle> {
+        let poles_len = checked_wasm_len(poles.len(), 8)?;
+        let weights_len = checked_wasm_len(weights.len(), 8)?;
+        let knots_len = checked_wasm_len(knots.len(), 8)?;
+        let multiplicities_len = checked_wasm_len(multiplicities.len(), 4)?;
         let poles_bytes: Vec<u8> = poles.iter().flat_map(|v| v.to_le_bytes()).collect();
         let poles_ptr = self.write_bytes(&poles_bytes)?;
-        let poles_len = poles.len() as u32;
         let weights_bytes: Vec<u8> = weights.iter().flat_map(|v| v.to_le_bytes()).collect();
         let weights_ptr = match self.write_bytes(&weights_bytes) {
             Ok(ptr) => ptr,
@@ -2758,7 +2715,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let weights_len = weights.len() as u32;
         let knots_bytes: Vec<u8> = knots.iter().flat_map(|v| v.to_le_bytes()).collect();
         let knots_ptr = match self.write_bytes(&knots_bytes) {
             Ok(ptr) => ptr,
@@ -2768,7 +2724,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let knots_len = knots.len() as u32;
         let multiplicities_bytes: Vec<u8> = multiplicities
             .iter()
             .flat_map(|v| v.to_le_bytes())
@@ -2782,18 +2737,17 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let multiplicities_len = multiplicities.len() as u32;
         let result = self.generated.fn_make_b_spline_edge.call(
             &mut self.store,
             (
-                poles_ptr as i32,
-                poles_len as i32,
-                weights_ptr as i32,
-                weights_len as i32,
-                knots_ptr as i32,
-                knots_len as i32,
-                multiplicities_ptr as i32,
-                multiplicities_len as i32,
+                poles_ptr,
+                poles_len,
+                weights_ptr,
+                weights_len,
+                knots_ptr,
+                knots_len,
+                multiplicities_ptr,
+                multiplicities_len,
                 degree,
                 i32::from(periodic),
             ),
@@ -3043,15 +2997,21 @@ impl crate::kernel::OcctKernel {
         init_face_id: u32,
         params: &[f64],
     ) -> OcctResult<ShapeHandle> {
+        let free_edge_ids_len = checked_wasm_len(free_edge_ids.len(), 4)?;
+        let supported_edge_ids_len = checked_wasm_len(supported_edge_ids.len(), 4)?;
+        let support_face_ids_len = checked_wasm_len(support_face_ids.len(), 4)?;
+        let support_orders_len = checked_wasm_len(support_orders.len(), 4)?;
+        let guide_edge_ids_len = checked_wasm_len(guide_edge_ids.len(), 4)?;
+        let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
+        let params_len = checked_wasm_len(params.len(), 8)?;
         let free_edge_ids_bytes: Vec<u8> = free_edge_ids
             .iter()
-            .flat_map(|h| h.0.to_le_bytes())
+            .flat_map(|v| v.0.to_le_bytes())
             .collect();
         let free_edge_ids_ptr = self.write_bytes(&free_edge_ids_bytes)?;
-        let free_edge_ids_len = free_edge_ids.len() as u32;
         let supported_edge_ids_bytes: Vec<u8> = supported_edge_ids
             .iter()
-            .flat_map(|h| h.0.to_le_bytes())
+            .flat_map(|v| v.0.to_le_bytes())
             .collect();
         let supported_edge_ids_ptr = match self.write_bytes(&supported_edge_ids_bytes) {
             Ok(ptr) => ptr,
@@ -3060,10 +3020,9 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let supported_edge_ids_len = supported_edge_ids.len() as u32;
         let support_face_ids_bytes: Vec<u8> = support_face_ids
             .iter()
-            .flat_map(|h| h.0.to_le_bytes())
+            .flat_map(|v| v.0.to_le_bytes())
             .collect();
         let support_face_ids_ptr = match self.write_bytes(&support_face_ids_bytes) {
             Ok(ptr) => ptr,
@@ -3073,7 +3032,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let support_face_ids_len = support_face_ids.len() as u32;
         let support_orders_bytes: Vec<u8> = support_orders
             .iter()
             .flat_map(|v| v.to_le_bytes())
@@ -3087,10 +3045,9 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let support_orders_len = support_orders.len() as u32;
         let guide_edge_ids_bytes: Vec<u8> = guide_edge_ids
             .iter()
-            .flat_map(|h| h.0.to_le_bytes())
+            .flat_map(|v| v.0.to_le_bytes())
             .collect();
         let guide_edge_ids_ptr = match self.write_bytes(&guide_edge_ids_bytes) {
             Ok(ptr) => ptr,
@@ -3102,7 +3059,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let guide_edge_ids_len = guide_edge_ids.len() as u32;
         let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
         let flat_points_ptr = match self.write_bytes(&flat_points_bytes) {
             Ok(ptr) => ptr,
@@ -3115,7 +3071,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let flat_points_len = flat_points.len() as u32;
         let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
         let params_ptr = match self.write_bytes(&params_bytes) {
             Ok(ptr) => ptr,
@@ -3129,25 +3084,24 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let params_len = params.len() as u32;
         let result = self.generated.fn_fill_surface.call(
             &mut self.store,
             (
-                free_edge_ids_ptr as i32,
-                free_edge_ids_len as i32,
-                supported_edge_ids_ptr as i32,
-                supported_edge_ids_len as i32,
-                support_face_ids_ptr as i32,
-                support_face_ids_len as i32,
-                support_orders_ptr as i32,
-                support_orders_len as i32,
-                guide_edge_ids_ptr as i32,
-                guide_edge_ids_len as i32,
-                flat_points_ptr as i32,
-                flat_points_len as i32,
+                free_edge_ids_ptr,
+                free_edge_ids_len,
+                supported_edge_ids_ptr,
+                supported_edge_ids_len,
+                support_face_ids_ptr,
+                support_face_ids_len,
+                support_orders_ptr,
+                support_orders_len,
+                guide_edge_ids_ptr,
+                guide_edge_ids_len,
+                flat_points_ptr,
+                flat_points_len,
                 init_face_id,
-                params_ptr as i32,
-                params_len as i32,
+                params_ptr,
+                params_len,
             ),
         );
         self.free_bytes(free_edge_ids_ptr)?;
@@ -3177,15 +3131,15 @@ impl crate::kernel::OcctKernel {
         tolerance: f64,
         closed: bool,
     ) -> OcctResult<ShapeHandle> {
+        let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
         let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
         let flat_points_ptr = self.write_bytes(&flat_points_bytes)?;
-        let flat_points_len = flat_points.len() as u32;
         let result = self.generated.fn_edge_on_surface.call(
             &mut self.store,
             (
                 face_id.0,
-                flat_points_ptr as i32,
-                flat_points_len as i32,
+                flat_points_ptr,
+                flat_points_len,
                 tolerance,
                 i32::from(closed),
             ),
@@ -3209,19 +3163,15 @@ impl crate::kernel::OcctKernel {
         face_id: ShapeHandle,
         hole_wire_ids: &[ShapeHandle],
     ) -> OcctResult<ShapeHandle> {
+        let hole_wire_ids_len = checked_wasm_len(hole_wire_ids.len(), 4)?;
         let hole_wire_ids_bytes: Vec<u8> = hole_wire_ids
             .iter()
-            .flat_map(|h| h.0.to_le_bytes())
+            .flat_map(|v| v.0.to_le_bytes())
             .collect();
         let hole_wire_ids_ptr = self.write_bytes(&hole_wire_ids_bytes)?;
-        let hole_wire_ids_len = hole_wire_ids.len() as u32;
         let result = self.generated.fn_add_holes_in_face.call(
             &mut self.store,
-            (
-                face_id.0,
-                hole_wire_ids_ptr as i32,
-                hole_wire_ids_len as i32,
-            ),
+            (face_id.0, hole_wire_ids_ptr, hole_wire_ids_len),
         );
         self.free_bytes(hole_wire_ids_ptr)?;
         let result = result?;
@@ -3242,13 +3192,13 @@ impl crate::kernel::OcctKernel {
         face_id: ShapeHandle,
         hole_indices: &[i32],
     ) -> OcctResult<ShapeHandle> {
+        let hole_indices_len = checked_wasm_len(hole_indices.len(), 4)?;
         let hole_indices_bytes: Vec<u8> =
             hole_indices.iter().flat_map(|v| v.to_le_bytes()).collect();
         let hole_indices_ptr = self.write_bytes(&hole_indices_bytes)?;
-        let hole_indices_len = hole_indices.len() as u32;
         let result = self.generated.fn_remove_holes_from_face.call(
             &mut self.store,
-            (face_id.0, hole_indices_ptr as i32, hole_indices_len as i32),
+            (face_id.0, hole_indices_ptr, hole_indices_len),
         );
         self.free_bytes(hole_indices_ptr)?;
         let result = result?;
@@ -3286,13 +3236,13 @@ impl crate::kernel::OcctKernel {
         face_ids: &[ShapeHandle],
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
+        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let face_ids_len = face_ids.len() as u32;
-        let result = self.generated.fn_build_solid_from_faces.call(
-            &mut self.store,
-            (face_ids_ptr as i32, face_ids_len as i32, tolerance),
-        );
+        let result = self
+            .generated
+            .fn_build_solid_from_faces
+            .call(&mut self.store, (face_ids_ptr, face_ids_len, tolerance));
         self.free_bytes(face_ids_ptr)?;
         let result = result?;
         self.check_error("build_solid_from_faces")?;
@@ -3312,13 +3262,13 @@ impl crate::kernel::OcctKernel {
         face_ids: &[ShapeHandle],
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
+        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let face_ids_len = face_ids.len() as u32;
-        let result = self.generated.fn_sew_and_solidify.call(
-            &mut self.store,
-            (face_ids_ptr as i32, face_ids_len as i32, tolerance),
-        );
+        let result = self
+            .generated
+            .fn_sew_and_solidify
+            .call(&mut self.store, (face_ids_ptr, face_ids_len, tolerance));
         self.free_bytes(face_ids_ptr)?;
         let result = result?;
         self.check_error("sew_and_solidify")?;
@@ -3395,12 +3345,12 @@ impl crate::kernel::OcctKernel {
         rows: i32,
         cols: i32,
     ) -> OcctResult<ShapeHandle> {
+        let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
         let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
         let flat_points_ptr = self.write_bytes(&flat_points_bytes)?;
-        let flat_points_len = flat_points.len() as u32;
         let result = self.generated.fn_bspline_surface.call(
             &mut self.store,
-            (flat_points_ptr as i32, flat_points_len as i32, rows, cols),
+            (flat_points_ptr, flat_points_len, rows, cols),
         );
         self.free_bytes(flat_points_ptr)?;
         let result = result?;
@@ -3426,9 +3376,15 @@ impl crate::kernel::OcctKernel {
         mults_v: &[i32],
         layout: &[i32],
     ) -> OcctResult<ShapeHandle> {
+        let flat_poles_len = checked_wasm_len(flat_poles.len(), 8)?;
+        let weights_len = checked_wasm_len(weights.len(), 8)?;
+        let knots_u_len = checked_wasm_len(knots_u.len(), 8)?;
+        let knots_v_len = checked_wasm_len(knots_v.len(), 8)?;
+        let mults_u_len = checked_wasm_len(mults_u.len(), 4)?;
+        let mults_v_len = checked_wasm_len(mults_v.len(), 4)?;
+        let layout_len = checked_wasm_len(layout.len(), 4)?;
         let flat_poles_bytes: Vec<u8> = flat_poles.iter().flat_map(|v| v.to_le_bytes()).collect();
         let flat_poles_ptr = self.write_bytes(&flat_poles_bytes)?;
-        let flat_poles_len = flat_poles.len() as u32;
         let weights_bytes: Vec<u8> = weights.iter().flat_map(|v| v.to_le_bytes()).collect();
         let weights_ptr = match self.write_bytes(&weights_bytes) {
             Ok(ptr) => ptr,
@@ -3437,7 +3393,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let weights_len = weights.len() as u32;
         let knots_u_bytes: Vec<u8> = knots_u.iter().flat_map(|v| v.to_le_bytes()).collect();
         let knots_u_ptr = match self.write_bytes(&knots_u_bytes) {
             Ok(ptr) => ptr,
@@ -3447,7 +3402,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let knots_u_len = knots_u.len() as u32;
         let knots_v_bytes: Vec<u8> = knots_v.iter().flat_map(|v| v.to_le_bytes()).collect();
         let knots_v_ptr = match self.write_bytes(&knots_v_bytes) {
             Ok(ptr) => ptr,
@@ -3458,7 +3412,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let knots_v_len = knots_v.len() as u32;
         let mults_u_bytes: Vec<u8> = mults_u.iter().flat_map(|v| v.to_le_bytes()).collect();
         let mults_u_ptr = match self.write_bytes(&mults_u_bytes) {
             Ok(ptr) => ptr,
@@ -3470,7 +3423,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let mults_u_len = mults_u.len() as u32;
         let mults_v_bytes: Vec<u8> = mults_v.iter().flat_map(|v| v.to_le_bytes()).collect();
         let mults_v_ptr = match self.write_bytes(&mults_v_bytes) {
             Ok(ptr) => ptr,
@@ -3483,7 +3435,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let mults_v_len = mults_v.len() as u32;
         let layout_bytes: Vec<u8> = layout.iter().flat_map(|v| v.to_le_bytes()).collect();
         let layout_ptr = match self.write_bytes(&layout_bytes) {
             Ok(ptr) => ptr,
@@ -3497,24 +3448,23 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let layout_len = layout.len() as u32;
         let result = self.generated.fn_nurbs_surface.call(
             &mut self.store,
             (
-                flat_poles_ptr as i32,
-                flat_poles_len as i32,
-                weights_ptr as i32,
-                weights_len as i32,
-                knots_u_ptr as i32,
-                knots_u_len as i32,
-                knots_v_ptr as i32,
-                knots_v_len as i32,
-                mults_u_ptr as i32,
-                mults_u_len as i32,
-                mults_v_ptr as i32,
-                mults_v_len as i32,
-                layout_ptr as i32,
-                layout_len as i32,
+                flat_poles_ptr,
+                flat_poles_len,
+                weights_ptr,
+                weights_len,
+                knots_u_ptr,
+                knots_u_len,
+                knots_v_ptr,
+                knots_v_len,
+                mults_u_ptr,
+                mults_u_len,
+                mults_v_ptr,
+                mults_v_len,
+                layout_ptr,
+                layout_len,
             ),
         );
         self.free_bytes(flat_poles_ptr)?;
@@ -3558,12 +3508,12 @@ impl crate::kernel::OcctKernel {
         id: ShapeHandle,
         shape_type: &str,
     ) -> OcctResult<Vec<ShapeHandle>> {
+        let shape_type_len = checked_wasm_len(shape_type.len(), 1)?;
         let shape_type_ptr = self.write_bytes(shape_type.as_bytes())?;
-        let shape_type_len = shape_type.len() as u32;
-        let len = self.generated.fn_get_sub_shapes.call(
-            &mut self.store,
-            (id.0, shape_type_ptr as i32, shape_type_len as i32),
-        );
+        let len = self
+            .generated
+            .fn_get_sub_shapes
+            .call(&mut self.store, (id.0, shape_type_ptr, shape_type_len));
         self.free_bytes(shape_type_ptr)?;
         let len = len?;
         if len < 0 {
@@ -3578,12 +3528,12 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn sub_shape_count(&mut self, id: ShapeHandle, shape_type: &str) -> OcctResult<i32> {
+        let shape_type_len = checked_wasm_len(shape_type.len(), 1)?;
         let shape_type_ptr = self.write_bytes(shape_type.as_bytes())?;
-        let shape_type_len = shape_type.len() as u32;
-        let result = self.generated.fn_sub_shape_count.call(
-            &mut self.store,
-            (id.0, shape_type_ptr as i32, shape_type_len as i32),
-        );
+        let result = self
+            .generated
+            .fn_sub_shape_count
+            .call(&mut self.store, (id.0, shape_type_ptr, shape_type_len));
         self.free_bytes(shape_type_ptr)?;
         let result = result?;
         self.check_error("sub_shape_count")?;
@@ -3601,16 +3551,11 @@ impl crate::kernel::OcctKernel {
         shape_type: &str,
         hash_upper_bound: i32,
     ) -> OcctResult<Vec<i32>> {
+        let shape_type_len = checked_wasm_len(shape_type.len(), 1)?;
         let shape_type_ptr = self.write_bytes(shape_type.as_bytes())?;
-        let shape_type_len = shape_type.len() as u32;
         let len = self.generated.fn_sub_shape_hashes.call(
             &mut self.store,
-            (
-                id.0,
-                shape_type_ptr as i32,
-                shape_type_len as i32,
-                hash_upper_bound,
-            ),
+            (id.0, shape_type_ptr, shape_type_len, hash_upper_bound),
         );
         self.free_bytes(shape_type_ptr)?;
         let len = len?;
@@ -3751,12 +3696,12 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn downcast(&mut self, id: ShapeHandle, target_type: &str) -> OcctResult<ShapeHandle> {
+        let target_type_len = checked_wasm_len(target_type.len(), 1)?;
         let target_type_ptr = self.write_bytes(target_type.as_bytes())?;
-        let target_type_len = target_type.len() as u32;
-        let result = self.generated.fn_downcast.call(
-            &mut self.store,
-            (id.0, target_type_ptr as i32, target_type_len as i32),
-        );
+        let result = self
+            .generated
+            .fn_downcast
+            .call(&mut self.store, (id.0, target_type_ptr, target_type_len));
         self.free_bytes(target_type_ptr)?;
         let result = result?;
         self.check_error("downcast")?;
@@ -4332,16 +4277,12 @@ impl crate::kernel::OcctKernel {
         flat_points: &[f64],
         periodic: bool,
     ) -> OcctResult<ShapeHandle> {
+        let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
         let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
         let flat_points_ptr = self.write_bytes(&flat_points_bytes)?;
-        let flat_points_len = flat_points.len() as u32;
         let result = self.generated.fn_interpolate_points.call(
             &mut self.store,
-            (
-                flat_points_ptr as i32,
-                flat_points_len as i32,
-                i32::from(periodic),
-            ),
+            (flat_points_ptr, flat_points_len, i32::from(periodic)),
         );
         self.free_bytes(flat_points_ptr)?;
         let result = result?;
@@ -4367,14 +4308,14 @@ impl crate::kernel::OcctKernel {
         end_tan_y: f64,
         end_tan_z: f64,
     ) -> OcctResult<ShapeHandle> {
+        let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
         let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
         let flat_points_ptr = self.write_bytes(&flat_points_bytes)?;
-        let flat_points_len = flat_points.len() as u32;
         let result = self.generated.fn_interpolate_points_with_tangents.call(
             &mut self.store,
             (
-                flat_points_ptr as i32,
-                flat_points_len as i32,
+                flat_points_ptr,
+                flat_points_len,
                 start_tan_x,
                 start_tan_y,
                 start_tan_z,
@@ -4440,12 +4381,12 @@ impl crate::kernel::OcctKernel {
         flat_points: &[f64],
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
+        let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
         let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
         let flat_points_ptr = self.write_bytes(&flat_points_bytes)?;
-        let flat_points_len = flat_points.len() as u32;
         let result = self.generated.fn_approximate_points.call(
             &mut self.store,
-            (flat_points_ptr as i32, flat_points_len as i32, tolerance),
+            (flat_points_ptr, flat_points_len, tolerance),
         );
         self.free_bytes(flat_points_ptr)?;
         let result = result?;
@@ -4474,15 +4415,15 @@ impl crate::kernel::OcctKernel {
         plane_xy: f64,
         plane_xz: f64,
     ) -> OcctResult<ShapeHandle> {
+        let flat_points2d_len = checked_wasm_len(flat_points2d.len(), 8)?;
         let flat_points2d_bytes: Vec<u8> =
             flat_points2d.iter().flat_map(|v| v.to_le_bytes()).collect();
         let flat_points2d_ptr = self.write_bytes(&flat_points2d_bytes)?;
-        let flat_points2d_len = flat_points2d.len() as u32;
         let result = self.generated.fn_lift_curve2d_to_plane.call(
             &mut self.store,
             (
-                flat_points2d_ptr as i32,
-                flat_points2d_len as i32,
+                flat_points2d_ptr,
+                flat_points2d_len,
                 plane_ox,
                 plane_oy,
                 plane_oz,
@@ -4626,13 +4567,13 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn query_batch(&mut self, ids: &[ShapeHandle]) -> OcctResult<Vec<f64>> {
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let ids_len = checked_wasm_len(ids.len(), 4)?;
+        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let ids_len = ids.len() as u32;
         let len = self
             .generated
             .fn_query_batch
-            .call(&mut self.store, (ids_ptr as i32, ids_len as i32));
+            .call(&mut self.store, (ids_ptr, ids_len));
         self.free_bytes(ids_ptr)?;
         let len = len?;
         if len < 0 {
@@ -4721,14 +4662,14 @@ impl crate::kernel::OcctKernel {
         is_solid: bool,
         ruled: bool,
     ) -> OcctResult<ShapeHandle> {
-        let wire_ids_bytes: Vec<u8> = wire_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let wire_ids_len = checked_wasm_len(wire_ids.len(), 4)?;
+        let wire_ids_bytes: Vec<u8> = wire_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let wire_ids_ptr = self.write_bytes(&wire_ids_bytes)?;
-        let wire_ids_len = wire_ids.len() as u32;
         let result = self.generated.fn_loft.call(
             &mut self.store,
             (
-                wire_ids_ptr as i32,
-                wire_ids_len as i32,
+                wire_ids_ptr,
+                wire_ids_len,
                 i32::from(is_solid),
                 i32::from(ruled),
             ),
@@ -4755,14 +4696,14 @@ impl crate::kernel::OcctKernel {
         start_vertex_id: ShapeHandle,
         end_vertex_id: ShapeHandle,
     ) -> OcctResult<ShapeHandle> {
-        let wire_ids_bytes: Vec<u8> = wire_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let wire_ids_len = checked_wasm_len(wire_ids.len(), 4)?;
+        let wire_ids_bytes: Vec<u8> = wire_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let wire_ids_ptr = self.write_bytes(&wire_ids_bytes)?;
-        let wire_ids_len = wire_ids.len() as u32;
         let result = self.generated.fn_loft_with_vertices.call(
             &mut self.store,
             (
-                wire_ids_ptr as i32,
-                wire_ids_len as i32,
+                wire_ids_ptr,
+                wire_ids_len,
                 i32::from(is_solid),
                 i32::from(ruled),
                 start_vertex_id.0,
@@ -5141,12 +5082,12 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn import_step(&mut self, data: &str) -> OcctResult<ShapeHandle> {
+        let data_len = checked_wasm_len(data.len(), 1)?;
         let data_ptr = self.write_bytes(data.as_bytes())?;
-        let data_len = data.len() as u32;
         let result = self
             .generated
             .fn_import_step
-            .call(&mut self.store, (data_ptr as i32, data_len as i32));
+            .call(&mut self.store, (data_ptr, data_len));
         self.free_bytes(data_ptr)?;
         let result = result?;
         self.check_error("import_step")?;
@@ -5178,12 +5119,12 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn export_step_with_unit(&mut self, id: ShapeHandle, unit: &str) -> OcctResult<String> {
+        let unit_len = checked_wasm_len(unit.len(), 1)?;
         let unit_ptr = self.write_bytes(unit.as_bytes())?;
-        let unit_len = unit.len() as u32;
         let len = self
             .generated
             .fn_export_step_with_unit
-            .call(&mut self.store, (id.0, unit_ptr as i32, unit_len as i32));
+            .call(&mut self.store, (id.0, unit_ptr, unit_len));
         self.free_bytes(unit_ptr)?;
         let len = len?;
         if len < 0 {
@@ -5203,8 +5144,9 @@ impl crate::kernel::OcctKernel {
         unit: &str,
         schema: &str,
     ) -> OcctResult<String> {
+        let unit_len = checked_wasm_len(unit.len(), 1)?;
+        let schema_len = checked_wasm_len(schema.len(), 1)?;
         let unit_ptr = self.write_bytes(unit.as_bytes())?;
-        let unit_len = unit.len() as u32;
         let schema_ptr = match self.write_bytes(schema.as_bytes()) {
             Ok(ptr) => ptr,
             Err(e) => {
@@ -5212,16 +5154,9 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let schema_len = schema.len() as u32;
         let len = self.generated.fn_export_step_with_options.call(
             &mut self.store,
-            (
-                id.0,
-                unit_ptr as i32,
-                unit_len as i32,
-                schema_ptr as i32,
-                schema_len as i32,
-            ),
+            (id.0, unit_ptr, unit_len, schema_ptr, schema_len),
         );
         self.free_bytes(unit_ptr)?;
         self.free_bytes(schema_ptr)?;
@@ -5259,12 +5194,12 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn import_stl(&mut self, data: &str) -> OcctResult<ShapeHandle> {
+        let data_len = checked_wasm_len(data.len(), 1)?;
         let data_ptr = self.write_bytes(data.as_bytes())?;
-        let data_len = data.len() as u32;
         let result = self
             .generated
             .fn_import_stl
-            .call(&mut self.store, (data_ptr as i32, data_len as i32));
+            .call(&mut self.store, (data_ptr, data_len));
         self.free_bytes(data_ptr)?;
         let result = result?;
         self.check_error("import_stl")?;
@@ -5300,12 +5235,12 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn import_stl_binary(&mut self, data: &[u8]) -> OcctResult<ShapeHandle> {
+        let data_len = checked_wasm_len(data.len(), 1)?;
         let data_ptr = self.write_bytes(data)?;
-        let data_len = data.len() as u32;
         let result = self
             .generated
             .fn_import_stl_binary
-            .call(&mut self.store, (data_ptr as i32, data_len as i32));
+            .call(&mut self.store, (data_ptr, data_len));
         self.free_bytes(data_ptr)?;
         let result = result?;
         self.check_error("import_stl_binary")?;
@@ -5334,12 +5269,12 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn from_brep(&mut self, data: &str) -> OcctResult<ShapeHandle> {
+        let data_len = checked_wasm_len(data.len(), 1)?;
         let data_ptr = self.write_bytes(data.as_bytes())?;
-        let data_len = data.len() as u32;
         let result = self
             .generated
             .fn_from_brep
-            .call(&mut self.store, (data_ptr as i32, data_len as i32));
+            .call(&mut self.store, (data_ptr, data_len));
         self.free_bytes(data_ptr)?;
         let result = result?;
         self.check_error("from_brep")?;
@@ -5371,12 +5306,12 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn from_brep_binary(&mut self, data: &[u8]) -> OcctResult<ShapeHandle> {
+        let data_len = checked_wasm_len(data.len(), 1)?;
         let data_ptr = self.write_bytes(data)?;
-        let data_len = data.len() as u32;
         let result = self
             .generated
             .fn_from_brep_binary
-            .call(&mut self.store, (data_ptr as i32, data_len as i32));
+            .call(&mut self.store, (data_ptr, data_len));
         self.free_bytes(data_ptr)?;
         let result = result?;
         self.check_error("from_brep_binary")?;
@@ -5400,12 +5335,12 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_extrude_with_history.call(
             &mut self.store,
             (
@@ -5413,8 +5348,8 @@ impl crate::kernel::OcctKernel {
                 dx,
                 dy,
                 dz,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -5444,12 +5379,12 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_revolve_with_history.call(
             &mut self.store,
             (
@@ -5461,8 +5396,8 @@ impl crate::kernel::OcctKernel {
                 dy,
                 dz,
                 angle_rad,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -5486,19 +5421,19 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_pipe_with_history.call(
             &mut self.store,
             (
                 profile_id.0,
                 spine_id.0,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -5525,9 +5460,10 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let options_len = checked_wasm_len(options.len(), 8)?;
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let options_bytes: Vec<u8> = options.iter().flat_map(|v| v.to_le_bytes()).collect();
         let options_ptr = self.write_bytes(&options_bytes)?;
-        let options_len = options.len() as u32;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
@@ -5539,7 +5475,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_sweep_with_history.call(
             &mut self.store,
             (
@@ -5547,10 +5482,10 @@ impl crate::kernel::OcctKernel {
                 spine_id.0,
                 aux_spine_id,
                 support_id,
-                options_ptr as i32,
-                options_len as i32,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                options_ptr,
+                options_len,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -5578,9 +5513,10 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
-        let wire_ids_bytes: Vec<u8> = wire_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let wire_ids_len = checked_wasm_len(wire_ids.len(), 4)?;
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
+        let wire_ids_bytes: Vec<u8> = wire_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let wire_ids_ptr = self.write_bytes(&wire_ids_bytes)?;
-        let wire_ids_len = wire_ids.len() as u32;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
@@ -5592,18 +5528,17 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_loft_with_history.call(
             &mut self.store,
             (
-                wire_ids_ptr as i32,
-                wire_ids_len as i32,
+                wire_ids_ptr,
+                wire_ids_len,
                 i32::from(is_solid),
                 i32::from(ruled),
                 start_vertex_id,
                 end_vertex_id,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -5627,18 +5562,18 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_unify_same_domain_with_history.call(
             &mut self.store,
             (
                 id.0,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -5662,9 +5597,10 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let matrix_len = checked_wasm_len(matrix.len(), 8)?;
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
         let matrix_ptr = self.write_bytes(&matrix_bytes)?;
-        let matrix_len = matrix.len() as u32;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
@@ -5676,15 +5612,14 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_transform_with_history.call(
             &mut self.store,
             (
                 id.0,
-                matrix_ptr as i32,
-                matrix_len as i32,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                matrix_ptr,
+                matrix_len,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -5711,12 +5646,12 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_translate_with_history.call(
             &mut self.store,
             (
@@ -5724,8 +5659,8 @@ impl crate::kernel::OcctKernel {
                 dx,
                 dy,
                 dz,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -5749,19 +5684,19 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_fuse_with_history.call(
             &mut self.store,
             (
                 a.0,
                 b.0,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -5785,19 +5720,19 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_cut_with_history.call(
             &mut self.store,
             (
                 a.0,
                 b.0,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -5822,9 +5757,10 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
+        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let edge_ids_len = edge_ids.len() as u32;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
@@ -5836,16 +5772,15 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_fillet_with_history.call(
             &mut self.store,
             (
                 solid_id.0,
-                edge_ids_ptr as i32,
-                edge_ids_len as i32,
+                edge_ids_ptr,
+                edge_ids_len,
                 radius,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -5876,12 +5811,12 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_rotate_with_history.call(
             &mut self.store,
             (
@@ -5893,8 +5828,8 @@ impl crate::kernel::OcctKernel {
                 dy,
                 dz,
                 angle,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -5923,12 +5858,12 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_mirror_with_history.call(
             &mut self.store,
             (
@@ -5939,8 +5874,8 @@ impl crate::kernel::OcctKernel {
                 nx,
                 ny,
                 nz,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -5967,12 +5902,12 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_scale_with_history.call(
             &mut self.store,
             (
@@ -5981,8 +5916,8 @@ impl crate::kernel::OcctKernel {
                 cy,
                 cz,
                 factor,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -6006,19 +5941,19 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_intersect_with_history.call(
             &mut self.store,
             (
                 a.0,
                 b.0,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -6043,9 +5978,10 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
+        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let edge_ids_len = edge_ids.len() as u32;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
@@ -6057,16 +5993,15 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_chamfer_with_history.call(
             &mut self.store,
             (
                 solid_id.0,
-                edge_ids_ptr as i32,
-                edge_ids_len as i32,
+                edge_ids_ptr,
+                edge_ids_len,
                 distance,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -6093,9 +6028,12 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
+        let start_radii_len = checked_wasm_len(start_radii.len(), 8)?;
+        let end_radii_len = checked_wasm_len(end_radii.len(), 8)?;
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
+        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let edge_ids_len = edge_ids.len() as u32;
         let start_radii_bytes: Vec<u8> = start_radii.iter().flat_map(|v| v.to_le_bytes()).collect();
         let start_radii_ptr = match self.write_bytes(&start_radii_bytes) {
             Ok(ptr) => ptr,
@@ -6104,7 +6042,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let start_radii_len = start_radii.len() as u32;
         let end_radii_bytes: Vec<u8> = end_radii.iter().flat_map(|v| v.to_le_bytes()).collect();
         let end_radii_ptr = match self.write_bytes(&end_radii_bytes) {
             Ok(ptr) => ptr,
@@ -6114,7 +6051,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let end_radii_len = end_radii.len() as u32;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
@@ -6128,19 +6064,18 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_fillet_radii_with_history.call(
             &mut self.store,
             (
                 solid_id.0,
-                edge_ids_ptr as i32,
-                edge_ids_len as i32,
-                start_radii_ptr as i32,
-                start_radii_len as i32,
-                end_radii_ptr as i32,
-                end_radii_len as i32,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                edge_ids_ptr,
+                edge_ids_len,
+                start_radii_ptr,
+                start_radii_len,
+                end_radii_ptr,
+                end_radii_len,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -6170,9 +6105,13 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
+        let distances1_len = checked_wasm_len(distances1.len(), 8)?;
+        let distances2_len = checked_wasm_len(distances2.len(), 8)?;
+        let reference_face_ids_len = checked_wasm_len(reference_face_ids.len(), 4)?;
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
+        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let edge_ids_len = edge_ids.len() as u32;
         let distances1_bytes: Vec<u8> = distances1.iter().flat_map(|v| v.to_le_bytes()).collect();
         let distances1_ptr = match self.write_bytes(&distances1_bytes) {
             Ok(ptr) => ptr,
@@ -6181,7 +6120,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let distances1_len = distances1.len() as u32;
         let distances2_bytes: Vec<u8> = distances2.iter().flat_map(|v| v.to_le_bytes()).collect();
         let distances2_ptr = match self.write_bytes(&distances2_bytes) {
             Ok(ptr) => ptr,
@@ -6191,10 +6129,9 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let distances2_len = distances2.len() as u32;
         let reference_face_ids_bytes: Vec<u8> = reference_face_ids
             .iter()
-            .flat_map(|h| h.0.to_le_bytes())
+            .flat_map(|v| v.0.to_le_bytes())
             .collect();
         let reference_face_ids_ptr = match self.write_bytes(&reference_face_ids_bytes) {
             Ok(ptr) => ptr,
@@ -6205,7 +6142,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let reference_face_ids_len = reference_face_ids.len() as u32;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
@@ -6220,21 +6156,20 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_chamfer_distances_with_history.call(
             &mut self.store,
             (
                 solid_id.0,
-                edge_ids_ptr as i32,
-                edge_ids_len as i32,
-                distances1_ptr as i32,
-                distances1_len as i32,
-                distances2_ptr as i32,
-                distances2_len as i32,
-                reference_face_ids_ptr as i32,
-                reference_face_ids_len as i32,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                edge_ids_ptr,
+                edge_ids_len,
+                distances1_ptr,
+                distances1_len,
+                distances2_ptr,
+                distances2_len,
+                reference_face_ids_ptr,
+                reference_face_ids_len,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -6265,9 +6200,13 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
+        let distances_len = checked_wasm_len(distances.len(), 8)?;
+        let angles_deg_len = checked_wasm_len(angles_deg.len(), 8)?;
+        let reference_face_ids_len = checked_wasm_len(reference_face_ids.len(), 4)?;
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
+        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let edge_ids_len = edge_ids.len() as u32;
         let distances_bytes: Vec<u8> = distances.iter().flat_map(|v| v.to_le_bytes()).collect();
         let distances_ptr = match self.write_bytes(&distances_bytes) {
             Ok(ptr) => ptr,
@@ -6276,7 +6215,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let distances_len = distances.len() as u32;
         let angles_deg_bytes: Vec<u8> = angles_deg.iter().flat_map(|v| v.to_le_bytes()).collect();
         let angles_deg_ptr = match self.write_bytes(&angles_deg_bytes) {
             Ok(ptr) => ptr,
@@ -6286,10 +6224,9 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let angles_deg_len = angles_deg.len() as u32;
         let reference_face_ids_bytes: Vec<u8> = reference_face_ids
             .iter()
-            .flat_map(|h| h.0.to_le_bytes())
+            .flat_map(|v| v.0.to_le_bytes())
             .collect();
         let reference_face_ids_ptr = match self.write_bytes(&reference_face_ids_bytes) {
             Ok(ptr) => ptr,
@@ -6300,7 +6237,6 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let reference_face_ids_len = reference_face_ids.len() as u32;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
@@ -6315,21 +6251,20 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_chamfer_dist_angles_with_history.call(
             &mut self.store,
             (
                 solid_id.0,
-                edge_ids_ptr as i32,
-                edge_ids_len as i32,
-                distances_ptr as i32,
-                distances_len as i32,
-                angles_deg_ptr as i32,
-                angles_deg_len as i32,
-                reference_face_ids_ptr as i32,
-                reference_face_ids_len as i32,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                edge_ids_ptr,
+                edge_ids_len,
+                distances_ptr,
+                distances_len,
+                angles_deg_ptr,
+                angles_deg_len,
+                reference_face_ids_ptr,
+                reference_face_ids_len,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -6359,9 +6294,10 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
+        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let face_ids_len = face_ids.len() as u32;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
@@ -6373,17 +6309,16 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_shell_with_history.call(
             &mut self.store,
             (
                 solid_id.0,
-                face_ids_ptr as i32,
-                face_ids_len as i32,
+                face_ids_ptr,
+                face_ids_len,
                 thickness,
                 tolerance,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -6409,20 +6344,20 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_offset_with_history.call(
             &mut self.store,
             (
                 solid_id.0,
                 distance,
                 tolerance,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -6449,9 +6384,10 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
         join_type: i32,
     ) -> OcctResult<EvolutionData> {
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
+        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let face_ids_len = face_ids.len() as u32;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
@@ -6463,17 +6399,16 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_shell_with_history_and_join.call(
             &mut self.store,
             (
                 solid_id.0,
-                face_ids_ptr as i32,
-                face_ids_len as i32,
+                face_ids_ptr,
+                face_ids_len,
                 thickness,
                 tolerance,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
                 join_type,
             ),
@@ -6501,20 +6436,20 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
         join_type: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_offset_with_history_and_join.call(
             &mut self.store,
             (
                 solid_id.0,
                 distance,
                 tolerance,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
                 join_type,
             ),
@@ -6540,20 +6475,20 @@ impl crate::kernel::OcctKernel {
         input_face_hashes: &[i32],
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
+        let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
         let input_face_hashes_bytes: Vec<u8> = input_face_hashes
             .iter()
             .flat_map(|v| v.to_le_bytes())
             .collect();
         let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let input_face_hashes_len = input_face_hashes.len() as u32;
         let status = self.generated.fn_thicken_with_history.call(
             &mut self.store,
             (
                 shape_id.0,
                 thickness,
                 tolerance,
-                input_face_hashes_ptr as i32,
-                input_face_hashes_len as i32,
+                input_face_hashes_ptr,
+                input_face_hashes_len,
                 hash_upper_bound,
             ),
         );
@@ -6639,17 +6574,12 @@ impl crate::kernel::OcctKernel {
         linear_deflection: f64,
         angular_deflection: f64,
     ) -> OcctResult<MeshBatch> {
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|h| h.0.to_le_bytes()).collect();
+        let ids_len = checked_wasm_len(ids.len(), 4)?;
+        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
         let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let ids_len = ids.len() as u32;
         let status = self.generated.fn_mesh_batch.call(
             &mut self.store,
-            (
-                ids_ptr as i32,
-                ids_len as i32,
-                linear_deflection,
-                angular_deflection,
-            ),
+            (ids_ptr, ids_len, linear_deflection, angular_deflection),
         );
         self.free_bytes(ids_ptr)?;
         let status = status?;
@@ -6940,12 +6870,12 @@ impl crate::kernel::OcctKernel {
         label_id: i32,
         name: &str,
     ) -> OcctResult<()> {
+        let name_len = checked_wasm_len(name.len(), 1)?;
         let name_ptr = self.write_bytes(name.as_bytes())?;
-        let name_len = name.len() as u32;
-        let result = self.generated.fn_xcaf_set_name.call(
-            &mut self.store,
-            (doc_id.0, label_id, name_ptr as i32, name_len as i32),
-        );
+        let result = self
+            .generated
+            .fn_xcaf_set_name
+            .call(&mut self.store, (doc_id.0, label_id, name_ptr, name_len));
         self.free_bytes(name_ptr)?;
         let result = result?;
         if result < 0 {
@@ -7113,12 +7043,12 @@ impl crate::kernel::OcctKernel {
         doc_id: DocumentHandle,
         unit: &str,
     ) -> OcctResult<String> {
+        let unit_len = checked_wasm_len(unit.len(), 1)?;
         let unit_ptr = self.write_bytes(unit.as_bytes())?;
-        let unit_len = unit.len() as u32;
-        let len = self.generated.fn_xcaf_export_step_with_unit.call(
-            &mut self.store,
-            (doc_id.0, unit_ptr as i32, unit_len as i32),
-        );
+        let len = self
+            .generated
+            .fn_xcaf_export_step_with_unit
+            .call(&mut self.store, (doc_id.0, unit_ptr, unit_len));
         self.free_bytes(unit_ptr)?;
         let len = len?;
         if len < 0 {
@@ -7138,8 +7068,9 @@ impl crate::kernel::OcctKernel {
         unit: &str,
         schema: &str,
     ) -> OcctResult<String> {
+        let unit_len = checked_wasm_len(unit.len(), 1)?;
+        let schema_len = checked_wasm_len(schema.len(), 1)?;
         let unit_ptr = self.write_bytes(unit.as_bytes())?;
-        let unit_len = unit.len() as u32;
         let schema_ptr = match self.write_bytes(schema.as_bytes()) {
             Ok(ptr) => ptr,
             Err(e) => {
@@ -7147,16 +7078,9 @@ impl crate::kernel::OcctKernel {
                 return Err(e);
             }
         };
-        let schema_len = schema.len() as u32;
         let len = self.generated.fn_xcaf_export_step_with_options.call(
             &mut self.store,
-            (
-                doc_id.0,
-                unit_ptr as i32,
-                unit_len as i32,
-                schema_ptr as i32,
-                schema_len as i32,
-            ),
+            (doc_id.0, unit_ptr, unit_len, schema_ptr, schema_len),
         );
         self.free_bytes(unit_ptr)?;
         self.free_bytes(schema_ptr)?;
@@ -7173,12 +7097,12 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn xcaf_import_step(&mut self, step_data: &str) -> OcctResult<DocumentHandle> {
+        let step_data_len = checked_wasm_len(step_data.len(), 1)?;
         let step_data_ptr = self.write_bytes(step_data.as_bytes())?;
-        let step_data_len = step_data.len() as u32;
-        let result = self.generated.fn_xcaf_import_step.call(
-            &mut self.store,
-            (step_data_ptr as i32, step_data_len as i32),
-        );
+        let result = self
+            .generated
+            .fn_xcaf_import_step
+            .call(&mut self.store, (step_data_ptr, step_data_len));
         self.free_bytes(step_data_ptr)?;
         let result = result?;
         self.check_error("xcaf_import_step")?;

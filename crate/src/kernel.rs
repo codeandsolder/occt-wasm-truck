@@ -44,7 +44,7 @@ pub struct OcctKernel {
 
     // Lifecycle + error functions
     pub(crate) fn_has_error: TypedFunc<(), i32>,
-    pub(crate) fn_get_error: TypedFunc<(), i32>,
+    pub(crate) fn_get_error: TypedFunc<(), u32>,
     pub(crate) fn_get_error_len: TypedFunc<(), u32>,
 
     // Memory management
@@ -52,13 +52,13 @@ pub struct OcctKernel {
     pub(crate) fn_free: TypedFunc<u32, ()>,
 
     // Result buffer accessors
-    pub(crate) fn_get_string_result: TypedFunc<(), i32>,
+    pub(crate) fn_get_string_result: TypedFunc<(), u32>,
     pub(crate) fn_get_string_result_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_vec_u32_result: TypedFunc<(), i32>,
+    pub(crate) fn_get_vec_u32_result: TypedFunc<(), u32>,
     pub(crate) fn_get_vec_u32_result_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_vec_f64_result: TypedFunc<(), i32>,
+    pub(crate) fn_get_vec_f64_result: TypedFunc<(), u32>,
     pub(crate) fn_get_vec_f64_result_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_vec_i32_result: TypedFunc<(), i32>,
+    pub(crate) fn_get_vec_i32_result: TypedFunc<(), u32>,
     pub(crate) fn_get_vec_i32_result_len: TypedFunc<(), u32>,
 
     // BBox accessors
@@ -70,58 +70,58 @@ pub struct OcctKernel {
     pub(crate) fn_get_bbox_zmax: TypedFunc<(), f64>,
 
     // Mesh accessors
-    pub(crate) fn_get_mesh_positions: TypedFunc<(), i32>,
+    pub(crate) fn_get_mesh_positions: TypedFunc<(), u32>,
     pub(crate) fn_get_mesh_positions_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_normals: TypedFunc<(), i32>,
+    pub(crate) fn_get_mesh_normals: TypedFunc<(), u32>,
     pub(crate) fn_get_mesh_normals_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_indices: TypedFunc<(), i32>,
+    pub(crate) fn_get_mesh_indices: TypedFunc<(), u32>,
     pub(crate) fn_get_mesh_indices_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_face_groups: TypedFunc<(), i32>,
+    pub(crate) fn_get_mesh_face_groups: TypedFunc<(), u32>,
     pub(crate) fn_get_mesh_face_groups_len: TypedFunc<(), i32>,
 
     // MeshBatch accessors
-    pub(crate) fn_get_mesh_batch_positions: TypedFunc<(), i32>,
+    pub(crate) fn_get_mesh_batch_positions: TypedFunc<(), u32>,
     pub(crate) fn_get_mesh_batch_positions_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_batch_normals: TypedFunc<(), i32>,
+    pub(crate) fn_get_mesh_batch_normals: TypedFunc<(), u32>,
     pub(crate) fn_get_mesh_batch_normals_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_batch_indices: TypedFunc<(), i32>,
+    pub(crate) fn_get_mesh_batch_indices: TypedFunc<(), u32>,
     pub(crate) fn_get_mesh_batch_indices_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_mesh_batch_shape_offsets: TypedFunc<(), i32>,
+    pub(crate) fn_get_mesh_batch_shape_offsets: TypedFunc<(), u32>,
     pub(crate) fn_get_mesh_batch_shape_count: TypedFunc<(), i32>,
 
     // Edge accessors
-    pub(crate) fn_get_edge_points: TypedFunc<(), i32>,
+    pub(crate) fn_get_edge_points: TypedFunc<(), u32>,
     pub(crate) fn_get_edge_points_len: TypedFunc<(), i32>,
-    pub(crate) fn_get_edge_groups: TypedFunc<(), i32>,
+    pub(crate) fn_get_edge_groups: TypedFunc<(), u32>,
     pub(crate) fn_get_edge_groups_len: TypedFunc<(), i32>,
 
     // NURBS accessors
     pub(crate) fn_get_nurbs_degree: TypedFunc<(), i32>,
     pub(crate) fn_get_nurbs_rational: TypedFunc<(), i32>,
     pub(crate) fn_get_nurbs_periodic: TypedFunc<(), i32>,
-    pub(crate) fn_get_nurbs_knots: TypedFunc<(), i32>,
+    pub(crate) fn_get_nurbs_knots: TypedFunc<(), u32>,
     pub(crate) fn_get_nurbs_knots_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_nurbs_multiplicities: TypedFunc<(), i32>,
+    pub(crate) fn_get_nurbs_multiplicities: TypedFunc<(), u32>,
     pub(crate) fn_get_nurbs_multiplicities_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_nurbs_poles: TypedFunc<(), i32>,
+    pub(crate) fn_get_nurbs_poles: TypedFunc<(), u32>,
     pub(crate) fn_get_nurbs_poles_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_nurbs_weights: TypedFunc<(), i32>,
+    pub(crate) fn_get_nurbs_weights: TypedFunc<(), u32>,
     pub(crate) fn_get_nurbs_weights_len: TypedFunc<(), u32>,
 
     // Curve geometry accessors
-    pub(crate) fn_get_curve_kind: TypedFunc<(), i32>,
+    pub(crate) fn_get_curve_kind: TypedFunc<(), u32>,
     pub(crate) fn_get_curve_kind_len: TypedFunc<(), u32>,
     pub(crate) fn_get_curve_first: TypedFunc<(), f64>,
     pub(crate) fn_get_curve_last: TypedFunc<(), f64>,
-    pub(crate) fn_get_curve_params: TypedFunc<(), i32>,
+    pub(crate) fn_get_curve_params: TypedFunc<(), u32>,
     pub(crate) fn_get_curve_params_len: TypedFunc<(), u32>,
     pub(crate) fn_get_curve_has_bspline: TypedFunc<(), i32>,
 
     // Surface geometry accessors
-    pub(crate) fn_get_surface_kind: TypedFunc<(), i32>,
+    pub(crate) fn_get_surface_kind: TypedFunc<(), u32>,
     pub(crate) fn_get_surface_kind_len: TypedFunc<(), u32>,
     pub(crate) fn_get_surface_is_direct: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_params: TypedFunc<(), i32>,
+    pub(crate) fn_get_surface_params: TypedFunc<(), u32>,
     pub(crate) fn_get_surface_params_len: TypedFunc<(), u32>,
     pub(crate) fn_get_surface_has_bspline: TypedFunc<(), i32>,
     pub(crate) fn_get_surface_degree_u: TypedFunc<(), i32>,
@@ -130,38 +130,38 @@ pub struct OcctKernel {
     pub(crate) fn_get_surface_nb_poles_v: TypedFunc<(), i32>,
     pub(crate) fn_get_surface_periodic_u: TypedFunc<(), i32>,
     pub(crate) fn_get_surface_periodic_v: TypedFunc<(), i32>,
-    pub(crate) fn_get_surface_knots_u: TypedFunc<(), i32>,
+    pub(crate) fn_get_surface_knots_u: TypedFunc<(), u32>,
     pub(crate) fn_get_surface_knots_u_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_surface_knots_v: TypedFunc<(), i32>,
+    pub(crate) fn_get_surface_knots_v: TypedFunc<(), u32>,
     pub(crate) fn_get_surface_knots_v_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_surface_multiplicities_u: TypedFunc<(), i32>,
+    pub(crate) fn_get_surface_multiplicities_u: TypedFunc<(), u32>,
     pub(crate) fn_get_surface_multiplicities_u_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_surface_multiplicities_v: TypedFunc<(), i32>,
+    pub(crate) fn_get_surface_multiplicities_v: TypedFunc<(), u32>,
     pub(crate) fn_get_surface_multiplicities_v_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_surface_poles: TypedFunc<(), i32>,
+    pub(crate) fn_get_surface_poles: TypedFunc<(), u32>,
     pub(crate) fn_get_surface_poles_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_surface_weights: TypedFunc<(), i32>,
+    pub(crate) fn_get_surface_weights: TypedFunc<(), u32>,
     pub(crate) fn_get_surface_weights_len: TypedFunc<(), u32>,
 
     // Evolution accessors
     pub(crate) fn_get_evo_result_id: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_modified: TypedFunc<(), i32>,
+    pub(crate) fn_get_evo_modified: TypedFunc<(), u32>,
     pub(crate) fn_get_evo_modified_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_generated: TypedFunc<(), i32>,
+    pub(crate) fn_get_evo_generated: TypedFunc<(), u32>,
     pub(crate) fn_get_evo_generated_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_deleted: TypedFunc<(), i32>,
+    pub(crate) fn_get_evo_deleted: TypedFunc<(), u32>,
     pub(crate) fn_get_evo_deleted_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_edge_modified: TypedFunc<(), i32>,
+    pub(crate) fn_get_evo_edge_modified: TypedFunc<(), u32>,
     pub(crate) fn_get_evo_edge_modified_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_edge_generated: TypedFunc<(), i32>,
+    pub(crate) fn_get_evo_edge_generated: TypedFunc<(), u32>,
     pub(crate) fn_get_evo_edge_generated_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_edge_deleted: TypedFunc<(), i32>,
+    pub(crate) fn_get_evo_edge_deleted: TypedFunc<(), u32>,
     pub(crate) fn_get_evo_edge_deleted_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_first_shape: TypedFunc<(), i32>,
+    pub(crate) fn_get_evo_first_shape: TypedFunc<(), u32>,
     pub(crate) fn_get_evo_first_shape_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_last_shape: TypedFunc<(), i32>,
+    pub(crate) fn_get_evo_last_shape: TypedFunc<(), u32>,
     pub(crate) fn_get_evo_last_shape_len: TypedFunc<(), u32>,
-    pub(crate) fn_get_evo_spine_generated: TypedFunc<(), i32>,
+    pub(crate) fn_get_evo_spine_generated: TypedFunc<(), u32>,
     pub(crate) fn_get_evo_spine_generated_len: TypedFunc<(), u32>,
 
     // Projection accessors
@@ -174,7 +174,7 @@ pub struct OcctKernel {
 
     // Label info accessors
     pub(crate) fn_get_label_info_label_id: TypedFunc<(), i32>,
-    pub(crate) fn_get_label_info_name: TypedFunc<(), i32>,
+    pub(crate) fn_get_label_info_name: TypedFunc<(), u32>,
     pub(crate) fn_get_label_info_name_len: TypedFunc<(), u32>,
     pub(crate) fn_get_label_info_has_color: TypedFunc<(), i32>,
     pub(crate) fn_get_label_info_r: TypedFunc<(), f64>,
@@ -323,18 +323,18 @@ impl OcctKernel {
             instance,
 
             fn_has_error: get_fn!("occt_has_error" => i32),
-            fn_get_error: get_fn!("occt_get_error" => i32),
+            fn_get_error: get_fn!("occt_get_error" => u32),
             fn_get_error_len: get_fn!("occt_get_error_len" => u32),
             fn_alloc: get_fn!("occt_alloc", u32 => u32),
             fn_free: get_fn!("occt_free", u32 => ()),
 
-            fn_get_string_result: get_fn!("occt_get_string_result" => i32),
+            fn_get_string_result: get_fn!("occt_get_string_result" => u32),
             fn_get_string_result_len: get_fn!("occt_get_string_result_len" => u32),
-            fn_get_vec_u32_result: get_fn!("occt_get_vec_u32_result" => i32),
+            fn_get_vec_u32_result: get_fn!("occt_get_vec_u32_result" => u32),
             fn_get_vec_u32_result_len: get_fn!("occt_get_vec_u32_result_len" => u32),
-            fn_get_vec_f64_result: get_fn!("occt_get_vec_f64_result" => i32),
+            fn_get_vec_f64_result: get_fn!("occt_get_vec_f64_result" => u32),
             fn_get_vec_f64_result_len: get_fn!("occt_get_vec_f64_result_len" => u32),
-            fn_get_vec_i32_result: get_fn!("occt_get_vec_i32_result" => i32),
+            fn_get_vec_i32_result: get_fn!("occt_get_vec_i32_result" => u32),
             fn_get_vec_i32_result_len: get_fn!("occt_get_vec_i32_result_len" => u32),
 
             fn_get_bbox_xmin: get_fn!("occt_get_bbox_xmin" => f64),
@@ -344,53 +344,53 @@ impl OcctKernel {
             fn_get_bbox_ymax: get_fn!("occt_get_bbox_ymax" => f64),
             fn_get_bbox_zmax: get_fn!("occt_get_bbox_zmax" => f64),
 
-            fn_get_mesh_positions: get_fn!("occt_get_mesh_positions" => i32),
+            fn_get_mesh_positions: get_fn!("occt_get_mesh_positions" => u32),
             fn_get_mesh_positions_len: get_fn!("occt_get_mesh_positions_len" => i32),
-            fn_get_mesh_normals: get_fn!("occt_get_mesh_normals" => i32),
+            fn_get_mesh_normals: get_fn!("occt_get_mesh_normals" => u32),
             fn_get_mesh_normals_len: get_fn!("occt_get_mesh_normals_len" => i32),
-            fn_get_mesh_indices: get_fn!("occt_get_mesh_indices" => i32),
+            fn_get_mesh_indices: get_fn!("occt_get_mesh_indices" => u32),
             fn_get_mesh_indices_len: get_fn!("occt_get_mesh_indices_len" => i32),
-            fn_get_mesh_face_groups: get_fn!("occt_get_mesh_face_groups" => i32),
+            fn_get_mesh_face_groups: get_fn!("occt_get_mesh_face_groups" => u32),
             fn_get_mesh_face_groups_len: get_fn!("occt_get_mesh_face_groups_len" => i32),
 
-            fn_get_mesh_batch_positions: get_fn!("occt_get_mesh_batch_positions" => i32),
+            fn_get_mesh_batch_positions: get_fn!("occt_get_mesh_batch_positions" => u32),
             fn_get_mesh_batch_positions_len: get_fn!("occt_get_mesh_batch_positions_len" => i32),
-            fn_get_mesh_batch_normals: get_fn!("occt_get_mesh_batch_normals" => i32),
+            fn_get_mesh_batch_normals: get_fn!("occt_get_mesh_batch_normals" => u32),
             fn_get_mesh_batch_normals_len: get_fn!("occt_get_mesh_batch_normals_len" => i32),
-            fn_get_mesh_batch_indices: get_fn!("occt_get_mesh_batch_indices" => i32),
+            fn_get_mesh_batch_indices: get_fn!("occt_get_mesh_batch_indices" => u32),
             fn_get_mesh_batch_indices_len: get_fn!("occt_get_mesh_batch_indices_len" => i32),
-            fn_get_mesh_batch_shape_offsets: get_fn!("occt_get_mesh_batch_shape_offsets" => i32),
+            fn_get_mesh_batch_shape_offsets: get_fn!("occt_get_mesh_batch_shape_offsets" => u32),
             fn_get_mesh_batch_shape_count: get_fn!("occt_get_mesh_batch_shape_count" => i32),
 
-            fn_get_edge_points: get_fn!("occt_get_edge_points" => i32),
+            fn_get_edge_points: get_fn!("occt_get_edge_points" => u32),
             fn_get_edge_points_len: get_fn!("occt_get_edge_points_len" => i32),
-            fn_get_edge_groups: get_fn!("occt_get_edge_groups" => i32),
+            fn_get_edge_groups: get_fn!("occt_get_edge_groups" => u32),
             fn_get_edge_groups_len: get_fn!("occt_get_edge_groups_len" => i32),
 
             fn_get_nurbs_degree: get_fn!("occt_get_nurbs_degree" => i32),
             fn_get_nurbs_rational: get_fn!("occt_get_nurbs_rational" => i32),
             fn_get_nurbs_periodic: get_fn!("occt_get_nurbs_periodic" => i32),
-            fn_get_nurbs_knots: get_fn!("occt_get_nurbs_knots" => i32),
+            fn_get_nurbs_knots: get_fn!("occt_get_nurbs_knots" => u32),
             fn_get_nurbs_knots_len: get_fn!("occt_get_nurbs_knots_len" => u32),
-            fn_get_nurbs_multiplicities: get_fn!("occt_get_nurbs_multiplicities" => i32),
+            fn_get_nurbs_multiplicities: get_fn!("occt_get_nurbs_multiplicities" => u32),
             fn_get_nurbs_multiplicities_len: get_fn!("occt_get_nurbs_multiplicities_len" => u32),
-            fn_get_nurbs_poles: get_fn!("occt_get_nurbs_poles" => i32),
+            fn_get_nurbs_poles: get_fn!("occt_get_nurbs_poles" => u32),
             fn_get_nurbs_poles_len: get_fn!("occt_get_nurbs_poles_len" => u32),
-            fn_get_nurbs_weights: get_fn!("occt_get_nurbs_weights" => i32),
+            fn_get_nurbs_weights: get_fn!("occt_get_nurbs_weights" => u32),
             fn_get_nurbs_weights_len: get_fn!("occt_get_nurbs_weights_len" => u32),
 
-            fn_get_curve_kind: get_fn!("occt_get_curve_kind" => i32),
+            fn_get_curve_kind: get_fn!("occt_get_curve_kind" => u32),
             fn_get_curve_kind_len: get_fn!("occt_get_curve_kind_len" => u32),
             fn_get_curve_first: get_fn!("occt_get_curve_first" => f64),
             fn_get_curve_last: get_fn!("occt_get_curve_last" => f64),
-            fn_get_curve_params: get_fn!("occt_get_curve_params" => i32),
+            fn_get_curve_params: get_fn!("occt_get_curve_params" => u32),
             fn_get_curve_params_len: get_fn!("occt_get_curve_params_len" => u32),
             fn_get_curve_has_bspline: get_fn!("occt_get_curve_has_bspline" => i32),
 
-            fn_get_surface_kind: get_fn!("occt_get_surface_kind" => i32),
+            fn_get_surface_kind: get_fn!("occt_get_surface_kind" => u32),
             fn_get_surface_kind_len: get_fn!("occt_get_surface_kind_len" => u32),
             fn_get_surface_is_direct: get_fn!("occt_get_surface_is_direct" => i32),
-            fn_get_surface_params: get_fn!("occt_get_surface_params" => i32),
+            fn_get_surface_params: get_fn!("occt_get_surface_params" => u32),
             fn_get_surface_params_len: get_fn!("occt_get_surface_params_len" => u32),
             fn_get_surface_has_bspline: get_fn!("occt_get_surface_has_bspline" => i32),
             fn_get_surface_degree_u: get_fn!("occt_get_surface_degree_u" => i32),
@@ -399,37 +399,37 @@ impl OcctKernel {
             fn_get_surface_nb_poles_v: get_fn!("occt_get_surface_nb_poles_v" => i32),
             fn_get_surface_periodic_u: get_fn!("occt_get_surface_periodic_u" => i32),
             fn_get_surface_periodic_v: get_fn!("occt_get_surface_periodic_v" => i32),
-            fn_get_surface_knots_u: get_fn!("occt_get_surface_knots_u" => i32),
+            fn_get_surface_knots_u: get_fn!("occt_get_surface_knots_u" => u32),
             fn_get_surface_knots_u_len: get_fn!("occt_get_surface_knots_u_len" => u32),
-            fn_get_surface_knots_v: get_fn!("occt_get_surface_knots_v" => i32),
+            fn_get_surface_knots_v: get_fn!("occt_get_surface_knots_v" => u32),
             fn_get_surface_knots_v_len: get_fn!("occt_get_surface_knots_v_len" => u32),
-            fn_get_surface_multiplicities_u: get_fn!("occt_get_surface_multiplicities_u" => i32),
+            fn_get_surface_multiplicities_u: get_fn!("occt_get_surface_multiplicities_u" => u32),
             fn_get_surface_multiplicities_u_len: get_fn!("occt_get_surface_multiplicities_u_len" => u32),
-            fn_get_surface_multiplicities_v: get_fn!("occt_get_surface_multiplicities_v" => i32),
+            fn_get_surface_multiplicities_v: get_fn!("occt_get_surface_multiplicities_v" => u32),
             fn_get_surface_multiplicities_v_len: get_fn!("occt_get_surface_multiplicities_v_len" => u32),
-            fn_get_surface_poles: get_fn!("occt_get_surface_poles" => i32),
+            fn_get_surface_poles: get_fn!("occt_get_surface_poles" => u32),
             fn_get_surface_poles_len: get_fn!("occt_get_surface_poles_len" => u32),
-            fn_get_surface_weights: get_fn!("occt_get_surface_weights" => i32),
+            fn_get_surface_weights: get_fn!("occt_get_surface_weights" => u32),
             fn_get_surface_weights_len: get_fn!("occt_get_surface_weights_len" => u32),
 
             fn_get_evo_result_id: get_fn!("occt_get_evo_result_id" => u32),
-            fn_get_evo_modified: get_fn!("occt_get_evo_modified" => i32),
+            fn_get_evo_modified: get_fn!("occt_get_evo_modified" => u32),
             fn_get_evo_modified_len: get_fn!("occt_get_evo_modified_len" => u32),
-            fn_get_evo_generated: get_fn!("occt_get_evo_generated" => i32),
+            fn_get_evo_generated: get_fn!("occt_get_evo_generated" => u32),
             fn_get_evo_generated_len: get_fn!("occt_get_evo_generated_len" => u32),
-            fn_get_evo_deleted: get_fn!("occt_get_evo_deleted" => i32),
+            fn_get_evo_deleted: get_fn!("occt_get_evo_deleted" => u32),
             fn_get_evo_deleted_len: get_fn!("occt_get_evo_deleted_len" => u32),
-            fn_get_evo_edge_modified: get_fn!("occt_get_evo_edge_modified" => i32),
+            fn_get_evo_edge_modified: get_fn!("occt_get_evo_edge_modified" => u32),
             fn_get_evo_edge_modified_len: get_fn!("occt_get_evo_edge_modified_len" => u32),
-            fn_get_evo_edge_generated: get_fn!("occt_get_evo_edge_generated" => i32),
+            fn_get_evo_edge_generated: get_fn!("occt_get_evo_edge_generated" => u32),
             fn_get_evo_edge_generated_len: get_fn!("occt_get_evo_edge_generated_len" => u32),
-            fn_get_evo_edge_deleted: get_fn!("occt_get_evo_edge_deleted" => i32),
+            fn_get_evo_edge_deleted: get_fn!("occt_get_evo_edge_deleted" => u32),
             fn_get_evo_edge_deleted_len: get_fn!("occt_get_evo_edge_deleted_len" => u32),
-            fn_get_evo_first_shape: get_fn!("occt_get_evo_first_shape" => i32),
+            fn_get_evo_first_shape: get_fn!("occt_get_evo_first_shape" => u32),
             fn_get_evo_first_shape_len: get_fn!("occt_get_evo_first_shape_len" => u32),
-            fn_get_evo_last_shape: get_fn!("occt_get_evo_last_shape" => i32),
+            fn_get_evo_last_shape: get_fn!("occt_get_evo_last_shape" => u32),
             fn_get_evo_last_shape_len: get_fn!("occt_get_evo_last_shape_len" => u32),
-            fn_get_evo_spine_generated: get_fn!("occt_get_evo_spine_generated" => i32),
+            fn_get_evo_spine_generated: get_fn!("occt_get_evo_spine_generated" => u32),
             fn_get_evo_spine_generated_len: get_fn!("occt_get_evo_spine_generated_len" => u32),
 
             fn_get_proj_visible_outline: get_fn!("occt_get_proj_visible_outline" => u32),
@@ -440,7 +440,7 @@ impl OcctKernel {
             fn_get_proj_hidden_sharp: get_fn!("occt_get_proj_hidden_sharp" => u32),
 
             fn_get_label_info_label_id: get_fn!("occt_get_label_info_label_id" => i32),
-            fn_get_label_info_name: get_fn!("occt_get_label_info_name" => i32),
+            fn_get_label_info_name: get_fn!("occt_get_label_info_name" => u32),
             fn_get_label_info_name_len: get_fn!("occt_get_label_info_name_len" => u32),
             fn_get_label_info_has_color: get_fn!("occt_get_label_info_has_color" => i32),
             fn_get_label_info_r: get_fn!("occt_get_label_info_r" => f64),
@@ -459,19 +459,22 @@ impl OcctKernel {
 
     /// Write bytes into WASM linear memory via `occt_alloc`.
     pub(crate) fn write_bytes(&mut self, data: &[u8]) -> OcctResult<u32> {
-        let ptr = self.fn_alloc.call(&mut self.store, data.len() as u32)?;
+        let ptr = self
+            .fn_alloc
+            .call(&mut self.store, checked_wasm_len(data.len(), 1)?)?;
         if ptr == 0 {
             core::hint::cold_path();
             return Err(OcctError::Memory("allocation failed".to_owned()));
         }
         let mem = self.memory.data_mut(&mut self.store);
         let start = ptr as usize;
-        let end = start + data.len();
-        if end > mem.len() {
-            core::hint::cold_path();
-            return Err(OcctError::Memory("write out of bounds".to_owned()));
-        }
-        mem[start..end].copy_from_slice(data);
+        let end = start
+            .checked_add(data.len())
+            .ok_or_else(|| OcctError::Memory("write range overflow".to_owned()))?;
+        let destination = mem
+            .get_mut(start..end)
+            .ok_or_else(|| OcctError::Memory("write out of bounds".to_owned()))?;
+        destination.copy_from_slice(data);
         Ok(ptr)
     }
 
@@ -481,52 +484,50 @@ impl OcctKernel {
         Ok(())
     }
 
-    /// Read a byte slice from WASM memory.
-    fn read_bytes(&self, ptr: u32, len: u32) -> OcctResult<Vec<u8>> {
+    /// Borrow a byte slice from WASM memory after validating its full range.
+    fn read_slice(&self, ptr: u32, len: u32) -> OcctResult<&[u8]> {
         let mem = self.memory.data(&self.store);
         let start = ptr as usize;
-        let end = start + len as usize;
-        if end > mem.len() {
-            core::hint::cold_path();
-            return Err(OcctError::Memory("read out of bounds".to_owned()));
-        }
-        Ok(mem[start..end].to_vec())
+        let end = start
+            .checked_add(len as usize)
+            .ok_or_else(|| OcctError::Memory("read range overflow".to_owned()))?;
+        mem.get(start..end)
+            .ok_or_else(|| OcctError::Memory("read out of bounds".to_owned()))
     }
 
-    /// Read a typed slice from WASM memory as `f32` values.
+    /// Read an owned byte slice from WASM memory.
+    fn read_bytes(&self, ptr: u32, len: u32) -> OcctResult<Vec<u8>> {
+        Ok(self.read_slice(ptr, len)?.to_vec())
+    }
+
+    /// Decode little-endian elements without an intermediate byte allocation.
+    fn read_array<const N: usize, T>(
+        &self,
+        ptr: u32,
+        count: u32,
+        decode: impl Fn([u8; N]) -> T,
+    ) -> OcctResult<Vec<T>> {
+        let width = checked_wasm_len(N, 1)?;
+        let len = checked_wasm_product(count, width)?;
+        let (chunks, remainder) = self.read_slice(ptr, len)?.as_chunks::<N>();
+        debug_assert!(remainder.is_empty());
+        Ok(chunks.iter().copied().map(decode).collect())
+    }
+
     fn read_f32_slice(&self, ptr: u32, count: u32) -> OcctResult<Vec<f32>> {
-        let bytes = self.read_bytes(ptr, count * 4)?;
-        Ok(bytes
-            .chunks_exact(4)
-            .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect())
+        self.read_array(ptr, count, f32::from_le_bytes)
     }
 
-    /// Read a typed slice from WASM memory as `u32` values.
     fn read_u32_slice(&self, ptr: u32, count: u32) -> OcctResult<Vec<u32>> {
-        let bytes = self.read_bytes(ptr, count * 4)?;
-        Ok(bytes
-            .chunks_exact(4)
-            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect())
+        self.read_array(ptr, count, u32::from_le_bytes)
     }
 
-    /// Read a typed slice from WASM memory as `i32` values.
     fn read_i32_slice(&self, ptr: u32, count: u32) -> OcctResult<Vec<i32>> {
-        let bytes = self.read_bytes(ptr, count * 4)?;
-        Ok(bytes
-            .chunks_exact(4)
-            .map(|c| i32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect())
+        self.read_array(ptr, count, i32::from_le_bytes)
     }
 
-    /// Read a typed slice from WASM memory as `f64` values.
     fn read_f64_slice(&self, ptr: u32, count: u32) -> OcctResult<Vec<f64>> {
-        let bytes = self.read_bytes(ptr, count * 8)?;
-        Ok(bytes
-            .chunks_exact(8)
-            .map(|c| f64::from_le_bytes([c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]]))
-            .collect())
+        self.read_array(ptr, count, f64::from_le_bytes)
     }
 
     // === Error handling ===
@@ -550,7 +551,7 @@ impl OcctKernel {
         let ptr = self.fn_get_error.call(&mut self.store, ()).unwrap_or(0);
         let len = self.fn_get_error_len.call(&mut self.store, ()).unwrap_or(0);
         let message = if ptr != 0 && len > 0 {
-            self.read_bytes(ptr as u32, len)
+            self.read_bytes(ptr, len)
                 .ok()
                 .and_then(|b| String::from_utf8(b).ok())
                 .unwrap_or_else(|| "unknown error".to_owned())
@@ -575,14 +576,14 @@ impl OcctKernel {
     pub(crate) fn read_bytes_result(&mut self) -> OcctResult<Vec<u8>> {
         let ptr = self.fn_get_string_result.call(&mut self.store, ())?;
         let len = self.fn_get_string_result_len.call(&mut self.store, ())?;
-        self.read_bytes(ptr as u32, len)
+        self.read_bytes(ptr, len)
     }
 
     /// Read a `Vec<u32>` result.
     pub(crate) fn read_vec_u32_result(&mut self) -> OcctResult<Vec<u32>> {
         let ptr = self.fn_get_vec_u32_result.call(&mut self.store, ())?;
         let len = self.fn_get_vec_u32_result_len.call(&mut self.store, ())?;
-        self.read_u32_slice(ptr as u32, len)
+        self.read_u32_slice(ptr, len)
     }
 
     /// Read a `Vec<ShapeHandle>` result.
@@ -598,14 +599,14 @@ impl OcctKernel {
     pub(crate) fn read_vec_f64_result(&mut self) -> OcctResult<Vec<f64>> {
         let ptr = self.fn_get_vec_f64_result.call(&mut self.store, ())?;
         let len = self.fn_get_vec_f64_result_len.call(&mut self.store, ())?;
-        self.read_f64_slice(ptr as u32, len)
+        self.read_f64_slice(ptr, len)
     }
 
     /// Read a `Vec<i32>` result.
     pub(crate) fn read_vec_i32_result(&mut self) -> OcctResult<Vec<i32>> {
         let ptr = self.fn_get_vec_i32_result.call(&mut self.store, ())?;
         let len = self.fn_get_vec_i32_result_len.call(&mut self.store, ())?;
-        self.read_i32_slice(ptr as u32, len)
+        self.read_i32_slice(ptr, len)
     }
 
     /// Read a bounding box result.
@@ -636,10 +637,10 @@ impl OcctKernel {
         let fg_len = self.fn_get_mesh_face_groups_len.call(&mut self.store, ())?;
 
         Ok(Mesh {
-            positions: self.read_f32_slice(pos_ptr as u32, pos_len as u32)?,
-            normals: self.read_f32_slice(norm_ptr as u32, norm_len as u32)?,
-            indices: self.read_u32_slice(idx_ptr as u32, idx_len as u32)?,
-            face_groups: self.read_i32_slice(fg_ptr as u32, fg_len as u32)?,
+            positions: self.read_f32_slice(pos_ptr, checked_signed_len(pos_len)?)?,
+            normals: self.read_f32_slice(norm_ptr, checked_signed_len(norm_len)?)?,
+            indices: self.read_u32_slice(idx_ptr, checked_signed_len(idx_len)?)?,
+            face_groups: self.read_i32_slice(fg_ptr, checked_signed_len(fg_len)?)?,
         })
     }
 
@@ -665,10 +666,13 @@ impl OcctKernel {
             .call(&mut self.store, ())?;
 
         Ok(MeshBatch {
-            positions: self.read_f32_slice(pos_ptr as u32, pos_len as u32)?,
-            normals: self.read_f32_slice(norm_ptr as u32, norm_len as u32)?,
-            indices: self.read_u32_slice(idx_ptr as u32, idx_len as u32)?,
-            shape_offsets: self.read_i32_slice(off_ptr as u32, (shape_count * 4) as u32)?,
+            positions: self.read_f32_slice(pos_ptr, checked_signed_len(pos_len)?)?,
+            normals: self.read_f32_slice(norm_ptr, checked_signed_len(norm_len)?)?,
+            indices: self.read_u32_slice(idx_ptr, checked_signed_len(idx_len)?)?,
+            shape_offsets: self.read_i32_slice(
+                off_ptr,
+                checked_wasm_product(checked_signed_len(shape_count)?, 4)?,
+            )?,
         })
     }
 
@@ -680,8 +684,8 @@ impl OcctKernel {
         let grp_len = self.fn_get_edge_groups_len.call(&mut self.store, ())?;
 
         Ok(EdgeData {
-            points: self.read_f32_slice(pts_ptr as u32, pts_len as u32)?,
-            edge_groups: self.read_i32_slice(grp_ptr as u32, grp_len as u32)?,
+            points: self.read_f32_slice(pts_ptr, checked_signed_len(pts_len)?)?,
+            edge_groups: self.read_i32_slice(grp_ptr, checked_signed_len(grp_len)?)?,
         })
     }
 
@@ -706,10 +710,10 @@ impl OcctKernel {
             degree,
             rational,
             periodic,
-            knots: self.read_f64_slice(knots_ptr as u32, knots_len)?,
-            multiplicities: self.read_i32_slice(mult_ptr as u32, mult_len)?,
-            poles: self.read_f64_slice(poles_ptr as u32, poles_len)?,
-            weights: self.read_f64_slice(weights_ptr as u32, weights_len)?,
+            knots: self.read_f64_slice(knots_ptr, knots_len)?,
+            multiplicities: self.read_i32_slice(mult_ptr, mult_len)?,
+            poles: self.read_f64_slice(poles_ptr, poles_len)?,
+            weights: self.read_f64_slice(weights_ptr, weights_len)?,
         })
     }
 
@@ -717,13 +721,13 @@ impl OcctKernel {
     pub(crate) fn read_curve_result(&mut self) -> OcctResult<CurveData> {
         let kind_ptr = self.fn_get_curve_kind.call(&mut self.store, ())?;
         let kind_len = self.fn_get_curve_kind_len.call(&mut self.store, ())?;
-        let kind = String::from_utf8(self.read_bytes(kind_ptr as u32, kind_len)?)
+        let kind = String::from_utf8(self.read_bytes(kind_ptr, kind_len)?)
             .map_err(|e| OcctError::Memory(e.to_string()))?;
         let first = self.fn_get_curve_first.call(&mut self.store, ())?;
         let last = self.fn_get_curve_last.call(&mut self.store, ())?;
         let params_ptr = self.fn_get_curve_params.call(&mut self.store, ())?;
         let params_len = self.fn_get_curve_params_len.call(&mut self.store, ())?;
-        let params = self.read_f64_slice(params_ptr as u32, params_len)?;
+        let params = self.read_f64_slice(params_ptr, params_len)?;
         let has_bspline = self.fn_get_curve_has_bspline.call(&mut self.store, ())? != 0;
         let bspline = if has_bspline {
             Some(self.read_nurbs_result()?)
@@ -741,12 +745,12 @@ impl OcctKernel {
     pub(crate) fn read_surface_result(&mut self) -> OcctResult<SurfaceData> {
         let kind_ptr = self.fn_get_surface_kind.call(&mut self.store, ())?;
         let kind_len = self.fn_get_surface_kind_len.call(&mut self.store, ())?;
-        let kind = String::from_utf8(self.read_bytes(kind_ptr as u32, kind_len)?)
+        let kind = String::from_utf8(self.read_bytes(kind_ptr, kind_len)?)
             .map_err(|e| OcctError::Memory(e.to_string()))?;
         let is_direct = self.fn_get_surface_is_direct.call(&mut self.store, ())? != 0;
         let params_ptr = self.fn_get_surface_params.call(&mut self.store, ())?;
         let params_len = self.fn_get_surface_params_len.call(&mut self.store, ())?;
-        let params = self.read_f64_slice(params_ptr as u32, params_len)?;
+        let params = self.read_f64_slice(params_ptr, params_len)?;
         let has_bspline = self.fn_get_surface_has_bspline.call(&mut self.store, ())? != 0;
         let bspline = if has_bspline {
             Some(self.read_nurbs_surface()?)
@@ -785,12 +789,12 @@ impl OcctKernel {
             nb_poles_v: self.fn_get_surface_nb_poles_v.call(&mut self.store, ())?,
             periodic_u: self.fn_get_surface_periodic_u.call(&mut self.store, ())? != 0,
             periodic_v: self.fn_get_surface_periodic_v.call(&mut self.store, ())? != 0,
-            knots_u: self.read_f64_slice(knots_u_ptr as u32, knots_u_len)?,
-            knots_v: self.read_f64_slice(knots_v_ptr as u32, knots_v_len)?,
-            multiplicities_u: self.read_i32_slice(mults_u_ptr as u32, mults_u_len)?,
-            multiplicities_v: self.read_i32_slice(mults_v_ptr as u32, mults_v_len)?,
-            poles: self.read_f64_slice(poles_ptr as u32, poles_len)?,
-            weights: self.read_f64_slice(weights_ptr as u32, weights_len)?,
+            knots_u: self.read_f64_slice(knots_u_ptr, knots_u_len)?,
+            knots_v: self.read_f64_slice(knots_v_ptr, knots_v_len)?,
+            multiplicities_u: self.read_i32_slice(mults_u_ptr, mults_u_len)?,
+            multiplicities_v: self.read_i32_slice(mults_v_ptr, mults_v_len)?,
+            poles: self.read_f64_slice(poles_ptr, poles_len)?,
+            weights: self.read_f64_slice(weights_ptr, weights_len)?,
         })
     }
 
@@ -824,15 +828,15 @@ impl OcctKernel {
 
         Ok(EvolutionData {
             result_id,
-            modified: self.read_i32_slice(mod_ptr as u32, mod_len)?,
-            generated: self.read_i32_slice(gen_ptr as u32, gen_len)?,
-            deleted: self.read_i32_slice(del_ptr as u32, del_len)?,
-            edge_modified: self.read_i32_slice(edge_mod_ptr as u32, edge_mod_len)?,
-            edge_generated: self.read_i32_slice(edge_gen_ptr as u32, edge_gen_len)?,
-            edge_deleted: self.read_i32_slice(edge_del_ptr as u32, edge_del_len)?,
-            first_shape: self.read_i32_slice(first_ptr as u32, first_len)?,
-            last_shape: self.read_i32_slice(last_ptr as u32, last_len)?,
-            spine_generated: self.read_i32_slice(spine_ptr as u32, spine_len)?,
+            modified: self.read_i32_slice(mod_ptr, mod_len)?,
+            generated: self.read_i32_slice(gen_ptr, gen_len)?,
+            deleted: self.read_i32_slice(del_ptr, del_len)?,
+            edge_modified: self.read_i32_slice(edge_mod_ptr, edge_mod_len)?,
+            edge_generated: self.read_i32_slice(edge_gen_ptr, edge_gen_len)?,
+            edge_deleted: self.read_i32_slice(edge_del_ptr, edge_del_len)?,
+            first_shape: self.read_i32_slice(first_ptr, first_len)?,
+            last_shape: self.read_i32_slice(last_ptr, last_len)?,
+            spine_generated: self.read_i32_slice(spine_ptr, spine_len)?,
         })
     }
 
@@ -855,7 +859,7 @@ impl OcctKernel {
         let label_id = self.fn_get_label_info_label_id.call(&mut self.store, ())?;
         let name_ptr = self.fn_get_label_info_name.call(&mut self.store, ())?;
         let name_len = self.fn_get_label_info_name_len.call(&mut self.store, ())?;
-        let name_bytes = self.read_bytes(name_ptr as u32, name_len)?;
+        let name_bytes = self.read_bytes(name_ptr, name_len)?;
         let name = String::from_utf8(name_bytes).map_err(|e| OcctError::Memory(e.to_string()))?;
 
         Ok(LabelInfo {
@@ -1035,4 +1039,43 @@ fn decode_surface_data(
         _ => SurfaceData::Other { kind, bspline },
     };
     Ok(data)
+}
+
+/// Validate the element count and total byte size before crossing the wasm32 ABI.
+pub(super) fn checked_wasm_len(count: usize, width: u32) -> OcctResult<u32> {
+    let count = u32::try_from(count)
+        .map_err(|_| OcctError::Memory("element count exceeds wasm32".to_owned()))?;
+    checked_wasm_product(count, width)?;
+    Ok(count)
+}
+
+fn checked_wasm_product(count: u32, width: u32) -> OcctResult<u32> {
+    count
+        .checked_mul(width)
+        .ok_or_else(|| OcctError::Memory("buffer size exceeds wasm32".to_owned()))
+}
+
+fn checked_signed_len(count: i32) -> OcctResult<u32> {
+    u32::try_from(count).map_err(|_| OcctError::Memory("negative buffer element count".to_owned()))
+}
+
+#[cfg(test)]
+mod memory_tests {
+    use super::{checked_signed_len, checked_wasm_len, checked_wasm_product};
+    use crate::OcctResult;
+
+    #[test]
+    fn rejects_out_of_range_buffer_counts() -> OcctResult<()> {
+        assert_eq!(checked_wasm_len(0, 8)?, 0);
+        assert_eq!(checked_wasm_len(12, 8)?, 12);
+        assert_eq!(checked_wasm_product(u32::MAX / 8, 8)?, u32::MAX - 7);
+        assert!(checked_wasm_product(u32::MAX / 8 + 1, 8).is_err());
+        assert!(checked_wasm_len((u32::MAX / 8 + 1) as usize, 8).is_err());
+        if let Ok(too_large) = usize::try_from(u64::from(u32::MAX) + 1) {
+            assert!(checked_wasm_len(too_large, 1).is_err());
+        }
+        assert!(checked_signed_len(-1).is_err());
+        assert_eq!(checked_signed_len(i32::MAX)?, i32::MAX.cast_unsigned());
+        Ok(())
+    }
 }
