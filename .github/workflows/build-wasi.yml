@@ -42,16 +42,30 @@ jobs:
     name: WASI build + stale-check
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/andymai/occt-wasm-builder:latest
+      image: ghcr.io/andymai/occt-wasm-builder@sha256:8fd87a3e12ef671b9196d5891b2dfcccd416ed36f55b6f2130ee74edcd2fc89a
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: recursive
+          persist-credentials: false
 
       - name: Link pre-built OCCT libs from builder image
         run: |
-          cp -r /workspace/occt/build occt/build
-          cp -r /workspace/3rdparty 3rdparty
+          set -euo pipefail
+          test "$(git rev-parse HEAD:occt)" = c7f60ffe85f28c67358d1771454044f0521f2fdd
+          rmdir occt
+          ln -s /workspace/occt occt
+          test -d occt/build/include/opencascade
+          ln -s /workspace/3rdparty 3rdparty
+          rustup toolchain install 1.95 --profile minimal --component rustfmt
+
+      - name: Setup mandatory sccache
+        uses: codeandsolder/ci-workflows/.github/actions/setup-sccache@5c304b590a43f6c162dc2541f2a7859e39a60391 # main
+        with:
+          rust-toolchain: "1.95"
+          cache-scope: occt-wasm-truck-wasi
 
       - name: Snapshot committed crate WASM
         # Snapshot before the build overwrites the file. cmp works without
@@ -59,7 +73,11 @@ jobs:
         run: cp crate/src/occt-wasm.wasm.br /tmp/committed.wasm.br
 
       - name: Build WASI WASM + brotli install
-        run: cargo xtask build-wasi --release
+        run: |
+          cargo xtask codegen
+          cargo fmt --all
+          git diff --exit-code -- facade/generated/ crate/src/kernel_generated.rs
+          cargo xtask build-wasi --release
 
       - name: Stale-check vs. committed crate WASM
         id: stale
@@ -82,6 +100,13 @@ jobs:
           path: crate/src/occt-wasm.wasm.br
           retention-days: 14
 
+      - name: Test rebuilt kernel
+        run: cargo test --locked --release -p occt-wasm --test validation_bindings
+
       - name: Fail when stale
         if: steps.stale.outputs.stale == 'true'
         run: exit 1
+
+      - name: Finalize mandatory sccache
+        if: always()
+        uses: codeandsolder/ci-workflows/.github/actions/finalize-sccache@5c304b590a43f6c162dc2541f2a7859e39a60391 # main
