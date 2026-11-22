@@ -45,10 +45,10 @@ pub enum OcctError {
     #[error("{operation}; guest cleanup failed: {cleanup}")]
     Cleanup {
         /// Original operation or marshalling error.
-        operation: Box<OcctError>,
+        operation: Box<Self>,
         /// Error that invalidated the kernel during cleanup.
         #[source]
-        cleanup: Box<OcctError>,
+        cleanup: Box<Self>,
     },
 
     /// A memory access or data conversion error.
