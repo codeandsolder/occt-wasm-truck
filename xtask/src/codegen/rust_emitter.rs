@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 use super::emitter::group_by_category;
-use super::types::{FacadeParam, MethodSpec, ReturnType};
+use super::types::{FacadeParam, MethodSpec, ReturnType, WasmReturn};
 use super::wasi_emitter::camel_to_snake;
 
 /// Rust API representation of a facade parameter.
@@ -266,34 +266,10 @@ fn wasm_typed_func_type(spec: &MethodSpec) -> String {
         })
         .collect();
 
-    // All non-scalar returns cross the WASM boundary as an `i32` status/length;
-    // the match is exhaustive so a new `ReturnType` is a compile error.
-    let ret_type = match spec.return_type {
-        ReturnType::ShapeId | ReturnType::DocId | ReturnType::Uint32 => "u32",
-        ReturnType::Double => "f64",
-        ReturnType::Bool
-        | ReturnType::Void
-        | ReturnType::Int
-        | ReturnType::String
-        | ReturnType::Bytes
-        | ReturnType::VectorUint32
-        | ReturnType::StepImport
-        | ReturnType::StepEntityImport
-        | ReturnType::BRepProperties
-        | ReturnType::AdaptiveVolume
-        | ReturnType::VectorShapeIds
-        | ReturnType::VectorDouble
-        | ReturnType::VectorInt
-        | ReturnType::BBoxData
-        | ReturnType::NurbsCurveData
-        | ReturnType::CurveData
-        | ReturnType::SurfaceData
-        | ReturnType::EvolutionData
-        | ReturnType::MeshData
-        | ReturnType::MeshBatchData
-        | ReturnType::EdgeData
-        | ReturnType::ProjectionData
-        | ReturnType::XCAFLabelInfo => "i32",
+    let ret_type = match spec.return_type.wasm_return() {
+        WasmReturn::U32 => "u32",
+        WasmReturn::F64 => "f64",
+        WasmReturn::I32 => "i32",
     };
 
     if param_count == 0 {
