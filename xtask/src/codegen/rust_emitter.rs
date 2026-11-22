@@ -72,45 +72,31 @@ const fn rust_return_type(rt: ReturnType) -> &'static str {
     }
 }
 
-/// Collect the names of heap-allocated parameters (those that need `write_bytes`).
-fn heap_param_names(params: &[FacadeParam]) -> Vec<String> {
-    params
-        .iter()
-        .filter_map(|p| match p {
-            FacadeParam::String(name)
-            | FacadeParam::Bytes(name)
-            | FacadeParam::VectorShapeIds(name)
-            | FacadeParam::VectorDouble(name)
-            | FacadeParam::VectorInt(name) => Some(rust_param_name(name)),
-            _ => None,
-        })
-        .collect()
+/// Number of bytes per element for a marshalled parameter.
+const fn heap_element_width(param: &FacadeParam) -> Option<u32> {
+    match param {
+        FacadeParam::String(_) | FacadeParam::Bytes(_) => Some(1),
+        FacadeParam::VectorShapeIds(_) | FacadeParam::VectorInt(_) => Some(4),
+        FacadeParam::VectorDouble(_) => Some(8),
+        _ => None,
+    }
 }
 
-/// Generate the WASM call arguments for a method.
-///
-/// This generates the code to prepare and pass arguments to the WASM function.
-/// When a method has multiple heap-allocated params, each allocation is guarded:
-/// if a later `write_bytes` fails, previously allocated buffers are freed before
-/// propagating the error.
-fn emit_wasm_call_setup(buf: &mut String, params: &[FacadeParam]) {
-    // Validate all lengths before allocating anything in guest memory.
+/// Validate each heap argument before any allocation occurs.
+fn emit_wasm_call_preflight(buf: &mut String, params: &[FacadeParam]) {
     for param in params {
-        let width = match param {
-            FacadeParam::String(_) | FacadeParam::Bytes(_) => 1,
-            FacadeParam::VectorShapeIds(_) | FacadeParam::VectorInt(_) => 4,
-            FacadeParam::VectorDouble(_) => 8,
-            _ => continue,
-        };
-        let rname = rust_param_name(param.name());
-        let _ = writeln!(
-            buf,
-            "        let {rname}_len = checked_wasm_len({rname}.len(), {width})?;"
-        );
+        if let Some(width) = heap_element_width(param) {
+            let rname = rust_param_name(param.name());
+            let _ = writeln!(
+                buf,
+                "        let {rname}_len = checked_wasm_len({rname}.len(), {width})?;"
+            );
+        }
     }
+}
 
-    // Track allocations so a failed later write can release earlier buffers.
-    let mut allocated_so_far = Vec::new();
+/// Emit guest allocations inside a scope which frees them on ordinary errors.
+fn emit_wasm_call_allocations(buf: &mut String, params: &[FacadeParam]) {
     for param in params {
         let rname = rust_param_name(param.name());
         let data_expr = match param {
@@ -126,43 +112,17 @@ fn emit_wasm_call_setup(buf: &mut String, params: &[FacadeParam]) {
                 };
                 let _ = writeln!(
                     buf,
-                    "        let {rname}_bytes: Vec<u8> = {rname}.iter().flat_map(|v| {value}.to_le_bytes()).collect();"
+                    "            let {rname}_bytes: Vec<u8> = {rname}.iter().flat_map(|v| {value}.to_le_bytes()).collect();"
                 );
                 format!("&{rname}_bytes")
             }
             _ => continue,
         };
-        if allocated_so_far.is_empty() {
-            let _ = writeln!(
-                buf,
-                "        let {rname}_ptr = self.write_bytes({data_expr})?;"
-            );
-        } else {
-            emit_guarded_write_bytes(buf, &rname, &data_expr, &allocated_so_far);
-        }
-        allocated_so_far.push(rname);
+        let _ = writeln!(
+            buf,
+            "            let {rname}_ptr = buffers.write(kernel, {data_expr})?;"
+        );
     }
-}
-
-/// Emit a `write_bytes` call that cleans up previously allocated buffers on error.
-fn emit_guarded_write_bytes(
-    buf: &mut String,
-    rname: &str,
-    data_expr: &str,
-    prior_allocs: &[String],
-) {
-    let _ = writeln!(
-        buf,
-        "        let {rname}_ptr = match self.write_bytes({data_expr}) {{"
-    );
-    let _ = writeln!(buf, "            Ok(ptr) => ptr,");
-    let _ = writeln!(buf, "            Err(e) => {{");
-    for prior in prior_allocs {
-        let _ = writeln!(buf, "                let _ = self.free_bytes({prior}_ptr);");
-    }
-    let _ = writeln!(buf, "                return Err(e);");
-    let _ = writeln!(buf, "            }}");
-    let _ = writeln!(buf, "        }};");
 }
 
 /// Generate the WASM call expression arguments.
@@ -191,23 +151,6 @@ fn emit_wasm_call_args(params: &[FacadeParam]) -> String {
         })
         .collect();
     args.join(", ")
-}
-
-/// Generate the cleanup code for allocated memory.
-fn emit_wasm_call_cleanup(buf: &mut String, params: &[FacadeParam]) {
-    for param in params {
-        match param {
-            FacadeParam::String(name)
-            | FacadeParam::Bytes(name)
-            | FacadeParam::VectorShapeIds(name)
-            | FacadeParam::VectorDouble(name)
-            | FacadeParam::VectorInt(name) => {
-                let rname = rust_param_name(name);
-                let _ = writeln!(buf, "        self.free_bytes({rname}_ptr)?;");
-            }
-            _ => {}
-        }
-    }
 }
 
 /// Count the number of WASM-level parameters (strings/vectors expand to 2).
@@ -280,8 +223,42 @@ fn wasm_typed_func_type(spec: &MethodSpec) -> String {
     }
 }
 
+/// How the C ABI signals errors for the result category.
+enum ResultCheck {
+    Flag,
+    Handle,
+    Status,
+}
+
+/// Describe the binding name, error check and successful return expression.
+const fn result_binding(rt: ReturnType) -> (&'static str, ResultCheck, &'static str) {
+    use ResultCheck::{Flag, Handle, Status};
+    match rt {
+        ReturnType::ShapeId => ("result", Handle, "Ok(ShapeHandle(result))"),
+        ReturnType::DocId => ("result", Flag, "Ok(DocumentHandle(result))"),
+        ReturnType::Uint32 | ReturnType::Double | ReturnType::Int => ("result", Flag, "Ok(result)"),
+        ReturnType::Bool => ("result", Status, "Ok(result != 0)"),
+        ReturnType::Void => ("result", Status, "Ok(())"),
+        ReturnType::String => ("len", Status, "self.read_string_result()"),
+        ReturnType::Bytes => ("len", Status, "self.read_bytes_result()"),
+        ReturnType::VectorUint32 => ("len", Status, "self.read_vec_u32_result()"),
+        ReturnType::VectorShapeIds => ("len", Status, "self.read_vec_shape_result()"),
+        ReturnType::VectorDouble => ("len", Status, "self.read_vec_f64_result()"),
+        ReturnType::VectorInt => ("len", Status, "self.read_vec_i32_result()"),
+        ReturnType::BBoxData => ("status", Status, "self.read_bbox_result()"),
+        ReturnType::MeshData => ("status", Status, "self.read_mesh_result()"),
+        ReturnType::MeshBatchData => ("status", Status, "self.read_mesh_batch_result()"),
+        ReturnType::EdgeData => ("status", Status, "self.read_edge_result()"),
+        ReturnType::NurbsCurveData => ("status", Status, "self.read_nurbs_result()"),
+        ReturnType::CurveData => ("status", Status, "self.read_curve_result()"),
+        ReturnType::SurfaceData => ("status", Status, "self.read_surface_result()"),
+        ReturnType::EvolutionData => ("status", Status, "self.read_evolution_result()"),
+        ReturnType::ProjectionData => ("status", Status, "self.read_projection_result()"),
+        ReturnType::XCAFLabelInfo => ("status", Status, "self.read_label_info_result()"),
+    }
+}
+
 /// Emit a single method implementation.
-#[allow(clippy::too_many_lines)]
 fn emit_rust_method(buf: &mut String, spec: &MethodSpec) {
     let snake_name = camel_to_snake(spec.name);
     let rust_ret = rust_return_type(spec.return_type);
@@ -298,23 +275,19 @@ fn emit_rust_method(buf: &mut String, spec: &MethodSpec) {
         "    /// Call the `{}` OCCT facade operation.",
         spec.name
     );
-    let _ = writeln!(buf, "    ///");
-    let _ = writeln!(buf, "    /// # Errors");
-    let _ = writeln!(
-        buf,
-        "    /// Returns an error if the WASM call traps, the operation fails,"
-    );
-    let _ = writeln!(
-        buf,
-        "    /// or marshalling its arguments or results fails."
+    buf.push_str(
+        r"    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
+",
     );
     let _ = writeln!(
         buf,
         "    pub fn {snake_name}({params_str}) -> {rust_ret} {{"
     );
 
-    // Setup: write complex params to WASM memory
-    emit_wasm_call_setup(buf, spec.params);
+    emit_wasm_call_preflight(buf, spec.params);
 
     // Build the call arguments
     let call_args = emit_wasm_call_args(spec.params);
@@ -327,200 +300,47 @@ fn emit_rust_method(buf: &mut String, spec: &MethodSpec) {
     };
 
     let fn_field = format!("generated.fn_{snake_name}");
-    let has_heap_params = !heap_param_names(spec.params).is_empty();
+    let heap_count = spec
+        .params
+        .iter()
+        .filter(|param| heap_element_width(param).is_some())
+        .count();
 
-    // For methods with heap-allocated params, capture the call result without `?`
-    // so we can always run cleanup before propagating errors.
-    let call_suffix = if has_heap_params { "" } else { "?" };
-
-    // Emit the call + error-check + reader shared by every struct-returning
-    // method. Each struct variant passes its own reader expression, which keeps
-    // the outer match exhaustive (no wildcard, no `unreachable!`).
-    let emit_struct_result = |buf: &mut String, reader: &str| {
+    let (name, check, expression) = result_binding(spec.return_type);
+    if heap_count == 0 {
         let _ = writeln!(
             buf,
-            "        let status = self.{fn_field}.call(&mut self.store, {call_tuple}){call_suffix};"
+            "        let {name} = self.{fn_field}.call(&mut self.store, {call_tuple})?;"
         );
-        if has_heap_params {
-            emit_wasm_call_cleanup(buf, spec.params);
-            let _ = writeln!(buf, "        let status = status?;");
-        }
-        let _ = writeln!(buf, "        if status < 0 {{");
+    } else {
+        let _ = writeln!(
+            buf,
+            "        let {name} = self.with_guest_buffers::<{heap_count}, _>(|kernel, buffers| {{"
+        );
+        emit_wasm_call_allocations(buf, spec.params);
+        let _ = writeln!(
+            buf,
+            "            Ok(kernel.{fn_field}.call(&mut kernel.store, {call_tuple})?)"
+        );
+        let _ = writeln!(buf, "        }})?;");
+    }
+
+    if matches!(check, ResultCheck::Flag | ResultCheck::Handle) {
+        let _ = writeln!(buf, "        self.check_error(\"{snake_name}\")?;");
+    }
+    if let Some(condition) = match check {
+        ResultCheck::Flag => None,
+        ResultCheck::Handle => Some(format!("{name} == 0")),
+        ResultCheck::Status => Some(format!("{name} < 0")),
+    } {
+        let _ = writeln!(buf, "        if {condition} {{");
         let _ = writeln!(
             buf,
             "            return Err(self.read_last_error(\"{snake_name}\"));"
         );
         let _ = writeln!(buf, "        }}");
-        let _ = writeln!(buf, "        {reader}");
-    };
-
-    // Call + result handling based on return type
-    match spec.return_type {
-        ReturnType::ShapeId => {
-            let _ = writeln!(
-                buf,
-                "        let result = self.{fn_field}.call(&mut self.store, {call_tuple}){call_suffix};"
-            );
-            if has_heap_params {
-                emit_wasm_call_cleanup(buf, spec.params);
-                let _ = writeln!(buf, "        let result = result?;");
-            }
-            let _ = writeln!(buf, "        self.check_error(\"{snake_name}\")?;");
-            let _ = writeln!(buf, "        if result == 0 {{");
-            let _ = writeln!(
-                buf,
-                "            return Err(self.read_last_error(\"{snake_name}\"));"
-            );
-            let _ = writeln!(buf, "        }}");
-            let _ = writeln!(buf, "        Ok(ShapeHandle(result))");
-        }
-        ReturnType::DocId => {
-            let _ = writeln!(
-                buf,
-                "        let result = self.{fn_field}.call(&mut self.store, {call_tuple}){call_suffix};"
-            );
-            if has_heap_params {
-                emit_wasm_call_cleanup(buf, spec.params);
-                let _ = writeln!(buf, "        let result = result?;");
-            }
-            let _ = writeln!(buf, "        self.check_error(\"{snake_name}\")?;");
-            let _ = writeln!(buf, "        Ok(DocumentHandle(result))");
-        }
-        ReturnType::Uint32 | ReturnType::Double | ReturnType::Int => {
-            let _ = writeln!(
-                buf,
-                "        let result = self.{fn_field}.call(&mut self.store, {call_tuple}){call_suffix};"
-            );
-            if has_heap_params {
-                emit_wasm_call_cleanup(buf, spec.params);
-                let _ = writeln!(buf, "        let result = result?;");
-            }
-            let _ = writeln!(buf, "        self.check_error(\"{snake_name}\")?;");
-            let _ = writeln!(buf, "        Ok(result)");
-        }
-        ReturnType::Bool => {
-            let _ = writeln!(
-                buf,
-                "        let result = self.{fn_field}.call(&mut self.store, {call_tuple}){call_suffix};"
-            );
-            if has_heap_params {
-                emit_wasm_call_cleanup(buf, spec.params);
-                let _ = writeln!(buf, "        let result = result?;");
-            }
-            let _ = writeln!(buf, "        if result < 0 {{");
-            let _ = writeln!(
-                buf,
-                "            return Err(self.read_last_error(\"{snake_name}\"));"
-            );
-            let _ = writeln!(buf, "        }}");
-            let _ = writeln!(buf, "        Ok(result != 0)");
-        }
-        ReturnType::Void => {
-            let _ = writeln!(
-                buf,
-                "        let result = self.{fn_field}.call(&mut self.store, {call_tuple}){call_suffix};"
-            );
-            if has_heap_params {
-                emit_wasm_call_cleanup(buf, spec.params);
-                let _ = writeln!(buf, "        let result = result?;");
-            }
-            let _ = writeln!(buf, "        if result < 0 {{");
-            let _ = writeln!(
-                buf,
-                "            return Err(self.read_last_error(\"{snake_name}\"));"
-            );
-            let _ = writeln!(buf, "        }}");
-            let _ = writeln!(buf, "        Ok(())");
-        }
-        ReturnType::String | ReturnType::Bytes => {
-            let _ = writeln!(
-                buf,
-                "        let len = self.{fn_field}.call(&mut self.store, {call_tuple}){call_suffix};"
-            );
-            if has_heap_params {
-                emit_wasm_call_cleanup(buf, spec.params);
-                let _ = writeln!(buf, "        let len = len?;");
-            }
-            let _ = writeln!(buf, "        if len < 0 {{");
-            let _ = writeln!(
-                buf,
-                "            return Err(self.read_last_error(\"{snake_name}\"));"
-            );
-            let _ = writeln!(buf, "        }}");
-            let reader = if spec.return_type == ReturnType::Bytes {
-                "read_bytes_result"
-            } else {
-                "read_string_result"
-            };
-            let _ = writeln!(buf, "        self.{reader}()");
-        }
-        ReturnType::VectorUint32 | ReturnType::VectorShapeIds => {
-            let _ = writeln!(
-                buf,
-                "        let len = self.{fn_field}.call(&mut self.store, {call_tuple}){call_suffix};"
-            );
-            if has_heap_params {
-                emit_wasm_call_cleanup(buf, spec.params);
-                let _ = writeln!(buf, "        let len = len?;");
-            }
-            let _ = writeln!(buf, "        if len < 0 {{");
-            let _ = writeln!(
-                buf,
-                "            return Err(self.read_last_error(\"{snake_name}\"));"
-            );
-            let _ = writeln!(buf, "        }}");
-            let reader = if spec.return_type == ReturnType::VectorShapeIds {
-                "read_vec_shape_result"
-            } else {
-                "read_vec_u32_result"
-            };
-            let _ = writeln!(buf, "        self.{reader}()");
-        }
-        ReturnType::VectorDouble => {
-            let _ = writeln!(
-                buf,
-                "        let len = self.{fn_field}.call(&mut self.store, {call_tuple}){call_suffix};"
-            );
-            if has_heap_params {
-                emit_wasm_call_cleanup(buf, spec.params);
-                let _ = writeln!(buf, "        let len = len?;");
-            }
-            let _ = writeln!(buf, "        if len < 0 {{");
-            let _ = writeln!(
-                buf,
-                "            return Err(self.read_last_error(\"{snake_name}\"));"
-            );
-            let _ = writeln!(buf, "        }}");
-            let _ = writeln!(buf, "        self.read_vec_f64_result()");
-        }
-        ReturnType::VectorInt => {
-            let _ = writeln!(
-                buf,
-                "        let len = self.{fn_field}.call(&mut self.store, {call_tuple}){call_suffix};"
-            );
-            if has_heap_params {
-                emit_wasm_call_cleanup(buf, spec.params);
-                let _ = writeln!(buf, "        let len = len?;");
-            }
-            let _ = writeln!(buf, "        if len < 0 {{");
-            let _ = writeln!(
-                buf,
-                "            return Err(self.read_last_error(\"{snake_name}\"));"
-            );
-            let _ = writeln!(buf, "        }}");
-            let _ = writeln!(buf, "        self.read_vec_i32_result()");
-        }
-        ReturnType::BBoxData => emit_struct_result(buf, "self.read_bbox_result()"),
-        ReturnType::MeshData => emit_struct_result(buf, "self.read_mesh_result()"),
-        ReturnType::MeshBatchData => emit_struct_result(buf, "self.read_mesh_batch_result()"),
-        ReturnType::EdgeData => emit_struct_result(buf, "self.read_edge_result()"),
-        ReturnType::NurbsCurveData => emit_struct_result(buf, "self.read_nurbs_result()"),
-        ReturnType::CurveData => emit_struct_result(buf, "self.read_curve_result()"),
-        ReturnType::SurfaceData => emit_struct_result(buf, "self.read_surface_result()"),
-        ReturnType::EvolutionData => emit_struct_result(buf, "self.read_evolution_result()"),
-        ReturnType::ProjectionData => emit_struct_result(buf, "self.read_projection_result()"),
-        ReturnType::XCAFLabelInfo => emit_struct_result(buf, "self.read_label_info_result()"),
     }
+    let _ = writeln!(buf, "        {expression}");
 
     let _ = writeln!(buf, "    }}");
 }
@@ -557,78 +377,71 @@ fn emit_func_lookups(buf: &mut String, methods: &[&MethodSpec]) {
 /// 1. The function fields for the `OcctKernel` struct
 /// 2. The `impl OcctKernel` block with all method wrappers
 /// 3. The function lookup initialization code
-#[allow(clippy::too_many_lines)]
 pub fn emit_rust_host(methods: &[&MethodSpec]) -> String {
     let mut buf = String::with_capacity(32768);
 
-    let _ = writeln!(
-        buf,
-        "// AUTO-GENERATED by cargo xtask codegen -- DO NOT EDIT"
+    buf.push_str(
+        r"// AUTO-GENERATED by cargo xtask codegen -- DO NOT EDIT
+// Rust host API for occt-wasm WASI module via wasmtime
+
+use wasmtime::TypedFunc;
+
+use crate::error::OcctResult;
+use crate::kernel::checked_wasm_len;
+use crate::types::{
+    BoundingBox, CurveData, EdgeData, EvolutionData, LabelInfo, Mesh, MeshBatch,
+    DocumentHandle, NurbsCurveData, ProjectionData, ShapeHandle, SurfaceData,
+};
+
+",
     );
-    let _ = writeln!(
-        buf,
-        "// Rust host API for occt-wasm WASI module via wasmtime"
-    );
-    let _ = writeln!(buf);
-    let _ = writeln!(buf, "use wasmtime::TypedFunc;");
-    let _ = writeln!(buf);
-    let _ = writeln!(buf, "use crate::error::OcctResult;");
-    let _ = writeln!(buf, "use crate::kernel::checked_wasm_len;");
-    let _ = writeln!(buf, "use crate::types::{{");
-    let _ = writeln!(
-        buf,
-        "    BoundingBox, CurveData, EdgeData, EvolutionData, LabelInfo, Mesh, MeshBatch,"
-    );
-    let _ = writeln!(
-        buf,
-        "    DocumentHandle, NurbsCurveData, ProjectionData, ShapeHandle, SurfaceData,"
-    );
-    let _ = writeln!(buf, "}};");
-    let _ = writeln!(buf);
 
     // Struct fields section (to be included in the kernel struct)
-    let _ = writeln!(buf, "/// Cached WASM function handles for kernel methods.");
-    let _ = writeln!(buf, "///");
-    let _ = writeln!(
-        buf,
-        "/// Include this in the `OcctKernel` struct definition:"
+    buf.push_str(
+        r"/// Cached WASM function handles for kernel methods.
+///
+/// Include this in the `OcctKernel` struct definition:
+/// ```ignore
+/// pub struct OcctKernel {
+///     // ... core fields ...
+///     #[doc(hidden)]
+///     generated: GeneratedFuncs,
+/// }
+/// ```
+#[allow(clippy::type_complexity, clippy::redundant_pub_crate, clippy::struct_field_names)]
+pub(crate) struct GeneratedFuncs {
+",
     );
-    let _ = writeln!(buf, "/// ```ignore");
-    let _ = writeln!(buf, "/// pub struct OcctKernel {{");
-    let _ = writeln!(buf, "///     // ... core fields ...");
-    let _ = writeln!(buf, "///     #[doc(hidden)]");
-    let _ = writeln!(buf, "///     generated: GeneratedFuncs,");
-    let _ = writeln!(buf, "/// }}");
-    let _ = writeln!(buf, "/// ```");
-    let _ = writeln!(
-        buf,
-        "#[allow(clippy::type_complexity, clippy::redundant_pub_crate, clippy::struct_field_names)]"
-    );
-    let _ = writeln!(buf, "pub(crate) struct GeneratedFuncs {{");
     emit_func_fields(&mut buf, methods);
     let _ = writeln!(buf, "}}");
     let _ = writeln!(buf);
 
     // Init function to resolve all typed funcs
-    let _ = writeln!(buf, "impl GeneratedFuncs {{");
-    let _ = writeln!(buf, "    #[allow(clippy::too_many_lines)]");
-    let _ = writeln!(buf, "    pub(crate) fn resolve<T: 'static>(");
-    let _ = writeln!(buf, "        instance: &wasmtime::Instance,");
-    let _ = writeln!(buf, "        store: &mut wasmtime::Store<T>,");
-    let _ = writeln!(buf, "    ) -> OcctResult<Self> {{");
-    let _ = writeln!(buf, "        Ok(Self {{");
+    buf.push_str(
+        r"impl GeneratedFuncs {
+    #[allow(clippy::too_many_lines)]
+    pub(crate) fn resolve<T: 'static>(
+        instance: &wasmtime::Instance,
+        store: &mut wasmtime::Store<T>,
+    ) -> OcctResult<Self> {
+        Ok(Self {
+",
+    );
     emit_func_lookups(&mut buf, methods);
-    let _ = writeln!(buf, "        }})");
-    let _ = writeln!(buf, "    }}");
-    let _ = writeln!(buf, "}}");
-    let _ = writeln!(buf);
+    buf.push_str(
+        r"        })
+    }
+}
+
+",
+    );
 
     // Method implementations
-    let _ = writeln!(buf, "/// Generated kernel methods.");
-    let _ = writeln!(buf, "///");
-    let _ = writeln!(
-        buf,
-        "/// All facade methods wrapped as safe Rust functions."
+    buf.push_str(
+        r"/// Generated kernel methods.
+///
+/// All facade methods wrapped as safe Rust functions.
+",
     );
     // Each vector parameter adds a fixed block of marshalling, so a method with
     // several of them outgrows the line limit without being complex.
@@ -772,8 +585,8 @@ mod tests {
         };
         let output = emit_rust_host(&[&IMPORT]);
         assert!(output.contains("data: &str"));
-        assert!(output.contains("self.write_bytes(data.as_bytes())"));
-        assert!(output.contains("self.free_bytes(data_ptr)"));
+        assert!(output.contains("buffers.write(kernel, data.as_bytes())"));
+        assert!(output.contains("self.with_guest_buffers::<1, _>"));
     }
 
     static EXPORT_BYTES: MethodSpec = MethodSpec {
@@ -807,26 +620,25 @@ mod tests {
     fn bytes_param_writes_slice_directly() {
         let output = emit_rust_host(&[&IMPORT_BYTES]);
         assert!(output.contains("data: &[u8]"));
-        assert!(output.contains("self.write_bytes(data)?"));
+        assert!(output.contains("buffers.write(kernel, data)?"));
         assert!(output.contains("checked_wasm_len(data.len(), 1)?"));
         assert!(!output.contains("data.len() as u32"));
         assert!(!output.contains("data_ptr as i32"));
-        assert!(output.contains("self.free_bytes(data_ptr)"));
+        assert!(output.contains("self.with_guest_buffers::<1, _>"));
         assert!(output.contains("fn_import_stl_binary: TypedFunc<(u32, u32), u32>"));
     }
 
     #[test]
     fn all_heap_lengths_are_checked_before_any_allocation() {
         let mut output = String::new();
-        emit_wasm_call_setup(
-            &mut output,
-            &[
-                FacadeParam::VectorShapeIds("shapes"),
-                FacadeParam::VectorDouble("values"),
-                FacadeParam::VectorInt("indices"),
-                FacadeParam::String("name"),
-            ],
-        );
+        let params = &[
+            FacadeParam::VectorShapeIds("shapes"),
+            FacadeParam::VectorDouble("values"),
+            FacadeParam::VectorInt("indices"),
+            FacadeParam::String("name"),
+        ];
+        emit_wasm_call_preflight(&mut output, params);
+        emit_wasm_call_allocations(&mut output, params);
         let preflight = concat!(
             "        let shapes_len = checked_wasm_len(shapes.len(), 4)?;\n",
             "        let values_len = checked_wasm_len(values.len(), 8)?;\n",
@@ -834,9 +646,9 @@ mod tests {
             "        let name_len = checked_wasm_len(name.len(), 1)?;\n",
         );
         assert!(output.starts_with(preflight));
-        assert!(output.contains("self.free_bytes(shapes_ptr)"));
-        assert!(output.contains("self.free_bytes(values_ptr)"));
-        assert!(output.contains("self.free_bytes(indices_ptr)"));
+        assert!(output.contains("buffers.write(kernel, &shapes_bytes)?"));
+        assert!(output.contains("buffers.write(kernel, &values_bytes)?"));
+        assert!(output.contains("buffers.write(kernel, &indices_bytes)?"));
     }
 
     #[test]

@@ -973,14 +973,15 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn fuse_all(&mut self, shape_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
         let shape_ids_len = checked_wasm_len(shape_ids.len(), 4)?;
-        let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let shape_ids_ptr = self.write_bytes(&shape_ids_bytes)?;
-        let result = self
-            .generated
-            .fn_fuse_all
-            .call(&mut self.store, (shape_ids_ptr, shape_ids_len));
-        self.free_bytes(shape_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let shape_ids_bytes: Vec<u8> =
+                shape_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let shape_ids_ptr = buffers.write(kernel, &shape_ids_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_fuse_all
+                .call(&mut kernel.store, (shape_ids_ptr, shape_ids_len))?)
+        })?;
         self.check_error("fuse_all")?;
         if result == 0 {
             return Err(self.read_last_error("fuse_all"));
@@ -995,14 +996,15 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn intersection_cells(&mut self, shape_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
         let shape_ids_len = checked_wasm_len(shape_ids.len(), 4)?;
-        let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let shape_ids_ptr = self.write_bytes(&shape_ids_bytes)?;
-        let result = self
-            .generated
-            .fn_intersection_cells
-            .call(&mut self.store, (shape_ids_ptr, shape_ids_len));
-        self.free_bytes(shape_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let shape_ids_bytes: Vec<u8> =
+                shape_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let shape_ids_ptr = buffers.write(kernel, &shape_ids_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_intersection_cells
+                .call(&mut kernel.store, (shape_ids_ptr, shape_ids_len))?)
+        })?;
         self.check_error("intersection_cells")?;
         if result == 0 {
             return Err(self.read_last_error("intersection_cells"));
@@ -1021,14 +1023,14 @@ impl crate::kernel::OcctKernel {
         tool_ids: &[ShapeHandle],
     ) -> OcctResult<ShapeHandle> {
         let tool_ids_len = checked_wasm_len(tool_ids.len(), 4)?;
-        let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let tool_ids_ptr = self.write_bytes(&tool_ids_bytes)?;
-        let result = self
-            .generated
-            .fn_cut_all
-            .call(&mut self.store, (shape_id.0, tool_ids_ptr, tool_ids_len));
-        self.free_bytes(tool_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let tool_ids_ptr = buffers.write(kernel, &tool_ids_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_cut_all
+                .call(&mut kernel.store, (shape_id.0, tool_ids_ptr, tool_ids_len))?)
+        })?;
         self.check_error("cut_all")?;
         if result == 0 {
             return Err(self.read_last_error("cut_all"));
@@ -1055,48 +1057,33 @@ impl crate::kernel::OcctKernel {
         let arg_ids_len = checked_wasm_len(arg_ids.len(), 4)?;
         let tool_ids_len = checked_wasm_len(tool_ids.len(), 4)?;
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let arg_ids_bytes: Vec<u8> = arg_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let arg_ids_ptr = self.write_bytes(&arg_ids_bytes)?;
-        let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let tool_ids_ptr = match self.write_bytes(&tool_ids_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(arg_ids_ptr);
-                return Err(e);
-            }
-        };
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = match self.write_bytes(&input_face_hashes_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(arg_ids_ptr);
-                let _ = self.free_bytes(tool_ids_ptr);
-                return Err(e);
-            }
-        };
-        let status = self.generated.fn_boolean_op.call(
-            &mut self.store,
-            (
-                op_code,
-                arg_ids_ptr,
-                arg_ids_len,
-                tool_ids_ptr,
-                tool_ids_len,
-                glue,
-                fuzzy_value,
-                simplify_angular_tolerance,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(arg_ids_ptr)?;
-        self.free_bytes(tool_ids_ptr)?;
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<3, _>(|kernel, buffers| {
+            let arg_ids_bytes: Vec<u8> = arg_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let arg_ids_ptr = buffers.write(kernel, &arg_ids_bytes)?;
+            let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let tool_ids_ptr = buffers.write(kernel, &tool_ids_bytes)?;
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_boolean_op.call(
+                &mut kernel.store,
+                (
+                    op_code,
+                    arg_ids_ptr,
+                    arg_ids_len,
+                    tool_ids_ptr,
+                    tool_ids_len,
+                    glue,
+                    fuzzy_value,
+                    simplify_angular_tolerance,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("boolean_op"));
         }
@@ -1116,29 +1103,22 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<ShapeHandle> {
         let op_codes_len = checked_wasm_len(op_codes.len(), 4)?;
         let tool_ids_len = checked_wasm_len(tool_ids.len(), 4)?;
-        let op_codes_bytes: Vec<u8> = op_codes.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let op_codes_ptr = self.write_bytes(&op_codes_bytes)?;
-        let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let tool_ids_ptr = match self.write_bytes(&tool_ids_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(op_codes_ptr);
-                return Err(e);
-            }
-        };
-        let result = self.generated.fn_boolean_pipeline.call(
-            &mut self.store,
-            (
-                base_id.0,
-                op_codes_ptr,
-                op_codes_len,
-                tool_ids_ptr,
-                tool_ids_len,
-            ),
-        );
-        self.free_bytes(op_codes_ptr)?;
-        self.free_bytes(tool_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let op_codes_bytes: Vec<u8> = op_codes.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let op_codes_ptr = buffers.write(kernel, &op_codes_bytes)?;
+            let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let tool_ids_ptr = buffers.write(kernel, &tool_ids_bytes)?;
+            Ok(kernel.generated.fn_boolean_pipeline.call(
+                &mut kernel.store,
+                (
+                    base_id.0,
+                    op_codes_ptr,
+                    op_codes_len,
+                    tool_ids_ptr,
+                    tool_ids_len,
+                ),
+            )?)
+        })?;
         self.check_error("boolean_pipeline")?;
         if result == 0 {
             return Err(self.read_last_error("boolean_pipeline"));
@@ -1157,14 +1137,14 @@ impl crate::kernel::OcctKernel {
         tool_ids: &[ShapeHandle],
     ) -> OcctResult<ShapeHandle> {
         let tool_ids_len = checked_wasm_len(tool_ids.len(), 4)?;
-        let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let tool_ids_ptr = self.write_bytes(&tool_ids_bytes)?;
-        let result = self
-            .generated
-            .fn_split
-            .call(&mut self.store, (shape_id.0, tool_ids_ptr, tool_ids_len));
-        self.free_bytes(tool_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let tool_ids_bytes: Vec<u8> = tool_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let tool_ids_ptr = buffers.write(kernel, &tool_ids_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_split
+                .call(&mut kernel.store, (shape_id.0, tool_ids_ptr, tool_ids_len))?)
+        })?;
         self.check_error("split")?;
         if result == 0 {
             return Err(self.read_last_error("split"));
@@ -1234,14 +1214,14 @@ impl crate::kernel::OcctKernel {
         radius: f64,
     ) -> OcctResult<ShapeHandle> {
         let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let result = self.generated.fn_fillet.call(
-            &mut self.store,
-            (solid_id.0, edge_ids_ptr, edge_ids_len, radius),
-        );
-        self.free_bytes(edge_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let edge_ids_ptr = buffers.write(kernel, &edge_ids_bytes)?;
+            Ok(kernel.generated.fn_fillet.call(
+                &mut kernel.store,
+                (solid_id.0, edge_ids_ptr, edge_ids_len, radius),
+            )?)
+        })?;
         self.check_error("fillet")?;
         if result == 0 {
             return Err(self.read_last_error("fillet"));
@@ -1261,14 +1241,14 @@ impl crate::kernel::OcctKernel {
         distance: f64,
     ) -> OcctResult<ShapeHandle> {
         let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let result = self.generated.fn_chamfer.call(
-            &mut self.store,
-            (solid_id.0, edge_ids_ptr, edge_ids_len, distance),
-        );
-        self.free_bytes(edge_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let edge_ids_ptr = buffers.write(kernel, &edge_ids_bytes)?;
+            Ok(kernel.generated.fn_chamfer.call(
+                &mut kernel.store,
+                (solid_id.0, edge_ids_ptr, edge_ids_len, distance),
+            )?)
+        })?;
         self.check_error("chamfer")?;
         if result == 0 {
             return Err(self.read_last_error("chamfer"));
@@ -1289,14 +1269,14 @@ impl crate::kernel::OcctKernel {
         angle_deg: f64,
     ) -> OcctResult<ShapeHandle> {
         let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let result = self.generated.fn_chamfer_dist_angle.call(
-            &mut self.store,
-            (solid_id.0, edge_ids_ptr, edge_ids_len, distance, angle_deg),
-        );
-        self.free_bytes(edge_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let edge_ids_ptr = buffers.write(kernel, &edge_ids_bytes)?;
+            Ok(kernel.generated.fn_chamfer_dist_angle.call(
+                &mut kernel.store,
+                (solid_id.0, edge_ids_ptr, edge_ids_len, distance, angle_deg),
+            )?)
+        })?;
         self.check_error("chamfer_dist_angle")?;
         if result == 0 {
             return Err(self.read_last_error("chamfer_dist_angle"));
@@ -1349,41 +1329,27 @@ impl crate::kernel::OcctKernel {
         let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
         let start_radii_len = checked_wasm_len(start_radii.len(), 8)?;
         let end_radii_len = checked_wasm_len(end_radii.len(), 8)?;
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let start_radii_bytes: Vec<u8> = start_radii.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let start_radii_ptr = match self.write_bytes(&start_radii_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                return Err(e);
-            }
-        };
-        let end_radii_bytes: Vec<u8> = end_radii.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let end_radii_ptr = match self.write_bytes(&end_radii_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                let _ = self.free_bytes(start_radii_ptr);
-                return Err(e);
-            }
-        };
-        let result = self.generated.fn_fillet_radii.call(
-            &mut self.store,
-            (
-                solid_id.0,
-                edge_ids_ptr,
-                edge_ids_len,
-                start_radii_ptr,
-                start_radii_len,
-                end_radii_ptr,
-                end_radii_len,
-            ),
-        );
-        self.free_bytes(edge_ids_ptr)?;
-        self.free_bytes(start_radii_ptr)?;
-        self.free_bytes(end_radii_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<3, _>(|kernel, buffers| {
+            let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let edge_ids_ptr = buffers.write(kernel, &edge_ids_bytes)?;
+            let start_radii_bytes: Vec<u8> =
+                start_radii.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let start_radii_ptr = buffers.write(kernel, &start_radii_bytes)?;
+            let end_radii_bytes: Vec<u8> = end_radii.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let end_radii_ptr = buffers.write(kernel, &end_radii_bytes)?;
+            Ok(kernel.generated.fn_fillet_radii.call(
+                &mut kernel.store,
+                (
+                    solid_id.0,
+                    edge_ids_ptr,
+                    edge_ids_len,
+                    start_radii_ptr,
+                    start_radii_len,
+                    end_radii_ptr,
+                    end_radii_len,
+                ),
+            )?)
+        })?;
         self.check_error("fillet_radii")?;
         if result == 0 {
             return Err(self.read_last_error("fillet_radii"));
@@ -1408,57 +1374,35 @@ impl crate::kernel::OcctKernel {
         let distances1_len = checked_wasm_len(distances1.len(), 8)?;
         let distances2_len = checked_wasm_len(distances2.len(), 8)?;
         let reference_face_ids_len = checked_wasm_len(reference_face_ids.len(), 4)?;
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let distances1_bytes: Vec<u8> = distances1.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let distances1_ptr = match self.write_bytes(&distances1_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                return Err(e);
-            }
-        };
-        let distances2_bytes: Vec<u8> = distances2.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let distances2_ptr = match self.write_bytes(&distances2_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                let _ = self.free_bytes(distances1_ptr);
-                return Err(e);
-            }
-        };
-        let reference_face_ids_bytes: Vec<u8> = reference_face_ids
-            .iter()
-            .flat_map(|v| v.0.to_le_bytes())
-            .collect();
-        let reference_face_ids_ptr = match self.write_bytes(&reference_face_ids_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                let _ = self.free_bytes(distances1_ptr);
-                let _ = self.free_bytes(distances2_ptr);
-                return Err(e);
-            }
-        };
-        let result = self.generated.fn_chamfer_distances.call(
-            &mut self.store,
-            (
-                solid_id.0,
-                edge_ids_ptr,
-                edge_ids_len,
-                distances1_ptr,
-                distances1_len,
-                distances2_ptr,
-                distances2_len,
-                reference_face_ids_ptr,
-                reference_face_ids_len,
-            ),
-        );
-        self.free_bytes(edge_ids_ptr)?;
-        self.free_bytes(distances1_ptr)?;
-        self.free_bytes(distances2_ptr)?;
-        self.free_bytes(reference_face_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<4, _>(|kernel, buffers| {
+            let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let edge_ids_ptr = buffers.write(kernel, &edge_ids_bytes)?;
+            let distances1_bytes: Vec<u8> =
+                distances1.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let distances1_ptr = buffers.write(kernel, &distances1_bytes)?;
+            let distances2_bytes: Vec<u8> =
+                distances2.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let distances2_ptr = buffers.write(kernel, &distances2_bytes)?;
+            let reference_face_ids_bytes: Vec<u8> = reference_face_ids
+                .iter()
+                .flat_map(|v| v.0.to_le_bytes())
+                .collect();
+            let reference_face_ids_ptr = buffers.write(kernel, &reference_face_ids_bytes)?;
+            Ok(kernel.generated.fn_chamfer_distances.call(
+                &mut kernel.store,
+                (
+                    solid_id.0,
+                    edge_ids_ptr,
+                    edge_ids_len,
+                    distances1_ptr,
+                    distances1_len,
+                    distances2_ptr,
+                    distances2_len,
+                    reference_face_ids_ptr,
+                    reference_face_ids_len,
+                ),
+            )?)
+        })?;
         self.check_error("chamfer_distances")?;
         if result == 0 {
             return Err(self.read_last_error("chamfer_distances"));
@@ -1483,57 +1427,34 @@ impl crate::kernel::OcctKernel {
         let distances_len = checked_wasm_len(distances.len(), 8)?;
         let angles_deg_len = checked_wasm_len(angles_deg.len(), 8)?;
         let reference_face_ids_len = checked_wasm_len(reference_face_ids.len(), 4)?;
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let distances_bytes: Vec<u8> = distances.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let distances_ptr = match self.write_bytes(&distances_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                return Err(e);
-            }
-        };
-        let angles_deg_bytes: Vec<u8> = angles_deg.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let angles_deg_ptr = match self.write_bytes(&angles_deg_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                let _ = self.free_bytes(distances_ptr);
-                return Err(e);
-            }
-        };
-        let reference_face_ids_bytes: Vec<u8> = reference_face_ids
-            .iter()
-            .flat_map(|v| v.0.to_le_bytes())
-            .collect();
-        let reference_face_ids_ptr = match self.write_bytes(&reference_face_ids_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                let _ = self.free_bytes(distances_ptr);
-                let _ = self.free_bytes(angles_deg_ptr);
-                return Err(e);
-            }
-        };
-        let result = self.generated.fn_chamfer_dist_angles.call(
-            &mut self.store,
-            (
-                solid_id.0,
-                edge_ids_ptr,
-                edge_ids_len,
-                distances_ptr,
-                distances_len,
-                angles_deg_ptr,
-                angles_deg_len,
-                reference_face_ids_ptr,
-                reference_face_ids_len,
-            ),
-        );
-        self.free_bytes(edge_ids_ptr)?;
-        self.free_bytes(distances_ptr)?;
-        self.free_bytes(angles_deg_ptr)?;
-        self.free_bytes(reference_face_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<4, _>(|kernel, buffers| {
+            let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let edge_ids_ptr = buffers.write(kernel, &edge_ids_bytes)?;
+            let distances_bytes: Vec<u8> = distances.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let distances_ptr = buffers.write(kernel, &distances_bytes)?;
+            let angles_deg_bytes: Vec<u8> =
+                angles_deg.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let angles_deg_ptr = buffers.write(kernel, &angles_deg_bytes)?;
+            let reference_face_ids_bytes: Vec<u8> = reference_face_ids
+                .iter()
+                .flat_map(|v| v.0.to_le_bytes())
+                .collect();
+            let reference_face_ids_ptr = buffers.write(kernel, &reference_face_ids_bytes)?;
+            Ok(kernel.generated.fn_chamfer_dist_angles.call(
+                &mut kernel.store,
+                (
+                    solid_id.0,
+                    edge_ids_ptr,
+                    edge_ids_len,
+                    distances_ptr,
+                    distances_len,
+                    angles_deg_ptr,
+                    angles_deg_len,
+                    reference_face_ids_ptr,
+                    reference_face_ids_len,
+                ),
+            )?)
+        })?;
         self.check_error("chamfer_dist_angles")?;
         if result == 0 {
             return Err(self.read_last_error("chamfer_dist_angles"));
@@ -1554,14 +1475,14 @@ impl crate::kernel::OcctKernel {
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
         let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let result = self.generated.fn_shell.call(
-            &mut self.store,
-            (solid_id.0, face_ids_ptr, face_ids_len, thickness, tolerance),
-        );
-        self.free_bytes(face_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let face_ids_ptr = buffers.write(kernel, &face_ids_bytes)?;
+            Ok(kernel.generated.fn_shell.call(
+                &mut kernel.store,
+                (solid_id.0, face_ids_ptr, face_ids_len, thickness, tolerance),
+            )?)
+        })?;
         self.check_error("shell")?;
         if result == 0 {
             return Err(self.read_last_error("shell"));
@@ -1605,21 +1526,21 @@ impl crate::kernel::OcctKernel {
         join_type: i32,
     ) -> OcctResult<ShapeHandle> {
         let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let result = self.generated.fn_shell_with_join.call(
-            &mut self.store,
-            (
-                solid_id.0,
-                face_ids_ptr,
-                face_ids_len,
-                thickness,
-                tolerance,
-                join_type,
-            ),
-        );
-        self.free_bytes(face_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let face_ids_ptr = buffers.write(kernel, &face_ids_bytes)?;
+            Ok(kernel.generated.fn_shell_with_join.call(
+                &mut kernel.store,
+                (
+                    solid_id.0,
+                    face_ids_ptr,
+                    face_ids_len,
+                    thickness,
+                    tolerance,
+                    join_type,
+                ),
+            )?)
+        })?;
         self.check_error("shell_with_join")?;
         if result == 0 {
             return Err(self.read_last_error("shell_with_join"));
@@ -1697,38 +1618,32 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<ShapeHandle> {
         let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
         let angles_rad_len = checked_wasm_len(angles_rad.len(), 8)?;
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let angles_rad_bytes: Vec<u8> = angles_rad.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let angles_rad_ptr = match self.write_bytes(&angles_rad_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(face_ids_ptr);
-                return Err(e);
-            }
-        };
-        let result = self.generated.fn_draft_faces.call(
-            &mut self.store,
-            (
-                shape_id.0,
-                face_ids_ptr,
-                face_ids_len,
-                angles_rad_ptr,
-                angles_rad_len,
-                dx,
-                dy,
-                dz,
-                px,
-                py,
-                pz,
-                nx,
-                ny,
-                nz,
-            ),
-        );
-        self.free_bytes(face_ids_ptr)?;
-        self.free_bytes(angles_rad_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let face_ids_ptr = buffers.write(kernel, &face_ids_bytes)?;
+            let angles_rad_bytes: Vec<u8> =
+                angles_rad.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let angles_rad_ptr = buffers.write(kernel, &angles_rad_bytes)?;
+            Ok(kernel.generated.fn_draft_faces.call(
+                &mut kernel.store,
+                (
+                    shape_id.0,
+                    face_ids_ptr,
+                    face_ids_len,
+                    angles_rad_ptr,
+                    angles_rad_len,
+                    dx,
+                    dy,
+                    dz,
+                    px,
+                    py,
+                    pz,
+                    nx,
+                    ny,
+                    nz,
+                ),
+            )?)
+        })?;
         self.check_error("draft_faces")?;
         if result == 0 {
             return Err(self.read_last_error("draft_faces"));
@@ -1770,14 +1685,14 @@ impl crate::kernel::OcctKernel {
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
         let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let result = self.generated.fn_defeature.call(
-            &mut self.store,
-            (shape_id.0, face_ids_ptr, face_ids_len, tolerance),
-        );
-        self.free_bytes(face_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let face_ids_ptr = buffers.write(kernel, &face_ids_bytes)?;
+            Ok(kernel.generated.fn_defeature.call(
+                &mut kernel.store,
+                (shape_id.0, face_ids_ptr, face_ids_len, tolerance),
+            )?)
+        })?;
         self.check_error("defeature")?;
         if result == 0 {
             return Err(self.read_last_error("defeature"));
@@ -1855,56 +1770,34 @@ impl crate::kernel::OcctKernel {
         let edge_counts_len = checked_wasm_len(edge_counts.len(), 4)?;
         let flat_edge_ids_len = checked_wasm_len(flat_edge_ids.len(), 4)?;
         let radii_len = checked_wasm_len(radii.len(), 8)?;
-        let solid_ids_bytes: Vec<u8> = solid_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let solid_ids_ptr = self.write_bytes(&solid_ids_bytes)?;
-        let edge_counts_bytes: Vec<u8> = edge_counts.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let edge_counts_ptr = match self.write_bytes(&edge_counts_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(solid_ids_ptr);
-                return Err(e);
-            }
-        };
-        let flat_edge_ids_bytes: Vec<u8> = flat_edge_ids
-            .iter()
-            .flat_map(|v| v.0.to_le_bytes())
-            .collect();
-        let flat_edge_ids_ptr = match self.write_bytes(&flat_edge_ids_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(solid_ids_ptr);
-                let _ = self.free_bytes(edge_counts_ptr);
-                return Err(e);
-            }
-        };
-        let radii_bytes: Vec<u8> = radii.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let radii_ptr = match self.write_bytes(&radii_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(solid_ids_ptr);
-                let _ = self.free_bytes(edge_counts_ptr);
-                let _ = self.free_bytes(flat_edge_ids_ptr);
-                return Err(e);
-            }
-        };
-        let len = self.generated.fn_fillet_batch.call(
-            &mut self.store,
-            (
-                solid_ids_ptr,
-                solid_ids_len,
-                edge_counts_ptr,
-                edge_counts_len,
-                flat_edge_ids_ptr,
-                flat_edge_ids_len,
-                radii_ptr,
-                radii_len,
-            ),
-        );
-        self.free_bytes(solid_ids_ptr)?;
-        self.free_bytes(edge_counts_ptr)?;
-        self.free_bytes(flat_edge_ids_ptr)?;
-        self.free_bytes(radii_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<4, _>(|kernel, buffers| {
+            let solid_ids_bytes: Vec<u8> =
+                solid_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let solid_ids_ptr = buffers.write(kernel, &solid_ids_bytes)?;
+            let edge_counts_bytes: Vec<u8> =
+                edge_counts.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let edge_counts_ptr = buffers.write(kernel, &edge_counts_bytes)?;
+            let flat_edge_ids_bytes: Vec<u8> = flat_edge_ids
+                .iter()
+                .flat_map(|v| v.0.to_le_bytes())
+                .collect();
+            let flat_edge_ids_ptr = buffers.write(kernel, &flat_edge_ids_bytes)?;
+            let radii_bytes: Vec<u8> = radii.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let radii_ptr = buffers.write(kernel, &radii_bytes)?;
+            Ok(kernel.generated.fn_fillet_batch.call(
+                &mut kernel.store,
+                (
+                    solid_ids_ptr,
+                    solid_ids_len,
+                    edge_counts_ptr,
+                    edge_counts_len,
+                    flat_edge_ids_ptr,
+                    flat_edge_ids_len,
+                    radii_ptr,
+                    radii_len,
+                ),
+            )?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("fillet_batch"));
         }
@@ -2107,14 +2000,14 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn transform(&mut self, id: ShapeHandle, matrix: &[f64]) -> OcctResult<ShapeHandle> {
         let matrix_len = checked_wasm_len(matrix.len(), 8)?;
-        let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let matrix_ptr = self.write_bytes(&matrix_bytes)?;
-        let result = self
-            .generated
-            .fn_transform
-            .call(&mut self.store, (id.0, matrix_ptr, matrix_len));
-        self.free_bytes(matrix_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let matrix_ptr = buffers.write(kernel, &matrix_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_transform
+                .call(&mut kernel.store, (id.0, matrix_ptr, matrix_len))?)
+        })?;
         self.check_error("transform")?;
         if result == 0 {
             return Err(self.read_last_error("transform"));
@@ -2129,14 +2022,14 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn located(&mut self, id: ShapeHandle, matrix: &[f64]) -> OcctResult<ShapeHandle> {
         let matrix_len = checked_wasm_len(matrix.len(), 8)?;
-        let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let matrix_ptr = self.write_bytes(&matrix_bytes)?;
-        let result = self
-            .generated
-            .fn_located
-            .call(&mut self.store, (id.0, matrix_ptr, matrix_len));
-        self.free_bytes(matrix_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let matrix_ptr = buffers.write(kernel, &matrix_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_located
+                .call(&mut kernel.store, (id.0, matrix_ptr, matrix_len))?)
+        })?;
         self.check_error("located")?;
         if result == 0 {
             return Err(self.read_last_error("located"));
@@ -2155,14 +2048,14 @@ impl crate::kernel::OcctKernel {
         matrix: &[f64],
     ) -> OcctResult<ShapeHandle> {
         let matrix_len = checked_wasm_len(matrix.len(), 8)?;
-        let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let matrix_ptr = self.write_bytes(&matrix_bytes)?;
-        let result = self
-            .generated
-            .fn_general_transform
-            .call(&mut self.store, (id.0, matrix_ptr, matrix_len));
-        self.free_bytes(matrix_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let matrix_ptr = buffers.write(kernel, &matrix_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_general_transform
+                .call(&mut kernel.store, (id.0, matrix_ptr, matrix_len))?)
+        })?;
         self.check_error("general_transform")?;
         if result == 0 {
             return Err(self.read_last_error("general_transform"));
@@ -2182,23 +2075,16 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<Vec<ShapeHandle>> {
         let ids_len = checked_wasm_len(ids.len(), 4)?;
         let offsets_len = checked_wasm_len(offsets.len(), 8)?;
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let offsets_bytes: Vec<u8> = offsets.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let offsets_ptr = match self.write_bytes(&offsets_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(ids_ptr);
-                return Err(e);
-            }
-        };
-        let len = self.generated.fn_translate_batch.call(
-            &mut self.store,
-            (ids_ptr, ids_len, offsets_ptr, offsets_len),
-        );
-        self.free_bytes(ids_ptr)?;
-        self.free_bytes(offsets_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let ids_ptr = buffers.write(kernel, &ids_bytes)?;
+            let offsets_bytes: Vec<u8> = offsets.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let offsets_ptr = buffers.write(kernel, &offsets_bytes)?;
+            Ok(kernel.generated.fn_translate_batch.call(
+                &mut kernel.store,
+                (ids_ptr, ids_len, offsets_ptr, offsets_len),
+            )?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("translate_batch"));
         }
@@ -2213,23 +2099,16 @@ impl crate::kernel::OcctKernel {
     pub fn compose_transform(&mut self, m1: &[f64], m2: &[f64]) -> OcctResult<Vec<f64>> {
         let m1_len = checked_wasm_len(m1.len(), 8)?;
         let m2_len = checked_wasm_len(m2.len(), 8)?;
-        let m1_bytes: Vec<u8> = m1.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let m1_ptr = self.write_bytes(&m1_bytes)?;
-        let m2_bytes: Vec<u8> = m2.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let m2_ptr = match self.write_bytes(&m2_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(m1_ptr);
-                return Err(e);
-            }
-        };
-        let len = self
-            .generated
-            .fn_compose_transform
-            .call(&mut self.store, (m1_ptr, m1_len, m2_ptr, m2_len));
-        self.free_bytes(m1_ptr)?;
-        self.free_bytes(m2_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let m1_bytes: Vec<u8> = m1.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let m1_ptr = buffers.write(kernel, &m1_bytes)?;
+            let m2_bytes: Vec<u8> = m2.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let m2_ptr = buffers.write(kernel, &m2_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_compose_transform
+                .call(&mut kernel.store, (m1_ptr, m1_len, m2_ptr, m2_len))?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("compose_transform"));
         }
@@ -2248,23 +2127,16 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<Vec<ShapeHandle>> {
         let ids_len = checked_wasm_len(ids.len(), 4)?;
         let matrices_len = checked_wasm_len(matrices.len(), 8)?;
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let matrices_bytes: Vec<u8> = matrices.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let matrices_ptr = match self.write_bytes(&matrices_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(ids_ptr);
-                return Err(e);
-            }
-        };
-        let len = self.generated.fn_transform_batch.call(
-            &mut self.store,
-            (ids_ptr, ids_len, matrices_ptr, matrices_len),
-        );
-        self.free_bytes(ids_ptr)?;
-        self.free_bytes(matrices_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let ids_ptr = buffers.write(kernel, &ids_bytes)?;
+            let matrices_bytes: Vec<u8> = matrices.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let matrices_ptr = buffers.write(kernel, &matrices_bytes)?;
+            Ok(kernel.generated.fn_transform_batch.call(
+                &mut kernel.store,
+                (ids_ptr, ids_len, matrices_ptr, matrices_len),
+            )?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("transform_batch"));
         }
@@ -2283,23 +2155,16 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<Vec<ShapeHandle>> {
         let ids_len = checked_wasm_len(ids.len(), 4)?;
         let params_len = checked_wasm_len(params.len(), 8)?;
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let params_ptr = match self.write_bytes(&params_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(ids_ptr);
-                return Err(e);
-            }
-        };
-        let len = self
-            .generated
-            .fn_rotate_batch
-            .call(&mut self.store, (ids_ptr, ids_len, params_ptr, params_len));
-        self.free_bytes(ids_ptr)?;
-        self.free_bytes(params_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let ids_ptr = buffers.write(kernel, &ids_bytes)?;
+            let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let params_ptr = buffers.write(kernel, &params_bytes)?;
+            Ok(kernel.generated.fn_rotate_batch.call(
+                &mut kernel.store,
+                (ids_ptr, ids_len, params_ptr, params_len),
+            )?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("rotate_batch"));
         }
@@ -2318,23 +2183,16 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<Vec<ShapeHandle>> {
         let ids_len = checked_wasm_len(ids.len(), 4)?;
         let params_len = checked_wasm_len(params.len(), 8)?;
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let params_ptr = match self.write_bytes(&params_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(ids_ptr);
-                return Err(e);
-            }
-        };
-        let len = self
-            .generated
-            .fn_scale_batch
-            .call(&mut self.store, (ids_ptr, ids_len, params_ptr, params_len));
-        self.free_bytes(ids_ptr)?;
-        self.free_bytes(params_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let ids_ptr = buffers.write(kernel, &ids_bytes)?;
+            let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let params_ptr = buffers.write(kernel, &params_bytes)?;
+            Ok(kernel.generated.fn_scale_batch.call(
+                &mut kernel.store,
+                (ids_ptr, ids_len, params_ptr, params_len),
+            )?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("scale_batch"));
         }
@@ -2353,23 +2211,16 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<Vec<ShapeHandle>> {
         let ids_len = checked_wasm_len(ids.len(), 4)?;
         let params_len = checked_wasm_len(params.len(), 8)?;
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let params_ptr = match self.write_bytes(&params_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(ids_ptr);
-                return Err(e);
-            }
-        };
-        let len = self
-            .generated
-            .fn_mirror_batch
-            .call(&mut self.store, (ids_ptr, ids_len, params_ptr, params_len));
-        self.free_bytes(ids_ptr)?;
-        self.free_bytes(params_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let ids_ptr = buffers.write(kernel, &ids_bytes)?;
+            let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let params_ptr = buffers.write(kernel, &params_bytes)?;
+            Ok(kernel.generated.fn_mirror_batch.call(
+                &mut kernel.store,
+                (ids_ptr, ids_len, params_ptr, params_len),
+            )?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("mirror_batch"));
         }
@@ -2417,14 +2268,14 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn make_wire(&mut self, edge_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
         let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let result = self
-            .generated
-            .fn_make_wire
-            .call(&mut self.store, (edge_ids_ptr, edge_ids_len));
-        self.free_bytes(edge_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let edge_ids_ptr = buffers.write(kernel, &edge_ids_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_make_wire
+                .call(&mut kernel.store, (edge_ids_ptr, edge_ids_len))?)
+        })?;
         self.check_error("make_wire")?;
         if result == 0 {
             return Err(self.read_last_error("make_wire"));
@@ -2494,14 +2345,15 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn sew(&mut self, shape_ids: &[ShapeHandle], tolerance: f64) -> OcctResult<ShapeHandle> {
         let shape_ids_len = checked_wasm_len(shape_ids.len(), 4)?;
-        let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let shape_ids_ptr = self.write_bytes(&shape_ids_bytes)?;
-        let result = self
-            .generated
-            .fn_sew
-            .call(&mut self.store, (shape_ids_ptr, shape_ids_len, tolerance));
-        self.free_bytes(shape_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let shape_ids_bytes: Vec<u8> =
+                shape_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let shape_ids_ptr = buffers.write(kernel, &shape_ids_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_sew
+                .call(&mut kernel.store, (shape_ids_ptr, shape_ids_len, tolerance))?)
+        })?;
         self.check_error("sew")?;
         if result == 0 {
             return Err(self.read_last_error("sew"));
@@ -2516,14 +2368,15 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn make_compound(&mut self, shape_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
         let shape_ids_len = checked_wasm_len(shape_ids.len(), 4)?;
-        let shape_ids_bytes: Vec<u8> = shape_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let shape_ids_ptr = self.write_bytes(&shape_ids_bytes)?;
-        let result = self
-            .generated
-            .fn_make_compound
-            .call(&mut self.store, (shape_ids_ptr, shape_ids_len));
-        self.free_bytes(shape_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let shape_ids_bytes: Vec<u8> =
+                shape_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let shape_ids_ptr = buffers.write(kernel, &shape_ids_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_make_compound
+                .call(&mut kernel.store, (shape_ids_ptr, shape_ids_len))?)
+        })?;
         self.check_error("make_compound")?;
         if result == 0 {
             return Err(self.read_last_error("make_compound"));
@@ -2672,14 +2525,15 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn make_bezier_edge(&mut self, flat_points: &[f64]) -> OcctResult<ShapeHandle> {
         let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
-        let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let flat_points_ptr = self.write_bytes(&flat_points_bytes)?;
-        let result = self
-            .generated
-            .fn_make_bezier_edge
-            .call(&mut self.store, (flat_points_ptr, flat_points_len));
-        self.free_bytes(flat_points_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let flat_points_bytes: Vec<u8> =
+                flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let flat_points_ptr = buffers.write(kernel, &flat_points_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_make_bezier_edge
+                .call(&mut kernel.store, (flat_points_ptr, flat_points_len))?)
+        })?;
         self.check_error("make_bezier_edge")?;
         if result == 0 {
             return Err(self.read_last_error("make_bezier_edge"));
@@ -2705,58 +2559,34 @@ impl crate::kernel::OcctKernel {
         let weights_len = checked_wasm_len(weights.len(), 8)?;
         let knots_len = checked_wasm_len(knots.len(), 8)?;
         let multiplicities_len = checked_wasm_len(multiplicities.len(), 4)?;
-        let poles_bytes: Vec<u8> = poles.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let poles_ptr = self.write_bytes(&poles_bytes)?;
-        let weights_bytes: Vec<u8> = weights.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let weights_ptr = match self.write_bytes(&weights_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(poles_ptr);
-                return Err(e);
-            }
-        };
-        let knots_bytes: Vec<u8> = knots.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let knots_ptr = match self.write_bytes(&knots_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(poles_ptr);
-                let _ = self.free_bytes(weights_ptr);
-                return Err(e);
-            }
-        };
-        let multiplicities_bytes: Vec<u8> = multiplicities
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let multiplicities_ptr = match self.write_bytes(&multiplicities_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(poles_ptr);
-                let _ = self.free_bytes(weights_ptr);
-                let _ = self.free_bytes(knots_ptr);
-                return Err(e);
-            }
-        };
-        let result = self.generated.fn_make_b_spline_edge.call(
-            &mut self.store,
-            (
-                poles_ptr,
-                poles_len,
-                weights_ptr,
-                weights_len,
-                knots_ptr,
-                knots_len,
-                multiplicities_ptr,
-                multiplicities_len,
-                degree,
-                i32::from(periodic),
-            ),
-        );
-        self.free_bytes(poles_ptr)?;
-        self.free_bytes(weights_ptr)?;
-        self.free_bytes(knots_ptr)?;
-        self.free_bytes(multiplicities_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<4, _>(|kernel, buffers| {
+            let poles_bytes: Vec<u8> = poles.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let poles_ptr = buffers.write(kernel, &poles_bytes)?;
+            let weights_bytes: Vec<u8> = weights.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let weights_ptr = buffers.write(kernel, &weights_bytes)?;
+            let knots_bytes: Vec<u8> = knots.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let knots_ptr = buffers.write(kernel, &knots_bytes)?;
+            let multiplicities_bytes: Vec<u8> = multiplicities
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let multiplicities_ptr = buffers.write(kernel, &multiplicities_bytes)?;
+            Ok(kernel.generated.fn_make_b_spline_edge.call(
+                &mut kernel.store,
+                (
+                    poles_ptr,
+                    poles_len,
+                    weights_ptr,
+                    weights_len,
+                    knots_ptr,
+                    knots_len,
+                    multiplicities_ptr,
+                    multiplicities_len,
+                    degree,
+                    i32::from(periodic),
+                ),
+            )?)
+        })?;
         self.check_error("make_b_spline_edge")?;
         if result == 0 {
             return Err(self.read_last_error("make_b_spline_edge"));
@@ -3004,114 +2834,58 @@ impl crate::kernel::OcctKernel {
         let guide_edge_ids_len = checked_wasm_len(guide_edge_ids.len(), 4)?;
         let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
         let params_len = checked_wasm_len(params.len(), 8)?;
-        let free_edge_ids_bytes: Vec<u8> = free_edge_ids
-            .iter()
-            .flat_map(|v| v.0.to_le_bytes())
-            .collect();
-        let free_edge_ids_ptr = self.write_bytes(&free_edge_ids_bytes)?;
-        let supported_edge_ids_bytes: Vec<u8> = supported_edge_ids
-            .iter()
-            .flat_map(|v| v.0.to_le_bytes())
-            .collect();
-        let supported_edge_ids_ptr = match self.write_bytes(&supported_edge_ids_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(free_edge_ids_ptr);
-                return Err(e);
-            }
-        };
-        let support_face_ids_bytes: Vec<u8> = support_face_ids
-            .iter()
-            .flat_map(|v| v.0.to_le_bytes())
-            .collect();
-        let support_face_ids_ptr = match self.write_bytes(&support_face_ids_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(free_edge_ids_ptr);
-                let _ = self.free_bytes(supported_edge_ids_ptr);
-                return Err(e);
-            }
-        };
-        let support_orders_bytes: Vec<u8> = support_orders
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let support_orders_ptr = match self.write_bytes(&support_orders_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(free_edge_ids_ptr);
-                let _ = self.free_bytes(supported_edge_ids_ptr);
-                let _ = self.free_bytes(support_face_ids_ptr);
-                return Err(e);
-            }
-        };
-        let guide_edge_ids_bytes: Vec<u8> = guide_edge_ids
-            .iter()
-            .flat_map(|v| v.0.to_le_bytes())
-            .collect();
-        let guide_edge_ids_ptr = match self.write_bytes(&guide_edge_ids_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(free_edge_ids_ptr);
-                let _ = self.free_bytes(supported_edge_ids_ptr);
-                let _ = self.free_bytes(support_face_ids_ptr);
-                let _ = self.free_bytes(support_orders_ptr);
-                return Err(e);
-            }
-        };
-        let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let flat_points_ptr = match self.write_bytes(&flat_points_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(free_edge_ids_ptr);
-                let _ = self.free_bytes(supported_edge_ids_ptr);
-                let _ = self.free_bytes(support_face_ids_ptr);
-                let _ = self.free_bytes(support_orders_ptr);
-                let _ = self.free_bytes(guide_edge_ids_ptr);
-                return Err(e);
-            }
-        };
-        let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let params_ptr = match self.write_bytes(&params_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(free_edge_ids_ptr);
-                let _ = self.free_bytes(supported_edge_ids_ptr);
-                let _ = self.free_bytes(support_face_ids_ptr);
-                let _ = self.free_bytes(support_orders_ptr);
-                let _ = self.free_bytes(guide_edge_ids_ptr);
-                let _ = self.free_bytes(flat_points_ptr);
-                return Err(e);
-            }
-        };
-        let result = self.generated.fn_fill_surface.call(
-            &mut self.store,
-            (
-                free_edge_ids_ptr,
-                free_edge_ids_len,
-                supported_edge_ids_ptr,
-                supported_edge_ids_len,
-                support_face_ids_ptr,
-                support_face_ids_len,
-                support_orders_ptr,
-                support_orders_len,
-                guide_edge_ids_ptr,
-                guide_edge_ids_len,
-                flat_points_ptr,
-                flat_points_len,
-                init_face_id,
-                params_ptr,
-                params_len,
-            ),
-        );
-        self.free_bytes(free_edge_ids_ptr)?;
-        self.free_bytes(supported_edge_ids_ptr)?;
-        self.free_bytes(support_face_ids_ptr)?;
-        self.free_bytes(support_orders_ptr)?;
-        self.free_bytes(guide_edge_ids_ptr)?;
-        self.free_bytes(flat_points_ptr)?;
-        self.free_bytes(params_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<7, _>(|kernel, buffers| {
+            let free_edge_ids_bytes: Vec<u8> = free_edge_ids
+                .iter()
+                .flat_map(|v| v.0.to_le_bytes())
+                .collect();
+            let free_edge_ids_ptr = buffers.write(kernel, &free_edge_ids_bytes)?;
+            let supported_edge_ids_bytes: Vec<u8> = supported_edge_ids
+                .iter()
+                .flat_map(|v| v.0.to_le_bytes())
+                .collect();
+            let supported_edge_ids_ptr = buffers.write(kernel, &supported_edge_ids_bytes)?;
+            let support_face_ids_bytes: Vec<u8> = support_face_ids
+                .iter()
+                .flat_map(|v| v.0.to_le_bytes())
+                .collect();
+            let support_face_ids_ptr = buffers.write(kernel, &support_face_ids_bytes)?;
+            let support_orders_bytes: Vec<u8> = support_orders
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let support_orders_ptr = buffers.write(kernel, &support_orders_bytes)?;
+            let guide_edge_ids_bytes: Vec<u8> = guide_edge_ids
+                .iter()
+                .flat_map(|v| v.0.to_le_bytes())
+                .collect();
+            let guide_edge_ids_ptr = buffers.write(kernel, &guide_edge_ids_bytes)?;
+            let flat_points_bytes: Vec<u8> =
+                flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let flat_points_ptr = buffers.write(kernel, &flat_points_bytes)?;
+            let params_bytes: Vec<u8> = params.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let params_ptr = buffers.write(kernel, &params_bytes)?;
+            Ok(kernel.generated.fn_fill_surface.call(
+                &mut kernel.store,
+                (
+                    free_edge_ids_ptr,
+                    free_edge_ids_len,
+                    supported_edge_ids_ptr,
+                    supported_edge_ids_len,
+                    support_face_ids_ptr,
+                    support_face_ids_len,
+                    support_orders_ptr,
+                    support_orders_len,
+                    guide_edge_ids_ptr,
+                    guide_edge_ids_len,
+                    flat_points_ptr,
+                    flat_points_len,
+                    init_face_id,
+                    params_ptr,
+                    params_len,
+                ),
+            )?)
+        })?;
         self.check_error("fill_surface")?;
         if result == 0 {
             return Err(self.read_last_error("fill_surface"));
@@ -3132,20 +2906,21 @@ impl crate::kernel::OcctKernel {
         closed: bool,
     ) -> OcctResult<ShapeHandle> {
         let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
-        let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let flat_points_ptr = self.write_bytes(&flat_points_bytes)?;
-        let result = self.generated.fn_edge_on_surface.call(
-            &mut self.store,
-            (
-                face_id.0,
-                flat_points_ptr,
-                flat_points_len,
-                tolerance,
-                i32::from(closed),
-            ),
-        );
-        self.free_bytes(flat_points_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let flat_points_bytes: Vec<u8> =
+                flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let flat_points_ptr = buffers.write(kernel, &flat_points_bytes)?;
+            Ok(kernel.generated.fn_edge_on_surface.call(
+                &mut kernel.store,
+                (
+                    face_id.0,
+                    flat_points_ptr,
+                    flat_points_len,
+                    tolerance,
+                    i32::from(closed),
+                ),
+            )?)
+        })?;
         self.check_error("edge_on_surface")?;
         if result == 0 {
             return Err(self.read_last_error("edge_on_surface"));
@@ -3164,17 +2939,17 @@ impl crate::kernel::OcctKernel {
         hole_wire_ids: &[ShapeHandle],
     ) -> OcctResult<ShapeHandle> {
         let hole_wire_ids_len = checked_wasm_len(hole_wire_ids.len(), 4)?;
-        let hole_wire_ids_bytes: Vec<u8> = hole_wire_ids
-            .iter()
-            .flat_map(|v| v.0.to_le_bytes())
-            .collect();
-        let hole_wire_ids_ptr = self.write_bytes(&hole_wire_ids_bytes)?;
-        let result = self.generated.fn_add_holes_in_face.call(
-            &mut self.store,
-            (face_id.0, hole_wire_ids_ptr, hole_wire_ids_len),
-        );
-        self.free_bytes(hole_wire_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let hole_wire_ids_bytes: Vec<u8> = hole_wire_ids
+                .iter()
+                .flat_map(|v| v.0.to_le_bytes())
+                .collect();
+            let hole_wire_ids_ptr = buffers.write(kernel, &hole_wire_ids_bytes)?;
+            Ok(kernel.generated.fn_add_holes_in_face.call(
+                &mut kernel.store,
+                (face_id.0, hole_wire_ids_ptr, hole_wire_ids_len),
+            )?)
+        })?;
         self.check_error("add_holes_in_face")?;
         if result == 0 {
             return Err(self.read_last_error("add_holes_in_face"));
@@ -3193,15 +2968,15 @@ impl crate::kernel::OcctKernel {
         hole_indices: &[i32],
     ) -> OcctResult<ShapeHandle> {
         let hole_indices_len = checked_wasm_len(hole_indices.len(), 4)?;
-        let hole_indices_bytes: Vec<u8> =
-            hole_indices.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let hole_indices_ptr = self.write_bytes(&hole_indices_bytes)?;
-        let result = self.generated.fn_remove_holes_from_face.call(
-            &mut self.store,
-            (face_id.0, hole_indices_ptr, hole_indices_len),
-        );
-        self.free_bytes(hole_indices_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let hole_indices_bytes: Vec<u8> =
+                hole_indices.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let hole_indices_ptr = buffers.write(kernel, &hole_indices_bytes)?;
+            Ok(kernel.generated.fn_remove_holes_from_face.call(
+                &mut kernel.store,
+                (face_id.0, hole_indices_ptr, hole_indices_len),
+            )?)
+        })?;
         self.check_error("remove_holes_from_face")?;
         if result == 0 {
             return Err(self.read_last_error("remove_holes_from_face"));
@@ -3237,14 +3012,14 @@ impl crate::kernel::OcctKernel {
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
         let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let result = self
-            .generated
-            .fn_build_solid_from_faces
-            .call(&mut self.store, (face_ids_ptr, face_ids_len, tolerance));
-        self.free_bytes(face_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let face_ids_ptr = buffers.write(kernel, &face_ids_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_build_solid_from_faces
+                .call(&mut kernel.store, (face_ids_ptr, face_ids_len, tolerance))?)
+        })?;
         self.check_error("build_solid_from_faces")?;
         if result == 0 {
             return Err(self.read_last_error("build_solid_from_faces"));
@@ -3263,14 +3038,14 @@ impl crate::kernel::OcctKernel {
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
         let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let result = self
-            .generated
-            .fn_sew_and_solidify
-            .call(&mut self.store, (face_ids_ptr, face_ids_len, tolerance));
-        self.free_bytes(face_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let face_ids_ptr = buffers.write(kernel, &face_ids_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_sew_and_solidify
+                .call(&mut kernel.store, (face_ids_ptr, face_ids_len, tolerance))?)
+        })?;
         self.check_error("sew_and_solidify")?;
         if result == 0 {
             return Err(self.read_last_error("sew_and_solidify"));
@@ -3346,14 +3121,15 @@ impl crate::kernel::OcctKernel {
         cols: i32,
     ) -> OcctResult<ShapeHandle> {
         let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
-        let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let flat_points_ptr = self.write_bytes(&flat_points_bytes)?;
-        let result = self.generated.fn_bspline_surface.call(
-            &mut self.store,
-            (flat_points_ptr, flat_points_len, rows, cols),
-        );
-        self.free_bytes(flat_points_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let flat_points_bytes: Vec<u8> =
+                flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let flat_points_ptr = buffers.write(kernel, &flat_points_bytes)?;
+            Ok(kernel.generated.fn_bspline_surface.call(
+                &mut kernel.store,
+                (flat_points_ptr, flat_points_len, rows, cols),
+            )?)
+        })?;
         self.check_error("bspline_surface")?;
         if result == 0 {
             return Err(self.read_last_error("bspline_surface"));
@@ -3383,98 +3159,42 @@ impl crate::kernel::OcctKernel {
         let mults_u_len = checked_wasm_len(mults_u.len(), 4)?;
         let mults_v_len = checked_wasm_len(mults_v.len(), 4)?;
         let layout_len = checked_wasm_len(layout.len(), 4)?;
-        let flat_poles_bytes: Vec<u8> = flat_poles.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let flat_poles_ptr = self.write_bytes(&flat_poles_bytes)?;
-        let weights_bytes: Vec<u8> = weights.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let weights_ptr = match self.write_bytes(&weights_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(flat_poles_ptr);
-                return Err(e);
-            }
-        };
-        let knots_u_bytes: Vec<u8> = knots_u.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let knots_u_ptr = match self.write_bytes(&knots_u_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(flat_poles_ptr);
-                let _ = self.free_bytes(weights_ptr);
-                return Err(e);
-            }
-        };
-        let knots_v_bytes: Vec<u8> = knots_v.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let knots_v_ptr = match self.write_bytes(&knots_v_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(flat_poles_ptr);
-                let _ = self.free_bytes(weights_ptr);
-                let _ = self.free_bytes(knots_u_ptr);
-                return Err(e);
-            }
-        };
-        let mults_u_bytes: Vec<u8> = mults_u.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let mults_u_ptr = match self.write_bytes(&mults_u_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(flat_poles_ptr);
-                let _ = self.free_bytes(weights_ptr);
-                let _ = self.free_bytes(knots_u_ptr);
-                let _ = self.free_bytes(knots_v_ptr);
-                return Err(e);
-            }
-        };
-        let mults_v_bytes: Vec<u8> = mults_v.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let mults_v_ptr = match self.write_bytes(&mults_v_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(flat_poles_ptr);
-                let _ = self.free_bytes(weights_ptr);
-                let _ = self.free_bytes(knots_u_ptr);
-                let _ = self.free_bytes(knots_v_ptr);
-                let _ = self.free_bytes(mults_u_ptr);
-                return Err(e);
-            }
-        };
-        let layout_bytes: Vec<u8> = layout.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let layout_ptr = match self.write_bytes(&layout_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(flat_poles_ptr);
-                let _ = self.free_bytes(weights_ptr);
-                let _ = self.free_bytes(knots_u_ptr);
-                let _ = self.free_bytes(knots_v_ptr);
-                let _ = self.free_bytes(mults_u_ptr);
-                let _ = self.free_bytes(mults_v_ptr);
-                return Err(e);
-            }
-        };
-        let result = self.generated.fn_nurbs_surface.call(
-            &mut self.store,
-            (
-                flat_poles_ptr,
-                flat_poles_len,
-                weights_ptr,
-                weights_len,
-                knots_u_ptr,
-                knots_u_len,
-                knots_v_ptr,
-                knots_v_len,
-                mults_u_ptr,
-                mults_u_len,
-                mults_v_ptr,
-                mults_v_len,
-                layout_ptr,
-                layout_len,
-            ),
-        );
-        self.free_bytes(flat_poles_ptr)?;
-        self.free_bytes(weights_ptr)?;
-        self.free_bytes(knots_u_ptr)?;
-        self.free_bytes(knots_v_ptr)?;
-        self.free_bytes(mults_u_ptr)?;
-        self.free_bytes(mults_v_ptr)?;
-        self.free_bytes(layout_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<7, _>(|kernel, buffers| {
+            let flat_poles_bytes: Vec<u8> =
+                flat_poles.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let flat_poles_ptr = buffers.write(kernel, &flat_poles_bytes)?;
+            let weights_bytes: Vec<u8> = weights.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let weights_ptr = buffers.write(kernel, &weights_bytes)?;
+            let knots_u_bytes: Vec<u8> = knots_u.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let knots_u_ptr = buffers.write(kernel, &knots_u_bytes)?;
+            let knots_v_bytes: Vec<u8> = knots_v.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let knots_v_ptr = buffers.write(kernel, &knots_v_bytes)?;
+            let mults_u_bytes: Vec<u8> = mults_u.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let mults_u_ptr = buffers.write(kernel, &mults_u_bytes)?;
+            let mults_v_bytes: Vec<u8> = mults_v.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let mults_v_ptr = buffers.write(kernel, &mults_v_bytes)?;
+            let layout_bytes: Vec<u8> = layout.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let layout_ptr = buffers.write(kernel, &layout_bytes)?;
+            Ok(kernel.generated.fn_nurbs_surface.call(
+                &mut kernel.store,
+                (
+                    flat_poles_ptr,
+                    flat_poles_len,
+                    weights_ptr,
+                    weights_len,
+                    knots_u_ptr,
+                    knots_u_len,
+                    knots_v_ptr,
+                    knots_v_len,
+                    mults_u_ptr,
+                    mults_u_len,
+                    mults_v_ptr,
+                    mults_v_len,
+                    layout_ptr,
+                    layout_len,
+                ),
+            )?)
+        })?;
         self.check_error("nurbs_surface")?;
         if result == 0 {
             return Err(self.read_last_error("nurbs_surface"));
@@ -3509,13 +3229,13 @@ impl crate::kernel::OcctKernel {
         shape_type: &str,
     ) -> OcctResult<Vec<ShapeHandle>> {
         let shape_type_len = checked_wasm_len(shape_type.len(), 1)?;
-        let shape_type_ptr = self.write_bytes(shape_type.as_bytes())?;
-        let len = self
-            .generated
-            .fn_get_sub_shapes
-            .call(&mut self.store, (id.0, shape_type_ptr, shape_type_len));
-        self.free_bytes(shape_type_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let shape_type_ptr = buffers.write(kernel, shape_type.as_bytes())?;
+            Ok(kernel
+                .generated
+                .fn_get_sub_shapes
+                .call(&mut kernel.store, (id.0, shape_type_ptr, shape_type_len))?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("get_sub_shapes"));
         }
@@ -3529,13 +3249,13 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn sub_shape_count(&mut self, id: ShapeHandle, shape_type: &str) -> OcctResult<i32> {
         let shape_type_len = checked_wasm_len(shape_type.len(), 1)?;
-        let shape_type_ptr = self.write_bytes(shape_type.as_bytes())?;
-        let result = self
-            .generated
-            .fn_sub_shape_count
-            .call(&mut self.store, (id.0, shape_type_ptr, shape_type_len));
-        self.free_bytes(shape_type_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let shape_type_ptr = buffers.write(kernel, shape_type.as_bytes())?;
+            Ok(kernel
+                .generated
+                .fn_sub_shape_count
+                .call(&mut kernel.store, (id.0, shape_type_ptr, shape_type_len))?)
+        })?;
         self.check_error("sub_shape_count")?;
         Ok(result)
     }
@@ -3552,13 +3272,13 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<Vec<i32>> {
         let shape_type_len = checked_wasm_len(shape_type.len(), 1)?;
-        let shape_type_ptr = self.write_bytes(shape_type.as_bytes())?;
-        let len = self.generated.fn_sub_shape_hashes.call(
-            &mut self.store,
-            (id.0, shape_type_ptr, shape_type_len, hash_upper_bound),
-        );
-        self.free_bytes(shape_type_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let shape_type_ptr = buffers.write(kernel, shape_type.as_bytes())?;
+            Ok(kernel.generated.fn_sub_shape_hashes.call(
+                &mut kernel.store,
+                (id.0, shape_type_ptr, shape_type_len, hash_upper_bound),
+            )?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("sub_shape_hashes"));
         }
@@ -3697,13 +3417,13 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn downcast(&mut self, id: ShapeHandle, target_type: &str) -> OcctResult<ShapeHandle> {
         let target_type_len = checked_wasm_len(target_type.len(), 1)?;
-        let target_type_ptr = self.write_bytes(target_type.as_bytes())?;
-        let result = self
-            .generated
-            .fn_downcast
-            .call(&mut self.store, (id.0, target_type_ptr, target_type_len));
-        self.free_bytes(target_type_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let target_type_ptr = buffers.write(kernel, target_type.as_bytes())?;
+            Ok(kernel
+                .generated
+                .fn_downcast
+                .call(&mut kernel.store, (id.0, target_type_ptr, target_type_len))?)
+        })?;
         self.check_error("downcast")?;
         if result == 0 {
             return Err(self.read_last_error("downcast"));
@@ -4278,14 +3998,15 @@ impl crate::kernel::OcctKernel {
         periodic: bool,
     ) -> OcctResult<ShapeHandle> {
         let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
-        let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let flat_points_ptr = self.write_bytes(&flat_points_bytes)?;
-        let result = self.generated.fn_interpolate_points.call(
-            &mut self.store,
-            (flat_points_ptr, flat_points_len, i32::from(periodic)),
-        );
-        self.free_bytes(flat_points_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let flat_points_bytes: Vec<u8> =
+                flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let flat_points_ptr = buffers.write(kernel, &flat_points_bytes)?;
+            Ok(kernel.generated.fn_interpolate_points.call(
+                &mut kernel.store,
+                (flat_points_ptr, flat_points_len, i32::from(periodic)),
+            )?)
+        })?;
         self.check_error("interpolate_points")?;
         if result == 0 {
             return Err(self.read_last_error("interpolate_points"));
@@ -4309,23 +4030,24 @@ impl crate::kernel::OcctKernel {
         end_tan_z: f64,
     ) -> OcctResult<ShapeHandle> {
         let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
-        let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let flat_points_ptr = self.write_bytes(&flat_points_bytes)?;
-        let result = self.generated.fn_interpolate_points_with_tangents.call(
-            &mut self.store,
-            (
-                flat_points_ptr,
-                flat_points_len,
-                start_tan_x,
-                start_tan_y,
-                start_tan_z,
-                end_tan_x,
-                end_tan_y,
-                end_tan_z,
-            ),
-        );
-        self.free_bytes(flat_points_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let flat_points_bytes: Vec<u8> =
+                flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let flat_points_ptr = buffers.write(kernel, &flat_points_bytes)?;
+            Ok(kernel.generated.fn_interpolate_points_with_tangents.call(
+                &mut kernel.store,
+                (
+                    flat_points_ptr,
+                    flat_points_len,
+                    start_tan_x,
+                    start_tan_y,
+                    start_tan_z,
+                    end_tan_x,
+                    end_tan_y,
+                    end_tan_z,
+                ),
+            )?)
+        })?;
         self.check_error("interpolate_points_with_tangents")?;
         if result == 0 {
             return Err(self.read_last_error("interpolate_points_with_tangents"));
@@ -4382,14 +4104,15 @@ impl crate::kernel::OcctKernel {
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
         let flat_points_len = checked_wasm_len(flat_points.len(), 8)?;
-        let flat_points_bytes: Vec<u8> = flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let flat_points_ptr = self.write_bytes(&flat_points_bytes)?;
-        let result = self.generated.fn_approximate_points.call(
-            &mut self.store,
-            (flat_points_ptr, flat_points_len, tolerance),
-        );
-        self.free_bytes(flat_points_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let flat_points_bytes: Vec<u8> =
+                flat_points.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let flat_points_ptr = buffers.write(kernel, &flat_points_bytes)?;
+            Ok(kernel.generated.fn_approximate_points.call(
+                &mut kernel.store,
+                (flat_points_ptr, flat_points_len, tolerance),
+            )?)
+        })?;
         self.check_error("approximate_points")?;
         if result == 0 {
             return Err(self.read_last_error("approximate_points"));
@@ -4416,27 +4139,27 @@ impl crate::kernel::OcctKernel {
         plane_xz: f64,
     ) -> OcctResult<ShapeHandle> {
         let flat_points2d_len = checked_wasm_len(flat_points2d.len(), 8)?;
-        let flat_points2d_bytes: Vec<u8> =
-            flat_points2d.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let flat_points2d_ptr = self.write_bytes(&flat_points2d_bytes)?;
-        let result = self.generated.fn_lift_curve2d_to_plane.call(
-            &mut self.store,
-            (
-                flat_points2d_ptr,
-                flat_points2d_len,
-                plane_ox,
-                plane_oy,
-                plane_oz,
-                plane_zx,
-                plane_zy,
-                plane_zz,
-                plane_xx,
-                plane_xy,
-                plane_xz,
-            ),
-        );
-        self.free_bytes(flat_points2d_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let flat_points2d_bytes: Vec<u8> =
+                flat_points2d.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let flat_points2d_ptr = buffers.write(kernel, &flat_points2d_bytes)?;
+            Ok(kernel.generated.fn_lift_curve2d_to_plane.call(
+                &mut kernel.store,
+                (
+                    flat_points2d_ptr,
+                    flat_points2d_len,
+                    plane_ox,
+                    plane_oy,
+                    plane_oz,
+                    plane_zx,
+                    plane_zy,
+                    plane_zz,
+                    plane_xx,
+                    plane_xy,
+                    plane_xz,
+                ),
+            )?)
+        })?;
         self.check_error("lift_curve2d_to_plane")?;
         if result == 0 {
             return Err(self.read_last_error("lift_curve2d_to_plane"));
@@ -4568,14 +4291,14 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn query_batch(&mut self, ids: &[ShapeHandle]) -> OcctResult<Vec<f64>> {
         let ids_len = checked_wasm_len(ids.len(), 4)?;
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let len = self
-            .generated
-            .fn_query_batch
-            .call(&mut self.store, (ids_ptr, ids_len));
-        self.free_bytes(ids_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let ids_ptr = buffers.write(kernel, &ids_bytes)?;
+            Ok(kernel
+                .generated
+                .fn_query_batch
+                .call(&mut kernel.store, (ids_ptr, ids_len))?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("query_batch"));
         }
@@ -4663,19 +4386,19 @@ impl crate::kernel::OcctKernel {
         ruled: bool,
     ) -> OcctResult<ShapeHandle> {
         let wire_ids_len = checked_wasm_len(wire_ids.len(), 4)?;
-        let wire_ids_bytes: Vec<u8> = wire_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let wire_ids_ptr = self.write_bytes(&wire_ids_bytes)?;
-        let result = self.generated.fn_loft.call(
-            &mut self.store,
-            (
-                wire_ids_ptr,
-                wire_ids_len,
-                i32::from(is_solid),
-                i32::from(ruled),
-            ),
-        );
-        self.free_bytes(wire_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let wire_ids_bytes: Vec<u8> = wire_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let wire_ids_ptr = buffers.write(kernel, &wire_ids_bytes)?;
+            Ok(kernel.generated.fn_loft.call(
+                &mut kernel.store,
+                (
+                    wire_ids_ptr,
+                    wire_ids_len,
+                    i32::from(is_solid),
+                    i32::from(ruled),
+                ),
+            )?)
+        })?;
         self.check_error("loft")?;
         if result == 0 {
             return Err(self.read_last_error("loft"));
@@ -4697,21 +4420,21 @@ impl crate::kernel::OcctKernel {
         end_vertex_id: ShapeHandle,
     ) -> OcctResult<ShapeHandle> {
         let wire_ids_len = checked_wasm_len(wire_ids.len(), 4)?;
-        let wire_ids_bytes: Vec<u8> = wire_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let wire_ids_ptr = self.write_bytes(&wire_ids_bytes)?;
-        let result = self.generated.fn_loft_with_vertices.call(
-            &mut self.store,
-            (
-                wire_ids_ptr,
-                wire_ids_len,
-                i32::from(is_solid),
-                i32::from(ruled),
-                start_vertex_id.0,
-                end_vertex_id.0,
-            ),
-        );
-        self.free_bytes(wire_ids_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let wire_ids_bytes: Vec<u8> = wire_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let wire_ids_ptr = buffers.write(kernel, &wire_ids_bytes)?;
+            Ok(kernel.generated.fn_loft_with_vertices.call(
+                &mut kernel.store,
+                (
+                    wire_ids_ptr,
+                    wire_ids_len,
+                    i32::from(is_solid),
+                    i32::from(ruled),
+                    start_vertex_id.0,
+                    end_vertex_id.0,
+                ),
+            )?)
+        })?;
         self.check_error("loft_with_vertices")?;
         if result == 0 {
             return Err(self.read_last_error("loft_with_vertices"));
@@ -5083,13 +4806,13 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn import_step(&mut self, data: &str) -> OcctResult<ShapeHandle> {
         let data_len = checked_wasm_len(data.len(), 1)?;
-        let data_ptr = self.write_bytes(data.as_bytes())?;
-        let result = self
-            .generated
-            .fn_import_step
-            .call(&mut self.store, (data_ptr, data_len));
-        self.free_bytes(data_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let data_ptr = buffers.write(kernel, data.as_bytes())?;
+            Ok(kernel
+                .generated
+                .fn_import_step
+                .call(&mut kernel.store, (data_ptr, data_len))?)
+        })?;
         self.check_error("import_step")?;
         if result == 0 {
             return Err(self.read_last_error("import_step"));
@@ -5120,13 +4843,13 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn export_step_with_unit(&mut self, id: ShapeHandle, unit: &str) -> OcctResult<String> {
         let unit_len = checked_wasm_len(unit.len(), 1)?;
-        let unit_ptr = self.write_bytes(unit.as_bytes())?;
-        let len = self
-            .generated
-            .fn_export_step_with_unit
-            .call(&mut self.store, (id.0, unit_ptr, unit_len));
-        self.free_bytes(unit_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let unit_ptr = buffers.write(kernel, unit.as_bytes())?;
+            Ok(kernel
+                .generated
+                .fn_export_step_with_unit
+                .call(&mut kernel.store, (id.0, unit_ptr, unit_len))?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("export_step_with_unit"));
         }
@@ -5146,21 +4869,14 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<String> {
         let unit_len = checked_wasm_len(unit.len(), 1)?;
         let schema_len = checked_wasm_len(schema.len(), 1)?;
-        let unit_ptr = self.write_bytes(unit.as_bytes())?;
-        let schema_ptr = match self.write_bytes(schema.as_bytes()) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(unit_ptr);
-                return Err(e);
-            }
-        };
-        let len = self.generated.fn_export_step_with_options.call(
-            &mut self.store,
-            (id.0, unit_ptr, unit_len, schema_ptr, schema_len),
-        );
-        self.free_bytes(unit_ptr)?;
-        self.free_bytes(schema_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let unit_ptr = buffers.write(kernel, unit.as_bytes())?;
+            let schema_ptr = buffers.write(kernel, schema.as_bytes())?;
+            Ok(kernel.generated.fn_export_step_with_options.call(
+                &mut kernel.store,
+                (id.0, unit_ptr, unit_len, schema_ptr, schema_len),
+            )?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("export_step_with_options"));
         }
@@ -5195,13 +4911,13 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn import_stl(&mut self, data: &str) -> OcctResult<ShapeHandle> {
         let data_len = checked_wasm_len(data.len(), 1)?;
-        let data_ptr = self.write_bytes(data.as_bytes())?;
-        let result = self
-            .generated
-            .fn_import_stl
-            .call(&mut self.store, (data_ptr, data_len));
-        self.free_bytes(data_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let data_ptr = buffers.write(kernel, data.as_bytes())?;
+            Ok(kernel
+                .generated
+                .fn_import_stl
+                .call(&mut kernel.store, (data_ptr, data_len))?)
+        })?;
         self.check_error("import_stl")?;
         if result == 0 {
             return Err(self.read_last_error("import_stl"));
@@ -5236,13 +4952,13 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn import_stl_binary(&mut self, data: &[u8]) -> OcctResult<ShapeHandle> {
         let data_len = checked_wasm_len(data.len(), 1)?;
-        let data_ptr = self.write_bytes(data)?;
-        let result = self
-            .generated
-            .fn_import_stl_binary
-            .call(&mut self.store, (data_ptr, data_len));
-        self.free_bytes(data_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let data_ptr = buffers.write(kernel, data)?;
+            Ok(kernel
+                .generated
+                .fn_import_stl_binary
+                .call(&mut kernel.store, (data_ptr, data_len))?)
+        })?;
         self.check_error("import_stl_binary")?;
         if result == 0 {
             return Err(self.read_last_error("import_stl_binary"));
@@ -5270,13 +4986,13 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn from_brep(&mut self, data: &str) -> OcctResult<ShapeHandle> {
         let data_len = checked_wasm_len(data.len(), 1)?;
-        let data_ptr = self.write_bytes(data.as_bytes())?;
-        let result = self
-            .generated
-            .fn_from_brep
-            .call(&mut self.store, (data_ptr, data_len));
-        self.free_bytes(data_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let data_ptr = buffers.write(kernel, data.as_bytes())?;
+            Ok(kernel
+                .generated
+                .fn_from_brep
+                .call(&mut kernel.store, (data_ptr, data_len))?)
+        })?;
         self.check_error("from_brep")?;
         if result == 0 {
             return Err(self.read_last_error("from_brep"));
@@ -5307,13 +5023,13 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn from_brep_binary(&mut self, data: &[u8]) -> OcctResult<ShapeHandle> {
         let data_len = checked_wasm_len(data.len(), 1)?;
-        let data_ptr = self.write_bytes(data)?;
-        let result = self
-            .generated
-            .fn_from_brep_binary
-            .call(&mut self.store, (data_ptr, data_len));
-        self.free_bytes(data_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let data_ptr = buffers.write(kernel, data)?;
+            Ok(kernel
+                .generated
+                .fn_from_brep_binary
+                .call(&mut kernel.store, (data_ptr, data_len))?)
+        })?;
         self.check_error("from_brep_binary")?;
         if result == 0 {
             return Err(self.read_last_error("from_brep_binary"));
@@ -5336,25 +5052,25 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_extrude_with_history.call(
-            &mut self.store,
-            (
-                shape_id.0,
-                dx,
-                dy,
-                dz,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_extrude_with_history.call(
+                &mut kernel.store,
+                (
+                    shape_id.0,
+                    dx,
+                    dy,
+                    dz,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("extrude_with_history"));
         }
@@ -5380,29 +5096,29 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_revolve_with_history.call(
-            &mut self.store,
-            (
-                shape_id.0,
-                px,
-                py,
-                pz,
-                dx,
-                dy,
-                dz,
-                angle_rad,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_revolve_with_history.call(
+                &mut kernel.store,
+                (
+                    shape_id.0,
+                    px,
+                    py,
+                    pz,
+                    dx,
+                    dy,
+                    dz,
+                    angle_rad,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("revolve_with_history"));
         }
@@ -5422,23 +5138,23 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_pipe_with_history.call(
-            &mut self.store,
-            (
-                profile_id.0,
-                spine_id.0,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_pipe_with_history.call(
+                &mut kernel.store,
+                (
+                    profile_id.0,
+                    spine_id.0,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("pipe_with_history"));
         }
@@ -5462,36 +5178,29 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<EvolutionData> {
         let options_len = checked_wasm_len(options.len(), 8)?;
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let options_bytes: Vec<u8> = options.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let options_ptr = self.write_bytes(&options_bytes)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = match self.write_bytes(&input_face_hashes_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(options_ptr);
-                return Err(e);
-            }
-        };
-        let status = self.generated.fn_sweep_with_history.call(
-            &mut self.store,
-            (
-                profile_id.0,
-                spine_id.0,
-                aux_spine_id,
-                support_id,
-                options_ptr,
-                options_len,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(options_ptr)?;
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let options_bytes: Vec<u8> = options.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let options_ptr = buffers.write(kernel, &options_bytes)?;
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_sweep_with_history.call(
+                &mut kernel.store,
+                (
+                    profile_id.0,
+                    spine_id.0,
+                    aux_spine_id,
+                    support_id,
+                    options_ptr,
+                    options_len,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("sweep_with_history"));
         }
@@ -5515,36 +5224,29 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<EvolutionData> {
         let wire_ids_len = checked_wasm_len(wire_ids.len(), 4)?;
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let wire_ids_bytes: Vec<u8> = wire_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let wire_ids_ptr = self.write_bytes(&wire_ids_bytes)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = match self.write_bytes(&input_face_hashes_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(wire_ids_ptr);
-                return Err(e);
-            }
-        };
-        let status = self.generated.fn_loft_with_history.call(
-            &mut self.store,
-            (
-                wire_ids_ptr,
-                wire_ids_len,
-                i32::from(is_solid),
-                i32::from(ruled),
-                start_vertex_id,
-                end_vertex_id,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(wire_ids_ptr)?;
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let wire_ids_bytes: Vec<u8> = wire_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let wire_ids_ptr = buffers.write(kernel, &wire_ids_bytes)?;
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_loft_with_history.call(
+                &mut kernel.store,
+                (
+                    wire_ids_ptr,
+                    wire_ids_len,
+                    i32::from(is_solid),
+                    i32::from(ruled),
+                    start_vertex_id,
+                    end_vertex_id,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("loft_with_history"));
         }
@@ -5563,22 +5265,22 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_unify_same_domain_with_history.call(
-            &mut self.store,
-            (
-                id.0,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_unify_same_domain_with_history.call(
+                &mut kernel.store,
+                (
+                    id.0,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("unify_same_domain_with_history"));
         }
@@ -5599,33 +5301,26 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<EvolutionData> {
         let matrix_len = checked_wasm_len(matrix.len(), 8)?;
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let matrix_ptr = self.write_bytes(&matrix_bytes)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = match self.write_bytes(&input_face_hashes_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(matrix_ptr);
-                return Err(e);
-            }
-        };
-        let status = self.generated.fn_transform_with_history.call(
-            &mut self.store,
-            (
-                id.0,
-                matrix_ptr,
-                matrix_len,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(matrix_ptr)?;
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let matrix_bytes: Vec<u8> = matrix.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let matrix_ptr = buffers.write(kernel, &matrix_bytes)?;
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_transform_with_history.call(
+                &mut kernel.store,
+                (
+                    id.0,
+                    matrix_ptr,
+                    matrix_len,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("transform_with_history"));
         }
@@ -5647,25 +5342,25 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_translate_with_history.call(
-            &mut self.store,
-            (
-                id.0,
-                dx,
-                dy,
-                dz,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_translate_with_history.call(
+                &mut kernel.store,
+                (
+                    id.0,
+                    dx,
+                    dy,
+                    dz,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("translate_with_history"));
         }
@@ -5685,23 +5380,23 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_fuse_with_history.call(
-            &mut self.store,
-            (
-                a.0,
-                b.0,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_fuse_with_history.call(
+                &mut kernel.store,
+                (
+                    a.0,
+                    b.0,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("fuse_with_history"));
         }
@@ -5721,23 +5416,23 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_cut_with_history.call(
-            &mut self.store,
-            (
-                a.0,
-                b.0,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_cut_with_history.call(
+                &mut kernel.store,
+                (
+                    a.0,
+                    b.0,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("cut_with_history"));
         }
@@ -5759,34 +5454,27 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<EvolutionData> {
         let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = match self.write_bytes(&input_face_hashes_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                return Err(e);
-            }
-        };
-        let status = self.generated.fn_fillet_with_history.call(
-            &mut self.store,
-            (
-                solid_id.0,
-                edge_ids_ptr,
-                edge_ids_len,
-                radius,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(edge_ids_ptr)?;
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let edge_ids_ptr = buffers.write(kernel, &edge_ids_bytes)?;
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_fillet_with_history.call(
+                &mut kernel.store,
+                (
+                    solid_id.0,
+                    edge_ids_ptr,
+                    edge_ids_len,
+                    radius,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("fillet_with_history"));
         }
@@ -5812,29 +5500,29 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_rotate_with_history.call(
-            &mut self.store,
-            (
-                id.0,
-                px,
-                py,
-                pz,
-                dx,
-                dy,
-                dz,
-                angle,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_rotate_with_history.call(
+                &mut kernel.store,
+                (
+                    id.0,
+                    px,
+                    py,
+                    pz,
+                    dx,
+                    dy,
+                    dz,
+                    angle,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("rotate_with_history"));
         }
@@ -5859,28 +5547,28 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_mirror_with_history.call(
-            &mut self.store,
-            (
-                id.0,
-                px,
-                py,
-                pz,
-                nx,
-                ny,
-                nz,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_mirror_with_history.call(
+                &mut kernel.store,
+                (
+                    id.0,
+                    px,
+                    py,
+                    pz,
+                    nx,
+                    ny,
+                    nz,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("mirror_with_history"));
         }
@@ -5903,26 +5591,26 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_scale_with_history.call(
-            &mut self.store,
-            (
-                id.0,
-                cx,
-                cy,
-                cz,
-                factor,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_scale_with_history.call(
+                &mut kernel.store,
+                (
+                    id.0,
+                    cx,
+                    cy,
+                    cz,
+                    factor,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("scale_with_history"));
         }
@@ -5942,23 +5630,23 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_intersect_with_history.call(
-            &mut self.store,
-            (
-                a.0,
-                b.0,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_intersect_with_history.call(
+                &mut kernel.store,
+                (
+                    a.0,
+                    b.0,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("intersect_with_history"));
         }
@@ -5980,34 +5668,27 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<EvolutionData> {
         let edge_ids_len = checked_wasm_len(edge_ids.len(), 4)?;
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = match self.write_bytes(&input_face_hashes_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                return Err(e);
-            }
-        };
-        let status = self.generated.fn_chamfer_with_history.call(
-            &mut self.store,
-            (
-                solid_id.0,
-                edge_ids_ptr,
-                edge_ids_len,
-                distance,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(edge_ids_ptr)?;
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let edge_ids_ptr = buffers.write(kernel, &edge_ids_bytes)?;
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_chamfer_with_history.call(
+                &mut kernel.store,
+                (
+                    solid_id.0,
+                    edge_ids_ptr,
+                    edge_ids_len,
+                    distance,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("chamfer_with_history"));
         }
@@ -6032,58 +5713,35 @@ impl crate::kernel::OcctKernel {
         let start_radii_len = checked_wasm_len(start_radii.len(), 8)?;
         let end_radii_len = checked_wasm_len(end_radii.len(), 8)?;
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let start_radii_bytes: Vec<u8> = start_radii.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let start_radii_ptr = match self.write_bytes(&start_radii_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                return Err(e);
-            }
-        };
-        let end_radii_bytes: Vec<u8> = end_radii.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let end_radii_ptr = match self.write_bytes(&end_radii_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                let _ = self.free_bytes(start_radii_ptr);
-                return Err(e);
-            }
-        };
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = match self.write_bytes(&input_face_hashes_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                let _ = self.free_bytes(start_radii_ptr);
-                let _ = self.free_bytes(end_radii_ptr);
-                return Err(e);
-            }
-        };
-        let status = self.generated.fn_fillet_radii_with_history.call(
-            &mut self.store,
-            (
-                solid_id.0,
-                edge_ids_ptr,
-                edge_ids_len,
-                start_radii_ptr,
-                start_radii_len,
-                end_radii_ptr,
-                end_radii_len,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(edge_ids_ptr)?;
-        self.free_bytes(start_radii_ptr)?;
-        self.free_bytes(end_radii_ptr)?;
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<4, _>(|kernel, buffers| {
+            let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let edge_ids_ptr = buffers.write(kernel, &edge_ids_bytes)?;
+            let start_radii_bytes: Vec<u8> =
+                start_radii.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let start_radii_ptr = buffers.write(kernel, &start_radii_bytes)?;
+            let end_radii_bytes: Vec<u8> = end_radii.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let end_radii_ptr = buffers.write(kernel, &end_radii_bytes)?;
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_fillet_radii_with_history.call(
+                &mut kernel.store,
+                (
+                    solid_id.0,
+                    edge_ids_ptr,
+                    edge_ids_len,
+                    start_radii_ptr,
+                    start_radii_len,
+                    end_radii_ptr,
+                    end_radii_len,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("fillet_radii_with_history"));
         }
@@ -6110,75 +5768,43 @@ impl crate::kernel::OcctKernel {
         let distances2_len = checked_wasm_len(distances2.len(), 8)?;
         let reference_face_ids_len = checked_wasm_len(reference_face_ids.len(), 4)?;
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let distances1_bytes: Vec<u8> = distances1.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let distances1_ptr = match self.write_bytes(&distances1_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                return Err(e);
-            }
-        };
-        let distances2_bytes: Vec<u8> = distances2.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let distances2_ptr = match self.write_bytes(&distances2_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                let _ = self.free_bytes(distances1_ptr);
-                return Err(e);
-            }
-        };
-        let reference_face_ids_bytes: Vec<u8> = reference_face_ids
-            .iter()
-            .flat_map(|v| v.0.to_le_bytes())
-            .collect();
-        let reference_face_ids_ptr = match self.write_bytes(&reference_face_ids_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                let _ = self.free_bytes(distances1_ptr);
-                let _ = self.free_bytes(distances2_ptr);
-                return Err(e);
-            }
-        };
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = match self.write_bytes(&input_face_hashes_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                let _ = self.free_bytes(distances1_ptr);
-                let _ = self.free_bytes(distances2_ptr);
-                let _ = self.free_bytes(reference_face_ids_ptr);
-                return Err(e);
-            }
-        };
-        let status = self.generated.fn_chamfer_distances_with_history.call(
-            &mut self.store,
-            (
-                solid_id.0,
-                edge_ids_ptr,
-                edge_ids_len,
-                distances1_ptr,
-                distances1_len,
-                distances2_ptr,
-                distances2_len,
-                reference_face_ids_ptr,
-                reference_face_ids_len,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(edge_ids_ptr)?;
-        self.free_bytes(distances1_ptr)?;
-        self.free_bytes(distances2_ptr)?;
-        self.free_bytes(reference_face_ids_ptr)?;
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<5, _>(|kernel, buffers| {
+            let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let edge_ids_ptr = buffers.write(kernel, &edge_ids_bytes)?;
+            let distances1_bytes: Vec<u8> =
+                distances1.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let distances1_ptr = buffers.write(kernel, &distances1_bytes)?;
+            let distances2_bytes: Vec<u8> =
+                distances2.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let distances2_ptr = buffers.write(kernel, &distances2_bytes)?;
+            let reference_face_ids_bytes: Vec<u8> = reference_face_ids
+                .iter()
+                .flat_map(|v| v.0.to_le_bytes())
+                .collect();
+            let reference_face_ids_ptr = buffers.write(kernel, &reference_face_ids_bytes)?;
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_chamfer_distances_with_history.call(
+                &mut kernel.store,
+                (
+                    solid_id.0,
+                    edge_ids_ptr,
+                    edge_ids_len,
+                    distances1_ptr,
+                    distances1_len,
+                    distances2_ptr,
+                    distances2_len,
+                    reference_face_ids_ptr,
+                    reference_face_ids_len,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("chamfer_distances_with_history"));
         }
@@ -6205,75 +5831,42 @@ impl crate::kernel::OcctKernel {
         let angles_deg_len = checked_wasm_len(angles_deg.len(), 8)?;
         let reference_face_ids_len = checked_wasm_len(reference_face_ids.len(), 4)?;
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let edge_ids_ptr = self.write_bytes(&edge_ids_bytes)?;
-        let distances_bytes: Vec<u8> = distances.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let distances_ptr = match self.write_bytes(&distances_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                return Err(e);
-            }
-        };
-        let angles_deg_bytes: Vec<u8> = angles_deg.iter().flat_map(|v| v.to_le_bytes()).collect();
-        let angles_deg_ptr = match self.write_bytes(&angles_deg_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                let _ = self.free_bytes(distances_ptr);
-                return Err(e);
-            }
-        };
-        let reference_face_ids_bytes: Vec<u8> = reference_face_ids
-            .iter()
-            .flat_map(|v| v.0.to_le_bytes())
-            .collect();
-        let reference_face_ids_ptr = match self.write_bytes(&reference_face_ids_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                let _ = self.free_bytes(distances_ptr);
-                let _ = self.free_bytes(angles_deg_ptr);
-                return Err(e);
-            }
-        };
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = match self.write_bytes(&input_face_hashes_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(edge_ids_ptr);
-                let _ = self.free_bytes(distances_ptr);
-                let _ = self.free_bytes(angles_deg_ptr);
-                let _ = self.free_bytes(reference_face_ids_ptr);
-                return Err(e);
-            }
-        };
-        let status = self.generated.fn_chamfer_dist_angles_with_history.call(
-            &mut self.store,
-            (
-                solid_id.0,
-                edge_ids_ptr,
-                edge_ids_len,
-                distances_ptr,
-                distances_len,
-                angles_deg_ptr,
-                angles_deg_len,
-                reference_face_ids_ptr,
-                reference_face_ids_len,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(edge_ids_ptr)?;
-        self.free_bytes(distances_ptr)?;
-        self.free_bytes(angles_deg_ptr)?;
-        self.free_bytes(reference_face_ids_ptr)?;
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<5, _>(|kernel, buffers| {
+            let edge_ids_bytes: Vec<u8> = edge_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let edge_ids_ptr = buffers.write(kernel, &edge_ids_bytes)?;
+            let distances_bytes: Vec<u8> = distances.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let distances_ptr = buffers.write(kernel, &distances_bytes)?;
+            let angles_deg_bytes: Vec<u8> =
+                angles_deg.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let angles_deg_ptr = buffers.write(kernel, &angles_deg_bytes)?;
+            let reference_face_ids_bytes: Vec<u8> = reference_face_ids
+                .iter()
+                .flat_map(|v| v.0.to_le_bytes())
+                .collect();
+            let reference_face_ids_ptr = buffers.write(kernel, &reference_face_ids_bytes)?;
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_chamfer_dist_angles_with_history.call(
+                &mut kernel.store,
+                (
+                    solid_id.0,
+                    edge_ids_ptr,
+                    edge_ids_len,
+                    distances_ptr,
+                    distances_len,
+                    angles_deg_ptr,
+                    angles_deg_len,
+                    reference_face_ids_ptr,
+                    reference_face_ids_len,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("chamfer_dist_angles_with_history"));
         }
@@ -6296,35 +5889,28 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<EvolutionData> {
         let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = match self.write_bytes(&input_face_hashes_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(face_ids_ptr);
-                return Err(e);
-            }
-        };
-        let status = self.generated.fn_shell_with_history.call(
-            &mut self.store,
-            (
-                solid_id.0,
-                face_ids_ptr,
-                face_ids_len,
-                thickness,
-                tolerance,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(face_ids_ptr)?;
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let face_ids_ptr = buffers.write(kernel, &face_ids_bytes)?;
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_shell_with_history.call(
+                &mut kernel.store,
+                (
+                    solid_id.0,
+                    face_ids_ptr,
+                    face_ids_len,
+                    thickness,
+                    tolerance,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("shell_with_history"));
         }
@@ -6345,24 +5931,24 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_offset_with_history.call(
-            &mut self.store,
-            (
-                solid_id.0,
-                distance,
-                tolerance,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_offset_with_history.call(
+                &mut kernel.store,
+                (
+                    solid_id.0,
+                    distance,
+                    tolerance,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("offset_with_history"));
         }
@@ -6386,36 +5972,29 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<EvolutionData> {
         let face_ids_len = checked_wasm_len(face_ids.len(), 4)?;
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let face_ids_ptr = self.write_bytes(&face_ids_bytes)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = match self.write_bytes(&input_face_hashes_bytes) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(face_ids_ptr);
-                return Err(e);
-            }
-        };
-        let status = self.generated.fn_shell_with_history_and_join.call(
-            &mut self.store,
-            (
-                solid_id.0,
-                face_ids_ptr,
-                face_ids_len,
-                thickness,
-                tolerance,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-                join_type,
-            ),
-        );
-        self.free_bytes(face_ids_ptr)?;
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let face_ids_bytes: Vec<u8> = face_ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let face_ids_ptr = buffers.write(kernel, &face_ids_bytes)?;
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_shell_with_history_and_join.call(
+                &mut kernel.store,
+                (
+                    solid_id.0,
+                    face_ids_ptr,
+                    face_ids_len,
+                    thickness,
+                    tolerance,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                    join_type,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("shell_with_history_and_join"));
         }
@@ -6437,25 +6016,25 @@ impl crate::kernel::OcctKernel {
         join_type: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_offset_with_history_and_join.call(
-            &mut self.store,
-            (
-                solid_id.0,
-                distance,
-                tolerance,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-                join_type,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_offset_with_history_and_join.call(
+                &mut kernel.store,
+                (
+                    solid_id.0,
+                    distance,
+                    tolerance,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                    join_type,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("offset_with_history_and_join"));
         }
@@ -6476,24 +6055,24 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let input_face_hashes_len = checked_wasm_len(input_face_hashes.len(), 4)?;
-        let input_face_hashes_bytes: Vec<u8> = input_face_hashes
-            .iter()
-            .flat_map(|v| v.to_le_bytes())
-            .collect();
-        let input_face_hashes_ptr = self.write_bytes(&input_face_hashes_bytes)?;
-        let status = self.generated.fn_thicken_with_history.call(
-            &mut self.store,
-            (
-                shape_id.0,
-                thickness,
-                tolerance,
-                input_face_hashes_ptr,
-                input_face_hashes_len,
-                hash_upper_bound,
-            ),
-        );
-        self.free_bytes(input_face_hashes_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let input_face_hashes_bytes: Vec<u8> = input_face_hashes
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let input_face_hashes_ptr = buffers.write(kernel, &input_face_hashes_bytes)?;
+            Ok(kernel.generated.fn_thicken_with_history.call(
+                &mut kernel.store,
+                (
+                    shape_id.0,
+                    thickness,
+                    tolerance,
+                    input_face_hashes_ptr,
+                    input_face_hashes_len,
+                    hash_upper_bound,
+                ),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("thicken_with_history"));
         }
@@ -6575,14 +6154,14 @@ impl crate::kernel::OcctKernel {
         angular_deflection: f64,
     ) -> OcctResult<MeshBatch> {
         let ids_len = checked_wasm_len(ids.len(), 4)?;
-        let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
-        let ids_ptr = self.write_bytes(&ids_bytes)?;
-        let status = self.generated.fn_mesh_batch.call(
-            &mut self.store,
-            (ids_ptr, ids_len, linear_deflection, angular_deflection),
-        );
-        self.free_bytes(ids_ptr)?;
-        let status = status?;
+        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let ids_bytes: Vec<u8> = ids.iter().flat_map(|v| v.0.to_le_bytes()).collect();
+            let ids_ptr = buffers.write(kernel, &ids_bytes)?;
+            Ok(kernel.generated.fn_mesh_batch.call(
+                &mut kernel.store,
+                (ids_ptr, ids_len, linear_deflection, angular_deflection),
+            )?)
+        })?;
         if status < 0 {
             return Err(self.read_last_error("mesh_batch"));
         }
@@ -6871,13 +6450,13 @@ impl crate::kernel::OcctKernel {
         name: &str,
     ) -> OcctResult<()> {
         let name_len = checked_wasm_len(name.len(), 1)?;
-        let name_ptr = self.write_bytes(name.as_bytes())?;
-        let result = self
-            .generated
-            .fn_xcaf_set_name
-            .call(&mut self.store, (doc_id.0, label_id, name_ptr, name_len));
-        self.free_bytes(name_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let name_ptr = buffers.write(kernel, name.as_bytes())?;
+            Ok(kernel
+                .generated
+                .fn_xcaf_set_name
+                .call(&mut kernel.store, (doc_id.0, label_id, name_ptr, name_len))?)
+        })?;
         if result < 0 {
             return Err(self.read_last_error("xcaf_set_name"));
         }
@@ -7044,13 +6623,13 @@ impl crate::kernel::OcctKernel {
         unit: &str,
     ) -> OcctResult<String> {
         let unit_len = checked_wasm_len(unit.len(), 1)?;
-        let unit_ptr = self.write_bytes(unit.as_bytes())?;
-        let len = self
-            .generated
-            .fn_xcaf_export_step_with_unit
-            .call(&mut self.store, (doc_id.0, unit_ptr, unit_len));
-        self.free_bytes(unit_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let unit_ptr = buffers.write(kernel, unit.as_bytes())?;
+            Ok(kernel
+                .generated
+                .fn_xcaf_export_step_with_unit
+                .call(&mut kernel.store, (doc_id.0, unit_ptr, unit_len))?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_export_step_with_unit"));
         }
@@ -7070,21 +6649,14 @@ impl crate::kernel::OcctKernel {
     ) -> OcctResult<String> {
         let unit_len = checked_wasm_len(unit.len(), 1)?;
         let schema_len = checked_wasm_len(schema.len(), 1)?;
-        let unit_ptr = self.write_bytes(unit.as_bytes())?;
-        let schema_ptr = match self.write_bytes(schema.as_bytes()) {
-            Ok(ptr) => ptr,
-            Err(e) => {
-                let _ = self.free_bytes(unit_ptr);
-                return Err(e);
-            }
-        };
-        let len = self.generated.fn_xcaf_export_step_with_options.call(
-            &mut self.store,
-            (doc_id.0, unit_ptr, unit_len, schema_ptr, schema_len),
-        );
-        self.free_bytes(unit_ptr)?;
-        self.free_bytes(schema_ptr)?;
-        let len = len?;
+        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+            let unit_ptr = buffers.write(kernel, unit.as_bytes())?;
+            let schema_ptr = buffers.write(kernel, schema.as_bytes())?;
+            Ok(kernel.generated.fn_xcaf_export_step_with_options.call(
+                &mut kernel.store,
+                (doc_id.0, unit_ptr, unit_len, schema_ptr, schema_len),
+            )?)
+        })?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_export_step_with_options"));
         }
@@ -7098,13 +6670,13 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn xcaf_import_step(&mut self, step_data: &str) -> OcctResult<DocumentHandle> {
         let step_data_len = checked_wasm_len(step_data.len(), 1)?;
-        let step_data_ptr = self.write_bytes(step_data.as_bytes())?;
-        let result = self
-            .generated
-            .fn_xcaf_import_step
-            .call(&mut self.store, (step_data_ptr, step_data_len));
-        self.free_bytes(step_data_ptr)?;
-        let result = result?;
+        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let step_data_ptr = buffers.write(kernel, step_data.as_bytes())?;
+            Ok(kernel
+                .generated
+                .fn_xcaf_import_step
+                .call(&mut kernel.store, (step_data_ptr, step_data_len))?)
+        })?;
         self.check_error("xcaf_import_step")?;
         Ok(DocumentHandle(result))
     }
