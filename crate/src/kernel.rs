@@ -150,6 +150,31 @@ impl<const N: usize> GuestBuffers<N> {
         destination.copy_from_slice(data);
         Ok(ptr)
     }
+
+    /// Consume the scope and release each registered pointer, stopping on the
+    /// first trap. Keep both errors if cleanup fails after an ordinary error.
+    fn finish<T>(
+        self,
+        store: &mut Store<HostState>,
+        free: &TypedFunc<u32, ()>,
+        result: OcctResult<T>,
+    ) -> OcctResult<T> {
+        if store.data().is_poisoned() {
+            return result;
+        }
+        for ptr in self.pointers.into_iter().take(self.used) {
+            if let Err(cleanup) = free.call_guest(store, ptr) {
+                return Err(match result {
+                    Ok(_) => cleanup,
+                    Err(operation) => OcctError::Cleanup {
+                        operation: Box::new(operation),
+                        cleanup: Box::new(cleanup),
+                    },
+                });
+            }
+        }
+        result
+    }
 }
 
 /// The OCCT CAD kernel, backed by a sandboxed WASM module.
@@ -504,21 +529,7 @@ impl OcctKernel {
             used: 0,
         };
         let result = call(self, &mut buffers);
-        if self.store.data().is_poisoned() {
-            return result;
-        }
-        for ptr in buffers.pointers.into_iter().take(buffers.used) {
-            if let Err(cleanup) = self.runtime.free.call_guest(&mut self.store, ptr) {
-                return Err(match result {
-                    Ok(_) => cleanup,
-                    Err(operation) => OcctError::Cleanup {
-                        operation: Box::new(operation),
-                        cleanup: Box::new(cleanup),
-                    },
-                });
-            }
-        }
-        result
+        buffers.finish(&mut self.store, &self.runtime.free, result)
     }
 
     /// Read an owned byte slice from WASM memory.
@@ -1181,6 +1192,96 @@ fn checked_count(count: impl TryInto<u32>) -> OcctResult<u32> {
 mod memory_tests {
     use super::{checked_count, checked_wasm_len, checked_wasm_product};
     use crate::OcctResult;
+
+    use super::{GuestBuffers, GuestCall, HostState};
+    use crate::OcctError;
+    use wasmtime::{Engine, Instance, Module, Store, StoreLimits, TypedFunc, Val};
+
+    fn cleanup_fixture() -> OcctResult<(Store<HostState>, Instance, TypedFunc<u32, ()>)> {
+        let engine = Engine::default();
+        let mut store = Store::new(&engine, HostState::new(Box::new(StoreLimits::default())));
+        let module = Module::new(
+            &engine,
+            r#"(module
+          (global (export "freed") (mut i32) (i32.const 0))
+          (func (export "free") (param i32)
+            global.get 0 i32.const 1 i32.add global.set 0
+            local.get 0 i32.const 2 i32.eq if unreachable end)
+        )"#,
+        )?;
+        let instance = Instance::new(&mut store, &module, &[])?;
+        let free = instance.get_typed_func::<u32, ()>(&mut store, "free")?;
+        Ok((store, instance, free))
+    }
+
+    fn freed_count(store: &mut Store<HostState>, instance: Instance) -> OcctResult<i32> {
+        let freed = instance
+            .get_global(&mut *store, "freed")
+            .ok_or_else(|| OcctError::Memory("missing test global".to_owned()))?;
+        match freed.get(store) {
+            Val::I32(value) => Ok(value),
+            _ => Err(OcctError::Memory("unexpected test global type".to_owned())),
+        }
+    }
+
+    fn operation_error() -> OcctError {
+        OcctError::Operation {
+            operation: "test".to_owned(),
+            message: "operation".to_owned(),
+        }
+    }
+
+    #[test]
+    fn guest_buffers_release_all_on_ordinary_error() -> OcctResult<()> {
+        let (mut store, instance, free) = cleanup_fixture()?;
+        let buffers = GuestBuffers {
+            pointers: [1, 3, 4, 0],
+            used: 3,
+        };
+        assert!(matches!(
+            buffers.finish::<()>(&mut store, &free, Err(operation_error())),
+            Err(OcctError::Operation { .. })
+        ));
+        assert_eq!(freed_count(&mut store, instance)?, 3);
+        assert!(!store.data().is_poisoned());
+        Ok(())
+    }
+
+    #[test]
+    fn guest_buffers_retain_both_errors_and_stop_on_cleanup_trap() -> OcctResult<()> {
+        let (mut store, instance, free) = cleanup_fixture()?;
+        let buffers = GuestBuffers {
+            pointers: [1, 2, 3],
+            used: 3,
+        };
+        let outcome = buffers.finish::<()>(&mut store, &free, Err(operation_error()));
+        match outcome {
+            Err(OcctError::Cleanup { operation, cleanup }) => {
+                assert!(matches!(*operation, OcctError::Operation { .. }));
+                assert!(matches!(*cleanup, OcctError::Runtime(_)));
+            }
+            other => panic!("expected both errors, got {other:?}"),
+        }
+        assert_eq!(freed_count(&mut store, instance)?, 2);
+        assert!(store.data().is_poisoned());
+        Ok(())
+    }
+
+    #[test]
+    fn guest_buffers_do_not_enter_an_already_trapped_guest() -> OcctResult<()> {
+        let (mut store, instance, free) = cleanup_fixture()?;
+        let result = free.call_guest(&mut store, 2);
+        let buffers = GuestBuffers {
+            pointers: [1, 3],
+            used: 2,
+        };
+        assert!(matches!(
+            buffers.finish(&mut store, &free, result),
+            Err(OcctError::Runtime(_))
+        ));
+        assert_eq!(freed_count(&mut store, instance)?, 1);
+        Ok(())
+    }
 
     #[test]
     fn rejects_out_of_range_buffer_counts() -> OcctResult<()> {

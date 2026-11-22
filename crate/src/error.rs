@@ -18,7 +18,7 @@ pub enum OcctError {
     /// refused to grow linear memory.
     ///
     /// The call that needed the memory stopped partway through, so the
-    /// kernel's state is undefined: drop it and instantiate a new one.
+    /// kernel is invalidated: further operations fail without executing guest\n    /// code. Drop it and instantiate a new one.
     #[error("memory limit: growing linear memory from {current} to {requested} bytes was refused")]
     MemoryLimit {
         /// Linear memory size before the refused growth, in bytes.
