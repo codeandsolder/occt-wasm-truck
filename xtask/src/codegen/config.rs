@@ -5182,7 +5182,7 @@ return store(readStepShape(data).shape);",
         params: &[FacadeParam::Bytes("data")],
         occt_class: "",
         ctor_args: "",
-        setup_code: "
+        setup_code: "\
 const auto imported = readStepShape(data);
 std::vector<uint32_t> result{0, imported.roots, imported.transferred};
 result[0] = store(imported.shape);
