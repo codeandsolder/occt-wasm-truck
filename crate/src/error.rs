@@ -35,6 +35,22 @@ pub enum OcctError {
     #[error("WASM runtime error: {0}")]
     Runtime(#[source] wasmtime::Error),
 
+    /// An earlier guest trap made this kernel unusable. No further guest
+    /// code was executed; instantiate a fresh kernel to continue.
+    #[error("kernel invalidated by an earlier WASM runtime error")]
+    Invalidated,
+
+    /// An operation failed and releasing its input allocations also trapped.
+    /// Both errors are retained; the kernel must be discarded.
+    #[error("{operation}; guest cleanup failed: {cleanup}")]
+    Cleanup {
+        /// Original operation or marshalling error.
+        operation: Box<OcctError>,
+        /// Error that invalidated the kernel during cleanup.
+        #[source]
+        cleanup: Box<OcctError>,
+    },
+
     /// A memory access or data conversion error.
     #[error("memory error: {0}")]
     Memory(String),

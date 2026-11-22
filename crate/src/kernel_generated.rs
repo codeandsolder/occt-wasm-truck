@@ -4,6 +4,7 @@
 use wasmtime::TypedFunc;
 
 use crate::error::OcctResult;
+use crate::host::GuestCall;
 use crate::kernel::checked_wasm_len;
 use crate::types::{
     BRepProperties, BoundingBox, CurveData, DocumentHandle, EdgeData, EvolutionData, LabelInfo,
@@ -1763,7 +1764,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .primitives
             .make_box
-            .call(&mut self.store, (dx, dy, dz))?;
+            .call_guest(&mut self.store, (dx, dy, dz))?;
         self.check_error("make_box")?;
         if result == 0 {
             return Err(self.read_last_error("make_box"));
@@ -1789,7 +1790,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .primitives
             .make_box_from_corners
-            .call(&mut self.store, (x1, y1, z1, x2, y2, z2))?;
+            .call_guest(&mut self.store, (x1, y1, z1, x2, y2, z2))?;
         self.check_error("make_box_from_corners")?;
         if result == 0 {
             return Err(self.read_last_error("make_box_from_corners"));
@@ -1807,7 +1808,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .primitives
             .make_cylinder
-            .call(&mut self.store, (radius, height))?;
+            .call_guest(&mut self.store, (radius, height))?;
         self.check_error("make_cylinder")?;
         if result == 0 {
             return Err(self.read_last_error("make_cylinder"));
@@ -1825,7 +1826,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .primitives
             .make_sphere
-            .call(&mut self.store, (radius,))?;
+            .call_guest(&mut self.store, (radius,))?;
         self.check_error("make_sphere")?;
         if result == 0 {
             return Err(self.read_last_error("make_sphere"));
@@ -1843,7 +1844,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .primitives
             .make_cone
-            .call(&mut self.store, (r1, r2, height))?;
+            .call_guest(&mut self.store, (r1, r2, height))?;
         self.check_error("make_cone")?;
         if result == 0 {
             return Err(self.read_last_error("make_cone"));
@@ -1861,7 +1862,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .primitives
             .make_torus
-            .call(&mut self.store, (major_radius, minor_radius))?;
+            .call_guest(&mut self.store, (major_radius, minor_radius))?;
         self.check_error("make_torus")?;
         if result == 0 {
             return Err(self.read_last_error("make_torus"));
@@ -1879,7 +1880,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .primitives
             .make_ellipsoid
-            .call(&mut self.store, (rx, ry, rz))?;
+            .call_guest(&mut self.store, (rx, ry, rz))?;
         self.check_error("make_ellipsoid")?;
         if result == 0 {
             return Err(self.read_last_error("make_ellipsoid"));
@@ -1905,7 +1906,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .primitives
             .half_space
-            .call(&mut self.store, (ox, oy, oz, nx, ny, nz))?;
+            .call_guest(&mut self.store, (ox, oy, oz, nx, ny, nz))?;
         self.check_error("half_space")?;
         if result == 0 {
             return Err(self.read_last_error("half_space"));
@@ -1923,7 +1924,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .primitives
             .make_rectangle
-            .call(&mut self.store, (width, height))?;
+            .call_guest(&mut self.store, (width, height))?;
         self.check_error("make_rectangle")?;
         if result == 0 {
             return Err(self.read_last_error("make_rectangle"));
@@ -1941,7 +1942,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .booleans
             .fuse
-            .call(&mut self.store, (a.0, b.0))?;
+            .call_guest(&mut self.store, (a.0, b.0))?;
         self.check_error("fuse")?;
         if result == 0 {
             return Err(self.read_last_error("fuse"));
@@ -1959,7 +1960,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .booleans
             .cut
-            .call(&mut self.store, (a.0, b.0))?;
+            .call_guest(&mut self.store, (a.0, b.0))?;
         self.check_error("cut")?;
         if result == 0 {
             return Err(self.read_last_error("cut"));
@@ -1977,7 +1978,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .booleans
             .common
-            .call(&mut self.store, (a.0, b.0))?;
+            .call_guest(&mut self.store, (a.0, b.0))?;
         self.check_error("common")?;
         if result == 0 {
             return Err(self.read_last_error("common"));
@@ -1995,7 +1996,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .booleans
             .section
-            .call(&mut self.store, (a.0, b.0))?;
+            .call_guest(&mut self.store, (a.0, b.0))?;
         self.check_error("section")?;
         if result == 0 {
             return Err(self.read_last_error("section"));
@@ -2012,7 +2013,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::SectionPlaneRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.booleans.section_plane.call(
+        let result = self.generated.booleans.section_plane.call_guest(
             &mut self.store,
             (
                 request.shape_id.0,
@@ -2041,7 +2042,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .booleans
             .intersect
-            .call(&mut self.store, (a.0, b.0))?;
+            .call_guest(&mut self.store, (a.0, b.0))?;
         self.check_error("intersect")?;
         if result == 0 {
             return Err(self.read_last_error("intersect"));
@@ -2056,7 +2057,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn fuse_all(&mut self, shape_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(shape_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &shape_ids
@@ -2064,17 +2065,17 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .booleans
                 .fuse_all
-                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("fuse_all")?;
-        if result == 0 {
-            return Err(self.read_last_error("fuse_all"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("fuse_all")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("fuse_all"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `intersectionCells` OCCT facade operation.
@@ -2084,7 +2085,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn intersection_cells(&mut self, shape_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(shape_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &shape_ids
@@ -2092,17 +2093,17 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .booleans
                 .intersection_cells
-                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("intersection_cells")?;
-        if result == 0 {
-            return Err(self.read_last_error("intersection_cells"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("intersection_cells")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("intersection_cells"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `cutAll` OCCT facade operation.
@@ -2116,7 +2117,7 @@ impl crate::kernel::OcctKernel {
         tool_ids: &[ShapeHandle],
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(tool_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &tool_ids
@@ -2124,16 +2125,16 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.booleans.cut_all.call(
+            let result = kernel.generated.booleans.cut_all.call_guest(
                 &mut kernel.store,
                 (shape_id.0, guest_ptrs[0], guest_lengths[0]),
-            )?)
-        })?;
-        self.check_error("cut_all")?;
-        if result == 0 {
-            return Err(self.read_last_error("cut_all"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("cut_all")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("cut_all"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `booleanOp` OCCT facade operation.
@@ -2150,7 +2151,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(request.tool_ids.len(), 4)?,
             checked_wasm_len(request.input_face_hashes.len(), 4)?,
         ];
-        let status = self.with_guest_buffers::<3, _>(|kernel, buffers| {
+        self.with_guest_buffers::<3, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -2177,7 +2178,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.booleans.boolean_op.call(
+            let status = kernel.generated.booleans.boolean_op.call_guest(
                 &mut kernel.store,
                 (
                     request.op_code,
@@ -2192,12 +2193,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[2],
                     request.hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("boolean_op"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("boolean_op"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `booleanPipeline` OCCT facade operation.
@@ -2215,7 +2216,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(op_codes.len(), 4)?,
             checked_wasm_len(tool_ids.len(), 4)?,
         ];
-        let result = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -2232,7 +2233,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.booleans.boolean_pipeline.call(
+            let result = kernel.generated.booleans.boolean_pipeline.call_guest(
                 &mut kernel.store,
                 (
                     base_id.0,
@@ -2241,13 +2242,13 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[1],
                     guest_lengths[1],
                 ),
-            )?)
-        })?;
-        self.check_error("boolean_pipeline")?;
-        if result == 0 {
-            return Err(self.read_last_error("boolean_pipeline"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("boolean_pipeline")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("boolean_pipeline"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `split` OCCT facade operation.
@@ -2261,7 +2262,7 @@ impl crate::kernel::OcctKernel {
         tool_ids: &[ShapeHandle],
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(tool_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &tool_ids
@@ -2269,16 +2270,16 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.booleans.split.call(
+            let result = kernel.generated.booleans.split.call_guest(
                 &mut kernel.store,
                 (shape_id.0, guest_ptrs[0], guest_lengths[0]),
-            )?)
-        })?;
-        self.check_error("split")?;
-        if result == 0 {
-            return Err(self.read_last_error("split"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("split")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("split"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `extrude` OCCT facade operation.
@@ -2297,7 +2298,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .modeling
             .extrude
-            .call(&mut self.store, (shape_id.0, dx, dy, dz))?;
+            .call_guest(&mut self.store, (shape_id.0, dx, dy, dz))?;
         self.check_error("extrude")?;
         if result == 0 {
             return Err(self.read_last_error("extrude"));
@@ -2311,7 +2312,7 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn revolve(&mut self, request: requests::RevolveRequest) -> OcctResult<ShapeHandle> {
-        let result = self.generated.modeling.revolve.call(
+        let result = self.generated.modeling.revolve.call_guest(
             &mut self.store,
             (
                 request.shape_id.0,
@@ -2343,7 +2344,7 @@ impl crate::kernel::OcctKernel {
         radius: f64,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(edge_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &edge_ids
@@ -2351,16 +2352,16 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.modeling.fillet.call(
+            let result = kernel.generated.modeling.fillet.call_guest(
                 &mut kernel.store,
                 (solid_id.0, guest_ptrs[0], guest_lengths[0], radius),
-            )?)
-        })?;
-        self.check_error("fillet")?;
-        if result == 0 {
-            return Err(self.read_last_error("fillet"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("fillet")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("fillet"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `chamfer` OCCT facade operation.
@@ -2375,7 +2376,7 @@ impl crate::kernel::OcctKernel {
         distance: f64,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(edge_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &edge_ids
@@ -2383,16 +2384,16 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.modeling.chamfer.call(
+            let result = kernel.generated.modeling.chamfer.call_guest(
                 &mut kernel.store,
                 (solid_id.0, guest_ptrs[0], guest_lengths[0], distance),
-            )?)
-        })?;
-        self.check_error("chamfer")?;
-        if result == 0 {
-            return Err(self.read_last_error("chamfer"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("chamfer")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("chamfer"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `chamferDistAngle` OCCT facade operation.
@@ -2408,7 +2409,7 @@ impl crate::kernel::OcctKernel {
         angle_deg: f64,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(edge_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &edge_ids
@@ -2416,7 +2417,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.modeling.chamfer_dist_angle.call(
+            let result = kernel.generated.modeling.chamfer_dist_angle.call_guest(
                 &mut kernel.store,
                 (
                     solid_id.0,
@@ -2425,13 +2426,13 @@ impl crate::kernel::OcctKernel {
                     distance,
                     angle_deg,
                 ),
-            )?)
-        })?;
-        self.check_error("chamfer_dist_angle")?;
-        if result == 0 {
-            return Err(self.read_last_error("chamfer_dist_angle"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("chamfer_dist_angle")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("chamfer_dist_angle"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `chamferAsymmetric` OCCT facade operation.
@@ -2447,7 +2448,7 @@ impl crate::kernel::OcctKernel {
         distance2: f64,
         reference_face_id: u32,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.modeling.chamfer_asymmetric.call(
+        let result = self.generated.modeling.chamfer_asymmetric.call_guest(
             &mut self.store,
             (
                 solid_id.0,
@@ -2481,7 +2482,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(start_radii.len(), 8)?,
             checked_wasm_len(end_radii.len(), 8)?,
         ];
-        let result = self.with_guest_buffers::<3, _>(|kernel, buffers| {
+        self.with_guest_buffers::<3, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -2505,7 +2506,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.modeling.fillet_radii.call(
+            let result = kernel.generated.modeling.fillet_radii.call_guest(
                 &mut kernel.store,
                 (
                     solid_id.0,
@@ -2516,13 +2517,13 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[2],
                     guest_lengths[2],
                 ),
-            )?)
-        })?;
-        self.check_error("fillet_radii")?;
-        if result == 0 {
-            return Err(self.read_last_error("fillet_radii"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("fillet_radii")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("fillet_radii"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `chamferDistances` OCCT facade operation.
@@ -2544,7 +2545,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(distances2.len(), 8)?,
             checked_wasm_len(reference_face_ids.len(), 4)?,
         ];
-        let result = self.with_guest_buffers::<4, _>(|kernel, buffers| {
+        self.with_guest_buffers::<4, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -2575,7 +2576,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.modeling.chamfer_distances.call(
+            let result = kernel.generated.modeling.chamfer_distances.call_guest(
                 &mut kernel.store,
                 (
                     solid_id.0,
@@ -2588,13 +2589,13 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[3],
                     guest_lengths[3],
                 ),
-            )?)
-        })?;
-        self.check_error("chamfer_distances")?;
-        if result == 0 {
-            return Err(self.read_last_error("chamfer_distances"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("chamfer_distances")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("chamfer_distances"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `chamferDistAngles` OCCT facade operation.
@@ -2616,7 +2617,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(angles_deg.len(), 8)?,
             checked_wasm_len(reference_face_ids.len(), 4)?,
         ];
-        let result = self.with_guest_buffers::<4, _>(|kernel, buffers| {
+        self.with_guest_buffers::<4, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -2647,7 +2648,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.modeling.chamfer_dist_angles.call(
+            let result = kernel.generated.modeling.chamfer_dist_angles.call_guest(
                 &mut kernel.store,
                 (
                     solid_id.0,
@@ -2660,13 +2661,13 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[3],
                     guest_lengths[3],
                 ),
-            )?)
-        })?;
-        self.check_error("chamfer_dist_angles")?;
-        if result == 0 {
-            return Err(self.read_last_error("chamfer_dist_angles"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("chamfer_dist_angles")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("chamfer_dist_angles"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `shell` OCCT facade operation.
@@ -2682,7 +2683,7 @@ impl crate::kernel::OcctKernel {
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(face_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &face_ids
@@ -2690,7 +2691,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.modeling.shell.call(
+            let result = kernel.generated.modeling.shell.call_guest(
                 &mut kernel.store,
                 (
                     solid_id.0,
@@ -2699,13 +2700,13 @@ impl crate::kernel::OcctKernel {
                     thickness,
                     tolerance,
                 ),
-            )?)
-        })?;
-        self.check_error("shell")?;
-        if result == 0 {
-            return Err(self.read_last_error("shell"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("shell")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("shell"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `offset` OCCT facade operation.
@@ -2723,7 +2724,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .modeling
             .offset
-            .call(&mut self.store, (solid_id.0, distance, tolerance))?;
+            .call_guest(&mut self.store, (solid_id.0, distance, tolerance))?;
         self.check_error("offset")?;
         if result == 0 {
             return Err(self.read_last_error("offset"));
@@ -2745,7 +2746,7 @@ impl crate::kernel::OcctKernel {
         join_type: i32,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(face_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &face_ids
@@ -2753,7 +2754,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.modeling.shell_with_join.call(
+            let result = kernel.generated.modeling.shell_with_join.call_guest(
                 &mut kernel.store,
                 (
                     solid_id.0,
@@ -2763,13 +2764,13 @@ impl crate::kernel::OcctKernel {
                     tolerance,
                     join_type,
                 ),
-            )?)
-        })?;
-        self.check_error("shell_with_join")?;
-        if result == 0 {
-            return Err(self.read_last_error("shell_with_join"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("shell_with_join")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("shell_with_join"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `offsetWithJoin` OCCT facade operation.
@@ -2784,7 +2785,7 @@ impl crate::kernel::OcctKernel {
         tolerance: f64,
         join_type: i32,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.modeling.offset_with_join.call(
+        let result = self.generated.modeling.offset_with_join.call_guest(
             &mut self.store,
             (solid_id.0, distance, tolerance, join_type),
         )?;
@@ -2809,7 +2810,7 @@ impl crate::kernel::OcctKernel {
         dy: f64,
         dz: f64,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.modeling.draft.call(
+        let result = self.generated.modeling.draft.call_guest(
             &mut self.store,
             (shape_id.0, face_id.0, angle_rad, dx, dy, dz),
         )?;
@@ -2833,7 +2834,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(request.face_ids.len(), 4)?,
             checked_wasm_len(request.angles_rad.len(), 8)?,
         ];
-        let result = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -2852,7 +2853,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.modeling.draft_faces.call(
+            let result = kernel.generated.modeling.draft_faces.call_guest(
                 &mut kernel.store,
                 (
                     request.shape_id.0,
@@ -2870,13 +2871,13 @@ impl crate::kernel::OcctKernel {
                     request.ny,
                     request.nz,
                 ),
-            )?)
-        })?;
-        self.check_error("draft_faces")?;
-        if result == 0 {
-            return Err(self.read_last_error("draft_faces"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("draft_faces")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("draft_faces"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `thicken` OCCT facade operation.
@@ -2894,7 +2895,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .modeling
             .thicken
-            .call(&mut self.store, (shape_id.0, thickness, tolerance))?;
+            .call_guest(&mut self.store, (shape_id.0, thickness, tolerance))?;
         self.check_error("thicken")?;
         if result == 0 {
             return Err(self.read_last_error("thicken"));
@@ -2914,7 +2915,7 @@ impl crate::kernel::OcctKernel {
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(face_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &face_ids
@@ -2922,16 +2923,16 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.modeling.defeature.call(
+            let result = kernel.generated.modeling.defeature.call_guest(
                 &mut kernel.store,
                 (shape_id.0, guest_ptrs[0], guest_lengths[0], tolerance),
-            )?)
-        })?;
-        self.check_error("defeature")?;
-        if result == 0 {
-            return Err(self.read_last_error("defeature"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("defeature")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("defeature"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `reverseShape` OCCT facade operation.
@@ -2944,7 +2945,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .modeling
             .reverse_shape
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         self.check_error("reverse_shape")?;
         if result == 0 {
             return Err(self.read_last_error("reverse_shape"));
@@ -2962,7 +2963,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .modeling
             .simplify
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         self.check_error("simplify")?;
         if result == 0 {
             return Err(self.read_last_error("simplify"));
@@ -2982,7 +2983,7 @@ impl crate::kernel::OcctKernel {
         start_radius: f64,
         end_radius: f64,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.modeling.fillet_variable.call(
+        let result = self.generated.modeling.fillet_variable.call_guest(
             &mut self.store,
             (solid_id.0, edge_id.0, start_radius, end_radius),
         )?;
@@ -3011,7 +3012,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(flat_edge_ids.len(), 4)?,
             checked_wasm_len(radii.len(), 8)?,
         ];
-        let len = self.with_guest_buffers::<4, _>(|kernel, buffers| {
+        self.with_guest_buffers::<4, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -3042,7 +3043,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.modeling.fillet_batch.call(
+            let len = kernel.generated.modeling.fillet_batch.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -3054,12 +3055,12 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[3],
                     guest_lengths[3],
                 ),
-            )?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("fillet_batch"));
-        }
-        self.read_vec_shape_result()
+            )?;
+            if len < 0 {
+                return Err(kernel.read_last_error("fillet_batch"));
+            }
+            kernel.read_vec_shape_result()
+        })
     }
 
     /// Call the `offsetWire2D` OCCT facade operation.
@@ -3077,7 +3078,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .modeling
             .offset_wire2_d
-            .call(&mut self.store, (wire_id.0, offset, join_type))?;
+            .call_guest(&mut self.store, (wire_id.0, offset, join_type))?;
         self.check_error("offset_wire2_d")?;
         if result == 0 {
             return Err(self.read_last_error("offset_wire2_d"));
@@ -3101,7 +3102,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .transforms
             .translate
-            .call(&mut self.store, (id.0, dx, dy, dz))?;
+            .call_guest(&mut self.store, (id.0, dx, dy, dz))?;
         self.check_error("translate")?;
         if result == 0 {
             return Err(self.read_last_error("translate"));
@@ -3115,7 +3116,7 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn rotate(&mut self, request: requests::RotateRequest) -> OcctResult<ShapeHandle> {
-        let result = self.generated.transforms.rotate.call(
+        let result = self.generated.transforms.rotate.call_guest(
             &mut self.store,
             (
                 request.id.0,
@@ -3152,7 +3153,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .transforms
             .scale
-            .call(&mut self.store, (id.0, px, py, pz, factor))?;
+            .call_guest(&mut self.store, (id.0, px, py, pz, factor))?;
         self.check_error("scale")?;
         if result == 0 {
             return Err(self.read_last_error("scale"));
@@ -3166,7 +3167,7 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn mirror(&mut self, request: requests::MirrorRequest) -> OcctResult<ShapeHandle> {
-        let result = self.generated.transforms.mirror.call(
+        let result = self.generated.transforms.mirror.call_guest(
             &mut self.store,
             (
                 request.id.0,
@@ -3195,7 +3196,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .transforms
             .copy
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         self.check_error("copy")?;
         if result == 0 {
             return Err(self.read_last_error("copy"));
@@ -3221,7 +3222,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .transforms
             .linear_pattern
-            .call(&mut self.store, (id.0, dx, dy, dz, spacing, count))?;
+            .call_guest(&mut self.store, (id.0, dx, dy, dz, spacing, count))?;
         self.check_error("linear_pattern")?;
         if result == 0 {
             return Err(self.read_last_error("linear_pattern"));
@@ -3238,7 +3239,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::CircularPatternRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.transforms.circular_pattern.call(
+        let result = self.generated.transforms.circular_pattern.call_guest(
             &mut self.store,
             (
                 request.id.0,
@@ -3266,7 +3267,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn transform(&mut self, id: ShapeHandle, matrix: &[f64]) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(matrix.len(), 8)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &matrix
@@ -3274,17 +3275,17 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .transforms
                 .transform
-                .call(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("transform")?;
-        if result == 0 {
-            return Err(self.read_last_error("transform"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("transform")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("transform"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `located` OCCT facade operation.
@@ -3294,7 +3295,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn located(&mut self, id: ShapeHandle, matrix: &[f64]) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(matrix.len(), 8)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &matrix
@@ -3302,17 +3303,17 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .transforms
                 .located
-                .call(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("located")?;
-        if result == 0 {
-            return Err(self.read_last_error("located"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("located")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("located"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `generalTransform` OCCT facade operation.
@@ -3326,7 +3327,7 @@ impl crate::kernel::OcctKernel {
         matrix: &[f64],
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(matrix.len(), 8)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &matrix
@@ -3334,17 +3335,17 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .transforms
                 .general_transform
-                .call(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("general_transform")?;
-        if result == 0 {
-            return Err(self.read_last_error("general_transform"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("general_transform")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("general_transform"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `translateBatch` OCCT facade operation.
@@ -3361,7 +3362,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(ids.len(), 4)?,
             checked_wasm_len(offsets.len(), 8)?,
         ];
-        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -3377,7 +3378,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.transforms.translate_batch.call(
+            let len = kernel.generated.transforms.translate_batch.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -3385,12 +3386,12 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[1],
                     guest_lengths[1],
                 ),
-            )?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("translate_batch"));
-        }
-        self.read_vec_shape_result()
+            )?;
+            if len < 0 {
+                return Err(kernel.read_last_error("translate_batch"));
+            }
+            kernel.read_vec_shape_result()
+        })
     }
 
     /// Call the `composeTransform` OCCT facade operation.
@@ -3403,7 +3404,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(m1.len(), 8)?,
             checked_wasm_len(m2.len(), 8)?,
         ];
-        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -3414,7 +3415,7 @@ impl crate::kernel::OcctKernel {
                     &m2.iter().flat_map(|v| v.to_le_bytes()).collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.transforms.compose_transform.call(
+            let len = kernel.generated.transforms.compose_transform.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -3422,12 +3423,12 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[1],
                     guest_lengths[1],
                 ),
-            )?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("compose_transform"));
-        }
-        self.read_vec_f64_result()
+            )?;
+            if len < 0 {
+                return Err(kernel.read_last_error("compose_transform"));
+            }
+            kernel.read_vec_f64_result()
+        })
     }
 
     /// Call the `transformBatch` OCCT facade operation.
@@ -3444,7 +3445,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(ids.len(), 4)?,
             checked_wasm_len(matrices.len(), 8)?,
         ];
-        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -3460,7 +3461,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.transforms.transform_batch.call(
+            let len = kernel.generated.transforms.transform_batch.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -3468,12 +3469,12 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[1],
                     guest_lengths[1],
                 ),
-            )?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("transform_batch"));
-        }
-        self.read_vec_shape_result()
+            )?;
+            if len < 0 {
+                return Err(kernel.read_last_error("transform_batch"));
+            }
+            kernel.read_vec_shape_result()
+        })
     }
 
     /// Call the `rotateBatch` OCCT facade operation.
@@ -3490,7 +3491,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(ids.len(), 4)?,
             checked_wasm_len(params.len(), 8)?,
         ];
-        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -3506,7 +3507,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.transforms.rotate_batch.call(
+            let len = kernel.generated.transforms.rotate_batch.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -3514,12 +3515,12 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[1],
                     guest_lengths[1],
                 ),
-            )?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("rotate_batch"));
-        }
-        self.read_vec_shape_result()
+            )?;
+            if len < 0 {
+                return Err(kernel.read_last_error("rotate_batch"));
+            }
+            kernel.read_vec_shape_result()
+        })
     }
 
     /// Call the `scaleBatch` OCCT facade operation.
@@ -3536,7 +3537,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(ids.len(), 4)?,
             checked_wasm_len(params.len(), 8)?,
         ];
-        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -3552,7 +3553,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.transforms.scale_batch.call(
+            let len = kernel.generated.transforms.scale_batch.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -3560,12 +3561,12 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[1],
                     guest_lengths[1],
                 ),
-            )?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("scale_batch"));
-        }
-        self.read_vec_shape_result()
+            )?;
+            if len < 0 {
+                return Err(kernel.read_last_error("scale_batch"));
+            }
+            kernel.read_vec_shape_result()
+        })
     }
 
     /// Call the `mirrorBatch` OCCT facade operation.
@@ -3582,7 +3583,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(ids.len(), 4)?,
             checked_wasm_len(params.len(), 8)?,
         ];
-        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -3598,7 +3599,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.transforms.mirror_batch.call(
+            let len = kernel.generated.transforms.mirror_batch.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -3606,12 +3607,12 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[1],
                     guest_lengths[1],
                 ),
-            )?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("mirror_batch"));
-        }
-        self.read_vec_shape_result()
+            )?;
+            if len < 0 {
+                return Err(kernel.read_last_error("mirror_batch"));
+            }
+            kernel.read_vec_shape_result()
+        })
     }
 
     /// Call the `makeVertex` OCCT facade operation.
@@ -3624,7 +3625,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .construction
             .make_vertex
-            .call(&mut self.store, (x, y, z))?;
+            .call_guest(&mut self.store, (x, y, z))?;
         self.check_error("make_vertex")?;
         if result == 0 {
             return Err(self.read_last_error("make_vertex"));
@@ -3642,7 +3643,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .construction
             .make_edge
-            .call(&mut self.store, (v1.0, v2.0))?;
+            .call_guest(&mut self.store, (v1.0, v2.0))?;
         self.check_error("make_edge")?;
         if result == 0 {
             return Err(self.read_last_error("make_edge"));
@@ -3657,7 +3658,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn make_wire(&mut self, edge_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(edge_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &edge_ids
@@ -3665,17 +3666,17 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .construction
                 .make_wire
-                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("make_wire")?;
-        if result == 0 {
-            return Err(self.read_last_error("make_wire"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("make_wire")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("make_wire"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `makeFace` OCCT facade operation.
@@ -3688,7 +3689,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .construction
             .make_face
-            .call(&mut self.store, (wire_id.0,))?;
+            .call_guest(&mut self.store, (wire_id.0,))?;
         self.check_error("make_face")?;
         if result == 0 {
             return Err(self.read_last_error("make_face"));
@@ -3710,7 +3711,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .construction
             .make_face_on_surface
-            .call(&mut self.store, (face_id.0, wire_id.0))?;
+            .call_guest(&mut self.store, (face_id.0, wire_id.0))?;
         self.check_error("make_face_on_surface")?;
         if result == 0 {
             return Err(self.read_last_error("make_face_on_surface"));
@@ -3728,7 +3729,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .construction
             .make_solid
-            .call(&mut self.store, (shell_id.0,))?;
+            .call_guest(&mut self.store, (shell_id.0,))?;
         self.check_error("make_solid")?;
         if result == 0 {
             return Err(self.read_last_error("make_solid"));
@@ -3743,7 +3744,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn sew(&mut self, shape_ids: &[ShapeHandle], tolerance: f64) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(shape_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &shape_ids
@@ -3751,16 +3752,16 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.construction.sew.call(
+            let result = kernel.generated.construction.sew.call_guest(
                 &mut kernel.store,
                 (guest_ptrs[0], guest_lengths[0], tolerance),
-            )?)
-        })?;
-        self.check_error("sew")?;
-        if result == 0 {
-            return Err(self.read_last_error("sew"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("sew")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("sew"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `makeCompound` OCCT facade operation.
@@ -3770,7 +3771,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn make_compound(&mut self, shape_ids: &[ShapeHandle]) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(shape_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &shape_ids
@@ -3778,17 +3779,17 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .construction
                 .make_compound
-                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("make_compound")?;
-        if result == 0 {
-            return Err(self.read_last_error("make_compound"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("make_compound")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("make_compound"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `makeLineEdge` OCCT facade operation.
@@ -3809,7 +3810,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .construction
             .make_line_edge
-            .call(&mut self.store, (x1, y1, z1, x2, y2, z2))?;
+            .call_guest(&mut self.store, (x1, y1, z1, x2, y2, z2))?;
         self.check_error("make_line_edge")?;
         if result == 0 {
             return Err(self.read_last_error("make_line_edge"));
@@ -3826,7 +3827,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::MakeCircleEdgeRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.construction.make_circle_edge.call(
+        let result = self.generated.construction.make_circle_edge.call_guest(
             &mut self.store,
             (
                 request.cx,
@@ -3854,7 +3855,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::MakeCircleArcRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.construction.make_circle_arc.call(
+        let result = self.generated.construction.make_circle_arc.call_guest(
             &mut self.store,
             (
                 request.cx,
@@ -3884,7 +3885,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::MakeArcEdgeRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.construction.make_arc_edge.call(
+        let result = self.generated.construction.make_arc_edge.call_guest(
             &mut self.store,
             (
                 request.x1, request.y1, request.z1, request.x2, request.y2, request.z2, request.x3,
@@ -3907,7 +3908,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::MakeEllipseEdgeRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.construction.make_ellipse_edge.call(
+        let result = self.generated.construction.make_ellipse_edge.call_guest(
             &mut self.store,
             (
                 request.cx,
@@ -3934,7 +3935,7 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn make_bezier_edge(&mut self, flat_points: &[f64]) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(flat_points.len(), 8)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &flat_points
@@ -3942,17 +3943,17 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .construction
                 .make_bezier_edge
-                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("make_bezier_edge")?;
-        if result == 0 {
-            return Err(self.read_last_error("make_bezier_edge"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("make_bezier_edge")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("make_bezier_edge"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `makeBSplineEdge` OCCT facade operation.
@@ -3975,7 +3976,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(knots.len(), 8)?,
             checked_wasm_len(multiplicities.len(), 4)?,
         ];
-        let result = self.with_guest_buffers::<4, _>(|kernel, buffers| {
+        self.with_guest_buffers::<4, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -4006,27 +4007,31 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.construction.make_b_spline_edge.call(
-                &mut kernel.store,
-                (
-                    guest_ptrs[0],
-                    guest_lengths[0],
-                    guest_ptrs[1],
-                    guest_lengths[1],
-                    guest_ptrs[2],
-                    guest_lengths[2],
-                    guest_ptrs[3],
-                    guest_lengths[3],
-                    degree,
-                    i32::from(periodic),
-                ),
-            )?)
-        })?;
-        self.check_error("make_b_spline_edge")?;
-        if result == 0 {
-            return Err(self.read_last_error("make_b_spline_edge"));
-        }
-        Ok(ShapeHandle(result))
+            let result = kernel
+                .generated
+                .construction
+                .make_b_spline_edge
+                .call_guest(
+                    &mut kernel.store,
+                    (
+                        guest_ptrs[0],
+                        guest_lengths[0],
+                        guest_ptrs[1],
+                        guest_lengths[1],
+                        guest_ptrs[2],
+                        guest_lengths[2],
+                        guest_ptrs[3],
+                        guest_lengths[3],
+                        degree,
+                        i32::from(periodic),
+                    ),
+                )?;
+            kernel.check_error("make_b_spline_edge")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("make_b_spline_edge"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `makeEllipseArc` OCCT facade operation.
@@ -4038,7 +4043,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::MakeEllipseArcRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.construction.make_ellipse_arc.call(
+        let result = self.generated.construction.make_ellipse_arc.call_guest(
             &mut self.store,
             (
                 request.cx,
@@ -4069,24 +4074,28 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::MakeEllipseArcOrientedRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.construction.make_ellipse_arc_oriented.call(
-            &mut self.store,
-            (
-                request.cx,
-                request.cy,
-                request.cz,
-                request.nx,
-                request.ny,
-                request.nz,
-                request.xx,
-                request.xy,
-                request.xz,
-                request.major_radius,
-                request.minor_radius,
-                request.start_angle,
-                request.end_angle,
-            ),
-        )?;
+        let result = self
+            .generated
+            .construction
+            .make_ellipse_arc_oriented
+            .call_guest(
+                &mut self.store,
+                (
+                    request.cx,
+                    request.cy,
+                    request.cz,
+                    request.nx,
+                    request.ny,
+                    request.nz,
+                    request.xx,
+                    request.xy,
+                    request.xz,
+                    request.major_radius,
+                    request.minor_radius,
+                    request.start_angle,
+                    request.end_angle,
+                ),
+            )?;
         self.check_error("make_ellipse_arc_oriented")?;
         if result == 0 {
             return Err(self.read_last_error("make_ellipse_arc_oriented"));
@@ -4103,7 +4112,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::MakeHelixWireRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.construction.make_helix_wire.call(
+        let result = self.generated.construction.make_helix_wire.call_guest(
             &mut self.store,
             (
                 request.px,
@@ -4133,21 +4142,25 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::MakeHelixWireHandedRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.construction.make_helix_wire_handed.call(
-            &mut self.store,
-            (
-                request.px,
-                request.py,
-                request.pz,
-                request.dx,
-                request.dy,
-                request.dz,
-                request.pitch,
-                request.height,
-                request.radius,
-                i32::from(request.left_handed),
-            ),
-        )?;
+        let result = self
+            .generated
+            .construction
+            .make_helix_wire_handed
+            .call_guest(
+                &mut self.store,
+                (
+                    request.px,
+                    request.py,
+                    request.pz,
+                    request.dx,
+                    request.dy,
+                    request.dz,
+                    request.pitch,
+                    request.height,
+                    request.radius,
+                    i32::from(request.left_handed),
+                ),
+            )?;
         self.check_error("make_helix_wire_handed")?;
         if result == 0 {
             return Err(self.read_last_error("make_helix_wire_handed"));
@@ -4164,7 +4177,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::ThreadGrooveRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.construction.thread_groove.call(
+        let result = self.generated.construction.thread_groove.call_guest(
             &mut self.store,
             (
                 request.px,
@@ -4199,7 +4212,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .construction
             .make_non_planar_face
-            .call(&mut self.store, (wire_id.0,))?;
+            .call_guest(&mut self.store, (wire_id.0,))?;
         self.check_error("make_non_planar_face")?;
         if result == 0 {
             return Err(self.read_last_error("make_non_planar_face"));
@@ -4225,7 +4238,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(request.flat_points.len(), 8)?,
             checked_wasm_len(request.params.len(), 8)?,
         ];
-        let result = self.with_guest_buffers::<7, _>(|kernel, buffers| {
+        self.with_guest_buffers::<7, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -4284,7 +4297,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.construction.fill_surface.call(
+            let result = kernel.generated.construction.fill_surface.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -4303,13 +4316,13 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[6],
                     guest_lengths[6],
                 ),
-            )?)
-        })?;
-        self.check_error("fill_surface")?;
-        if result == 0 {
-            return Err(self.read_last_error("fill_surface"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("fill_surface")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("fill_surface"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `edgeOnSurface` OCCT facade operation.
@@ -4325,7 +4338,7 @@ impl crate::kernel::OcctKernel {
         closed: bool,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(flat_points.len(), 8)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &flat_points
@@ -4333,7 +4346,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.construction.edge_on_surface.call(
+            let result = kernel.generated.construction.edge_on_surface.call_guest(
                 &mut kernel.store,
                 (
                     face_id.0,
@@ -4342,13 +4355,13 @@ impl crate::kernel::OcctKernel {
                     tolerance,
                     i32::from(closed),
                 ),
-            )?)
-        })?;
-        self.check_error("edge_on_surface")?;
-        if result == 0 {
-            return Err(self.read_last_error("edge_on_surface"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("edge_on_surface")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("edge_on_surface"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `addHolesInFace` OCCT facade operation.
@@ -4362,7 +4375,7 @@ impl crate::kernel::OcctKernel {
         hole_wire_ids: &[ShapeHandle],
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(hole_wire_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &hole_wire_ids
@@ -4370,16 +4383,16 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.construction.add_holes_in_face.call(
+            let result = kernel.generated.construction.add_holes_in_face.call_guest(
                 &mut kernel.store,
                 (face_id.0, guest_ptrs[0], guest_lengths[0]),
-            )?)
-        })?;
-        self.check_error("add_holes_in_face")?;
-        if result == 0 {
-            return Err(self.read_last_error("add_holes_in_face"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("add_holes_in_face")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("add_holes_in_face"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `removeHolesFromFace` OCCT facade operation.
@@ -4393,7 +4406,7 @@ impl crate::kernel::OcctKernel {
         hole_indices: &[i32],
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(hole_indices.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &hole_indices
@@ -4401,16 +4414,20 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.construction.remove_holes_from_face.call(
-                &mut kernel.store,
-                (face_id.0, guest_ptrs[0], guest_lengths[0]),
-            )?)
-        })?;
-        self.check_error("remove_holes_from_face")?;
-        if result == 0 {
-            return Err(self.read_last_error("remove_holes_from_face"));
-        }
-        Ok(ShapeHandle(result))
+            let result = kernel
+                .generated
+                .construction
+                .remove_holes_from_face
+                .call_guest(
+                    &mut kernel.store,
+                    (face_id.0, guest_ptrs[0], guest_lengths[0]),
+                )?;
+            kernel.check_error("remove_holes_from_face")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("remove_holes_from_face"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `solidFromShell` OCCT facade operation.
@@ -4423,7 +4440,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .construction
             .solid_from_shell
-            .call(&mut self.store, (shell_id.0,))?;
+            .call_guest(&mut self.store, (shell_id.0,))?;
         self.check_error("solid_from_shell")?;
         if result == 0 {
             return Err(self.read_last_error("solid_from_shell"));
@@ -4442,7 +4459,7 @@ impl crate::kernel::OcctKernel {
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(face_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &face_ids
@@ -4450,16 +4467,20 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.construction.build_solid_from_faces.call(
-                &mut kernel.store,
-                (guest_ptrs[0], guest_lengths[0], tolerance),
-            )?)
-        })?;
-        self.check_error("build_solid_from_faces")?;
-        if result == 0 {
-            return Err(self.read_last_error("build_solid_from_faces"));
-        }
-        Ok(ShapeHandle(result))
+            let result = kernel
+                .generated
+                .construction
+                .build_solid_from_faces
+                .call_guest(
+                    &mut kernel.store,
+                    (guest_ptrs[0], guest_lengths[0], tolerance),
+                )?;
+            kernel.check_error("build_solid_from_faces")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("build_solid_from_faces"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `sewAndSolidify` OCCT facade operation.
@@ -4473,7 +4494,7 @@ impl crate::kernel::OcctKernel {
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(face_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &face_ids
@@ -4481,16 +4502,16 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.construction.sew_and_solidify.call(
+            let result = kernel.generated.construction.sew_and_solidify.call_guest(
                 &mut kernel.store,
                 (guest_ptrs[0], guest_lengths[0], tolerance),
-            )?)
-        })?;
-        self.check_error("sew_and_solidify")?;
-        if result == 0 {
-            return Err(self.read_last_error("sew_and_solidify"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("sew_and_solidify")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("sew_and_solidify"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `buildTriFace` OCCT facade operation.
@@ -4502,7 +4523,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::BuildTriFaceRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.construction.build_tri_face.call(
+        let result = self.generated.construction.build_tri_face.call_guest(
             &mut self.store,
             (
                 request.ax,
@@ -4532,7 +4553,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::MakeTangentArcRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.construction.make_tangent_arc.call(
+        let result = self.generated.construction.make_tangent_arc.call_guest(
             &mut self.store,
             (
                 request.x1, request.y1, request.z1, request.tx, request.ty, request.tz, request.x2,
@@ -4558,7 +4579,7 @@ impl crate::kernel::OcctKernel {
         cols: i32,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(flat_points.len(), 8)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &flat_points
@@ -4566,16 +4587,16 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.construction.bspline_surface.call(
+            let result = kernel.generated.construction.bspline_surface.call_guest(
                 &mut kernel.store,
                 (guest_ptrs[0], guest_lengths[0], rows, cols),
-            )?)
-        })?;
-        self.check_error("bspline_surface")?;
-        if result == 0 {
-            return Err(self.read_last_error("bspline_surface"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("bspline_surface")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("bspline_surface"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `nurbsSurface` OCCT facade operation.
@@ -4596,7 +4617,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(request.mults_v.len(), 4)?,
             checked_wasm_len(request.layout.len(), 4)?,
         ];
-        let result = self.with_guest_buffers::<7, _>(|kernel, buffers| {
+        self.with_guest_buffers::<7, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -4655,7 +4676,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.construction.nurbs_surface.call(
+            let result = kernel.generated.construction.nurbs_surface.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -4673,13 +4694,13 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[6],
                     guest_lengths[6],
                 ),
-            )?)
-        })?;
-        self.check_error("nurbs_surface")?;
-        if result == 0 {
-            return Err(self.read_last_error("nurbs_surface"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("nurbs_surface")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("nurbs_surface"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `getShapeType` OCCT facade operation.
@@ -4692,7 +4713,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .topology
             .get_shape_type
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("get_shape_type"));
         }
@@ -4710,18 +4731,18 @@ impl crate::kernel::OcctKernel {
         shape_type: &str,
     ) -> OcctResult<Vec<ShapeHandle>> {
         let guest_lengths = [checked_wasm_len(shape_type.len(), 1)?];
-        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, shape_type.as_bytes())?];
-            Ok(kernel
+            let len = kernel
                 .generated
                 .topology
                 .get_sub_shapes
-                .call(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("get_sub_shapes"));
-        }
-        self.read_vec_shape_result()
+                .call_guest(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?;
+            if len < 0 {
+                return Err(kernel.read_last_error("get_sub_shapes"));
+            }
+            kernel.read_vec_shape_result()
+        })
     }
 
     /// Call the `subShapeCount` OCCT facade operation.
@@ -4731,16 +4752,16 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn sub_shape_count(&mut self, id: ShapeHandle, shape_type: &str) -> OcctResult<i32> {
         let guest_lengths = [checked_wasm_len(shape_type.len(), 1)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, shape_type.as_bytes())?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .topology
                 .sub_shape_count
-                .call(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("sub_shape_count")?;
-        Ok(result)
+                .call_guest(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("sub_shape_count")?;
+            Ok(result)
+        })
     }
 
     /// Call the `getSubShapeOccurrences` OCCT facade operation.
@@ -4754,18 +4775,18 @@ impl crate::kernel::OcctKernel {
         shape_type: &str,
     ) -> OcctResult<Vec<ShapeHandle>> {
         let guest_lengths = [checked_wasm_len(shape_type.len(), 1)?];
-        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, shape_type.as_bytes())?];
-            Ok(kernel
+            let len = kernel
                 .generated
                 .topology
                 .get_sub_shape_occurrences
-                .call(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("get_sub_shape_occurrences"));
-        }
-        self.read_vec_shape_result()
+                .call_guest(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?;
+            if len < 0 {
+                return Err(kernel.read_last_error("get_sub_shape_occurrences"));
+            }
+            kernel.read_vec_shape_result()
+        })
     }
 
     /// Call the `subShapeOccurrenceCount` OCCT facade operation.
@@ -4779,16 +4800,16 @@ impl crate::kernel::OcctKernel {
         shape_type: &str,
     ) -> OcctResult<i32> {
         let guest_lengths = [checked_wasm_len(shape_type.len(), 1)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, shape_type.as_bytes())?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .topology
                 .sub_shape_occurrence_count
-                .call(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("sub_shape_occurrence_count")?;
-        Ok(result)
+                .call_guest(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("sub_shape_occurrence_count")?;
+            Ok(result)
+        })
     }
 
     /// Call the `subShapeHashes` OCCT facade operation.
@@ -4803,17 +4824,17 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<Vec<i32>> {
         let guest_lengths = [checked_wasm_len(shape_type.len(), 1)?];
-        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, shape_type.as_bytes())?];
-            Ok(kernel.generated.topology.sub_shape_hashes.call(
+            let len = kernel.generated.topology.sub_shape_hashes.call_guest(
                 &mut kernel.store,
                 (id.0, guest_ptrs[0], guest_lengths[0], hash_upper_bound),
-            )?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("sub_shape_hashes"));
-        }
-        self.read_vec_i32_result()
+            )?;
+            if len < 0 {
+                return Err(kernel.read_last_error("sub_shape_hashes"));
+            }
+            kernel.read_vec_i32_result()
+        })
     }
 
     /// Call the `distanceBetween` OCCT facade operation.
@@ -4826,7 +4847,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .topology
             .distance_between
-            .call(&mut self.store, (a.0, b.0))?;
+            .call_guest(&mut self.store, (a.0, b.0))?;
         self.check_error("distance_between")?;
         Ok(result)
     }
@@ -4841,7 +4862,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .topology
             .is_same
-            .call(&mut self.store, (a.0, b.0))?;
+            .call_guest(&mut self.store, (a.0, b.0))?;
         if result < 0 {
             return Err(self.read_last_error("is_same"));
         }
@@ -4858,7 +4879,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .topology
             .is_equal
-            .call(&mut self.store, (a.0, b.0))?;
+            .call_guest(&mut self.store, (a.0, b.0))?;
         if result < 0 {
             return Err(self.read_last_error("is_equal"));
         }
@@ -4875,7 +4896,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .topology
             .is_null
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if result < 0 {
             return Err(self.read_last_error("is_null"));
         }
@@ -4892,7 +4913,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .topology
             .hash_code
-            .call(&mut self.store, (id.0, upper_bound))?;
+            .call_guest(&mut self.store, (id.0, upper_bound))?;
         self.check_error("hash_code")?;
         Ok(result)
     }
@@ -4907,7 +4928,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .topology
             .shape_orientation
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("shape_orientation"));
         }
@@ -4924,7 +4945,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .topology
             .iter_shapes
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("iter_shapes"));
         }
@@ -4945,7 +4966,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .topology
             .edge_to_face_map
-            .call(&mut self.store, (id.0, hash_upper_bound))?;
+            .call_guest(&mut self.store, (id.0, hash_upper_bound))?;
         if len < 0 {
             return Err(self.read_last_error("edge_to_face_map"));
         }
@@ -4959,19 +4980,19 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn downcast(&mut self, id: ShapeHandle, target_type: &str) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(target_type.len(), 1)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, target_type.as_bytes())?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .topology
                 .downcast
-                .call(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("downcast")?;
-        if result == 0 {
-            return Err(self.read_last_error("downcast"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("downcast")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("downcast"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `adjacentFaces` OCCT facade operation.
@@ -4988,7 +5009,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .topology
             .adjacent_faces
-            .call(&mut self.store, (shape_id.0, face_id.0))?;
+            .call_guest(&mut self.store, (shape_id.0, face_id.0))?;
         if len < 0 {
             return Err(self.read_last_error("adjacent_faces"));
         }
@@ -5009,7 +5030,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .topology
             .shared_edges
-            .call(&mut self.store, (face_a.0, face_b.0))?;
+            .call_guest(&mut self.store, (face_a.0, face_b.0))?;
         if len < 0 {
             return Err(self.read_last_error("shared_edges"));
         }
@@ -5030,7 +5051,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .get_bounding_box
-            .call(&mut self.store, (id.0, i32::from(use_triangulation)))?;
+            .call_guest(&mut self.store, (id.0, i32::from(use_triangulation)))?;
         if status < 0 {
             return Err(self.read_last_error("get_bounding_box"));
         }
@@ -5051,7 +5072,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .get_bounding_box_loose
-            .call(&mut self.store, (id.0, i32::from(use_triangulation)))?;
+            .call_guest(&mut self.store, (id.0, i32::from(use_triangulation)))?;
         if status < 0 {
             return Err(self.read_last_error("get_bounding_box_loose"));
         }
@@ -5069,7 +5090,7 @@ impl crate::kernel::OcctKernel {
         use_triangulation: bool,
         use_shape_tolerance: bool,
     ) -> OcctResult<BoundingBox> {
-        let status = self.generated.query.get_optimal_bounds.call(
+        let status = self.generated.query.get_optimal_bounds.call_guest(
             &mut self.store,
             (
                 id.0,
@@ -5100,7 +5121,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .get_signed_face_volume_integrals
-            .call(&mut self.store, (id.0, x, y, z, epsilon))?;
+            .call_guest(&mut self.store, (id.0, x, y, z, epsilon))?;
         if len < 0 {
             return Err(self.read_last_error("get_signed_face_volume_integrals"));
         }
@@ -5124,7 +5145,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .classify_solid_point
-            .call(&mut self.store, (id.0, x, y, z, tolerance))?;
+            .call_guest(&mut self.store, (id.0, x, y, z, tolerance))?;
         self.check_error("classify_solid_point")?;
         Ok(result)
     }
@@ -5139,7 +5160,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .get_b_rep_properties
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("get_b_rep_properties"));
         }
@@ -5156,7 +5177,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .get_volume
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         self.check_error("get_volume")?;
         Ok(result)
     }
@@ -5171,7 +5192,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .get_surface_area
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         self.check_error("get_surface_area")?;
         Ok(result)
     }
@@ -5186,7 +5207,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .get_length
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         self.check_error("get_length")?;
         Ok(result)
     }
@@ -5201,7 +5222,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .get_center_of_mass
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("get_center_of_mass"));
         }
@@ -5218,7 +5239,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .get_inertia
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("get_inertia"));
         }
@@ -5242,7 +5263,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .contains_point
-            .call(&mut self.store, (id.0, x, y, z, tolerance))?;
+            .call_guest(&mut self.store, (id.0, x, y, z, tolerance))?;
         if result < 0 {
             return Err(self.read_last_error("contains_point"));
         }
@@ -5259,7 +5280,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .get_surface_center_of_mass
-            .call(&mut self.store, (face_id.0,))?;
+            .call_guest(&mut self.store, (face_id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("get_surface_center_of_mass"));
         }
@@ -5276,7 +5297,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .vertex_position
-            .call(&mut self.store, (vertex_id.0,))?;
+            .call_guest(&mut self.store, (vertex_id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("vertex_position"));
         }
@@ -5293,7 +5314,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .surface_type
-            .call(&mut self.store, (face_id.0,))?;
+            .call_guest(&mut self.store, (face_id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("surface_type"));
         }
@@ -5310,7 +5331,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .surface_data
-            .call(&mut self.store, (face_id.0,))?;
+            .call_guest(&mut self.store, (face_id.0,))?;
         if status < 0 {
             return Err(self.read_last_error("surface_data"));
         }
@@ -5327,7 +5348,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .surface_normal
-            .call(&mut self.store, (face_id.0, u, v))?;
+            .call_guest(&mut self.store, (face_id.0, u, v))?;
         if len < 0 {
             return Err(self.read_last_error("surface_normal"));
         }
@@ -5349,7 +5370,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .point_on_surface
-            .call(&mut self.store, (face_id.0, u, v))?;
+            .call_guest(&mut self.store, (face_id.0, u, v))?;
         if len < 0 {
             return Err(self.read_last_error("point_on_surface"));
         }
@@ -5366,7 +5387,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .outer_wire
-            .call(&mut self.store, (face_id.0,))?;
+            .call_guest(&mut self.store, (face_id.0,))?;
         self.check_error("outer_wire")?;
         if result == 0 {
             return Err(self.read_last_error("outer_wire"));
@@ -5384,7 +5405,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .get_linear_center_of_mass
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("get_linear_center_of_mass"));
         }
@@ -5406,7 +5427,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .surface_curvature
-            .call(&mut self.store, (face_id.0, u, v))?;
+            .call_guest(&mut self.store, (face_id.0, u, v))?;
         if len < 0 {
             return Err(self.read_last_error("surface_curvature"));
         }
@@ -5423,7 +5444,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .uv_bounds
-            .call(&mut self.store, (face_id.0,))?;
+            .call_guest(&mut self.store, (face_id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("uv_bounds"));
         }
@@ -5440,7 +5461,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .get_face_cylinder_data
-            .call(&mut self.store, (face_id.0,))?;
+            .call_guest(&mut self.store, (face_id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("get_face_cylinder_data"));
         }
@@ -5457,7 +5478,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .modeling
             .reverse_surface_u
-            .call(&mut self.store, (face_id.0,))?;
+            .call_guest(&mut self.store, (face_id.0,))?;
         self.check_error("reverse_surface_u")?;
         if result == 0 {
             return Err(self.read_last_error("reverse_surface_u"));
@@ -5481,7 +5502,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .uv_from_point
-            .call(&mut self.store, (face_id.0, x, y, z))?;
+            .call_guest(&mut self.store, (face_id.0, x, y, z))?;
         if len < 0 {
             return Err(self.read_last_error("uv_from_point"));
         }
@@ -5504,7 +5525,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .project_point_on_face
-            .call(&mut self.store, (face_id.0, x, y, z))?;
+            .call_guest(&mut self.store, (face_id.0, x, y, z))?;
         if len < 0 {
             return Err(self.read_last_error("project_point_on_face"));
         }
@@ -5526,7 +5547,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .classify_point_on_face
-            .call(&mut self.store, (face_id.0, u, v))?;
+            .call_guest(&mut self.store, (face_id.0, u, v))?;
         if len < 0 {
             return Err(self.read_last_error("classify_point_on_face"));
         }
@@ -5539,7 +5560,11 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn curve_type(&mut self, id: ShapeHandle) -> OcctResult<String> {
-        let len = self.generated.curve.r#type.call(&mut self.store, (id.0,))?;
+        let len = self
+            .generated
+            .curve
+            .r#type
+            .call_guest(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("curve_type"));
         }
@@ -5556,7 +5581,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .curve
             .data
-            .call(&mut self.store, (edge_id.0,))?;
+            .call_guest(&mut self.store, (edge_id.0,))?;
         if status < 0 {
             return Err(self.read_last_error("curve_data"));
         }
@@ -5573,7 +5598,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .curve
             .point_at_param
-            .call(&mut self.store, (id.0, param))?;
+            .call_guest(&mut self.store, (id.0, param))?;
         if len < 0 {
             return Err(self.read_last_error("curve_point_at_param"));
         }
@@ -5590,7 +5615,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .curve
             .tangent
-            .call(&mut self.store, (id.0, param))?;
+            .call_guest(&mut self.store, (id.0, param))?;
         if len < 0 {
             return Err(self.read_last_error("curve_tangent"));
         }
@@ -5607,7 +5632,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .curve
             .parameters
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("curve_parameters"));
         }
@@ -5624,7 +5649,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .curve
             .is_closed
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if result < 0 {
             return Err(self.read_last_error("curve_is_closed"));
         }
@@ -5637,7 +5662,11 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn curve_length(&mut self, id: ShapeHandle) -> OcctResult<f64> {
-        let result = self.generated.curve.length.call(&mut self.store, (id.0,))?;
+        let result = self
+            .generated
+            .curve
+            .length
+            .call_guest(&mut self.store, (id.0,))?;
         self.check_error("curve_length")?;
         Ok(result)
     }
@@ -5653,7 +5682,7 @@ impl crate::kernel::OcctKernel {
         periodic: bool,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(flat_points.len(), 8)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &flat_points
@@ -5661,16 +5690,16 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.curve.interpolate_points.call(
+            let result = kernel.generated.curve.interpolate_points.call_guest(
                 &mut kernel.store,
                 (guest_ptrs[0], guest_lengths[0], i32::from(periodic)),
-            )?)
-        })?;
-        self.check_error("interpolate_points")?;
-        if result == 0 {
-            return Err(self.read_last_error("interpolate_points"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("interpolate_points")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("interpolate_points"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `interpolatePointsWithTangents` OCCT facade operation.
@@ -5683,7 +5712,7 @@ impl crate::kernel::OcctKernel {
         request: requests::InterpolatePointsWithTangentsRequest<'_>,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(request.flat_points.len(), 8)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &request
@@ -5692,11 +5721,11 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .curve
                 .interpolate_points_with_tangents
-                .call(
+                .call_guest(
                     &mut kernel.store,
                     (
                         guest_ptrs[0],
@@ -5708,13 +5737,13 @@ impl crate::kernel::OcctKernel {
                         request.end_tan_y,
                         request.end_tan_z,
                     ),
-                )?)
-        })?;
-        self.check_error("interpolate_points_with_tangents")?;
-        if result == 0 {
-            return Err(self.read_last_error("interpolate_points_with_tangents"));
-        }
-        Ok(ShapeHandle(result))
+                )?;
+            kernel.check_error("interpolate_points_with_tangents")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("interpolate_points_with_tangents"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `projectPointOnEdge` OCCT facade operation.
@@ -5733,7 +5762,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .curve
             .project_point_on_edge
-            .call(&mut self.store, (edge_id.0, x, y, z))?;
+            .call_guest(&mut self.store, (edge_id.0, x, y, z))?;
         if len < 0 {
             return Err(self.read_last_error("project_point_on_edge"));
         }
@@ -5750,7 +5779,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .curve
             .is_periodic
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if result < 0 {
             return Err(self.read_last_error("curve_is_periodic"));
         }
@@ -5768,7 +5797,7 @@ impl crate::kernel::OcctKernel {
         tolerance: f64,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(flat_points.len(), 8)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &flat_points
@@ -5776,16 +5805,16 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.curve.approximate_points.call(
+            let result = kernel.generated.curve.approximate_points.call_guest(
                 &mut kernel.store,
                 (guest_ptrs[0], guest_lengths[0], tolerance),
-            )?)
-        })?;
-        self.check_error("approximate_points")?;
-        if result == 0 {
-            return Err(self.read_last_error("approximate_points"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("approximate_points")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("approximate_points"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `liftCurve2dToPlane` OCCT facade operation.
@@ -5798,7 +5827,7 @@ impl crate::kernel::OcctKernel {
         request: requests::LiftCurve2dToPlaneRequest<'_>,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(request.flat_points2d.len(), 8)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &request
@@ -5807,7 +5836,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.curve.lift_curve2d_to_plane.call(
+            let result = kernel.generated.curve.lift_curve2d_to_plane.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -5822,13 +5851,13 @@ impl crate::kernel::OcctKernel {
                     request.plane_xy,
                     request.plane_xz,
                 ),
-            )?)
-        })?;
-        self.check_error("lift_curve2d_to_plane")?;
-        if result == 0 {
-            return Err(self.read_last_error("lift_curve2d_to_plane"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("lift_curve2d_to_plane")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("lift_curve2d_to_plane"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `getNurbsCurveData` OCCT facade operation.
@@ -5841,7 +5870,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .curve
             .get_nurbs_curve_data
-            .call(&mut self.store, (edge_id.0,))?;
+            .call_guest(&mut self.store, (edge_id.0,))?;
         if status < 0 {
             return Err(self.read_last_error("get_nurbs_curve_data"));
         }
@@ -5862,7 +5891,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .curve
             .degree_elevate
-            .call(&mut self.store, (edge_id.0, elevate_by))?;
+            .call_guest(&mut self.store, (edge_id.0, elevate_by))?;
         self.check_error("curve_degree_elevate")?;
         if result == 0 {
             return Err(self.read_last_error("curve_degree_elevate"));
@@ -5885,7 +5914,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .curve
             .knot_insert
-            .call(&mut self.store, (edge_id.0, knot, times))?;
+            .call_guest(&mut self.store, (edge_id.0, knot, times))?;
         self.check_error("curve_knot_insert")?;
         if result == 0 {
             return Err(self.read_last_error("curve_knot_insert"));
@@ -5908,7 +5937,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .curve
             .knot_remove
-            .call(&mut self.store, (edge_id.0, knot, tolerance))?;
+            .call_guest(&mut self.store, (edge_id.0, knot, tolerance))?;
         self.check_error("curve_knot_remove")?;
         if result == 0 {
             return Err(self.read_last_error("curve_knot_remove"));
@@ -5930,7 +5959,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .curve
             .split
-            .call(&mut self.store, (edge_id.0, param))?;
+            .call_guest(&mut self.store, (edge_id.0, param))?;
         if len < 0 {
             return Err(self.read_last_error("curve_split"));
         }
@@ -5947,7 +5976,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .query
             .has_triangulation
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if result < 0 {
             return Err(self.read_last_error("has_triangulation"));
         }
@@ -5961,23 +5990,23 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn query_batch(&mut self, ids: &[ShapeHandle]) -> OcctResult<Vec<f64>> {
         let guest_lengths = [checked_wasm_len(ids.len(), 4)?];
-        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &ids.iter()
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel
+            let len = kernel
                 .generated
                 .query
                 .batch
-                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("query_batch"));
-        }
-        self.read_vec_f64_result()
+                .call_guest(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?;
+            if len < 0 {
+                return Err(kernel.read_last_error("query_batch"));
+            }
+            kernel.read_vec_f64_result()
+        })
     }
 
     /// Call the `pipe` OCCT facade operation.
@@ -5994,7 +6023,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .sweep
             .pipe
-            .call(&mut self.store, (profile_id.0, spine_id.0))?;
+            .call_guest(&mut self.store, (profile_id.0, spine_id.0))?;
         self.check_error("pipe")?;
         if result == 0 {
             return Err(self.read_last_error("pipe"));
@@ -6016,7 +6045,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .sweep
             .simple_pipe
-            .call(&mut self.store, (profile_id.0, spine_id.0))?;
+            .call_guest(&mut self.store, (profile_id.0, spine_id.0))?;
         self.check_error("simple_pipe")?;
         if result == 0 {
             return Err(self.read_last_error("simple_pipe"));
@@ -6030,7 +6059,7 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn revolve_vec(&mut self, request: requests::RevolveVecRequest) -> OcctResult<ShapeHandle> {
-        let result = self.generated.sweep.revolve_vec.call(
+        let result = self.generated.sweep.revolve_vec.call_guest(
             &mut self.store,
             (
                 request.shape_id.0,
@@ -6062,7 +6091,7 @@ impl crate::kernel::OcctKernel {
         ruled: bool,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(wire_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &wire_ids
@@ -6070,7 +6099,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.sweep.loft.call(
+            let result = kernel.generated.sweep.loft.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -6078,13 +6107,13 @@ impl crate::kernel::OcctKernel {
                     i32::from(is_solid),
                     i32::from(ruled),
                 ),
-            )?)
-        })?;
-        self.check_error("loft")?;
-        if result == 0 {
-            return Err(self.read_last_error("loft"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("loft")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("loft"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `loftWithVertices` OCCT facade operation.
@@ -6101,7 +6130,7 @@ impl crate::kernel::OcctKernel {
         end_vertex_id: ShapeHandle,
     ) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(wire_ids.len(), 4)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &wire_ids
@@ -6109,7 +6138,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.sweep.loft_with_vertices.call(
+            let result = kernel.generated.sweep.loft_with_vertices.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -6119,13 +6148,13 @@ impl crate::kernel::OcctKernel {
                     start_vertex_id.0,
                     end_vertex_id.0,
                 ),
-            )?)
-        })?;
-        self.check_error("loft_with_vertices")?;
-        if result == 0 {
-            return Err(self.read_last_error("loft_with_vertices"));
-        }
-        Ok(ShapeHandle(result))
+            )?;
+            kernel.check_error("loft_with_vertices")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("loft_with_vertices"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `sweep` OCCT facade operation.
@@ -6143,7 +6172,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .sweep
             .sweep
-            .call(&mut self.store, (wire_id.0, spine_id.0, transition_mode))?;
+            .call_guest(&mut self.store, (wire_id.0, spine_id.0, transition_mode))?;
         self.check_error("sweep")?;
         if result == 0 {
             return Err(self.read_last_error("sweep"));
@@ -6163,7 +6192,7 @@ impl crate::kernel::OcctKernel {
         freenet: bool,
         smooth: bool,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.sweep.pipe_shell.call(
+        let result = self.generated.sweep.pipe_shell.call_guest(
             &mut self.store,
             (
                 profile_id.0,
@@ -6188,7 +6217,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::SweepOrientedRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.sweep.oriented.call(
+        let result = self.generated.sweep.oriented.call_guest(
             &mut self.store,
             (
                 request.profile_id.0,
@@ -6221,7 +6250,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::SweepAdvancedRequest,
     ) -> OcctResult<ShapeHandle> {
-        let result = self.generated.sweep.advanced.call(
+        let result = self.generated.sweep.advanced.call_guest(
             &mut self.store,
             (
                 request.profile_id.0,
@@ -6265,7 +6294,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .modeling
             .draft_prism
-            .call(&mut self.store, (shape_id.0, dx, dy, dz, angle_deg))?;
+            .call_guest(&mut self.store, (shape_id.0, dx, dy, dz, angle_deg))?;
         self.check_error("draft_prism")?;
         if result == 0 {
             return Err(self.read_last_error("draft_prism"));
@@ -6283,7 +6312,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .healing
             .fix_shape
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         self.check_error("fix_shape")?;
         if result == 0 {
             return Err(self.read_last_error("fix_shape"));
@@ -6301,7 +6330,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .healing
             .unify_same_domain
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         self.check_error("unify_same_domain")?;
         if result == 0 {
             return Err(self.read_last_error("unify_same_domain"));
@@ -6324,7 +6353,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .healing
             .unify_same_domain_within
-            .call(&mut self.store, (id.0, linear_tolerance, angular_tolerance))?;
+            .call_guest(&mut self.store, (id.0, linear_tolerance, angular_tolerance))?;
         self.check_error("unify_same_domain_within")?;
         if result == 0 {
             return Err(self.read_last_error("unify_same_domain_within"));
@@ -6342,7 +6371,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .healing
             .is_valid
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if result < 0 {
             return Err(self.read_last_error("is_valid"));
         }
@@ -6359,7 +6388,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .healing
             .heal_solid
-            .call(&mut self.store, (id.0, tolerance))?;
+            .call_guest(&mut self.store, (id.0, tolerance))?;
         self.check_error("heal_solid")?;
         if result == 0 {
             return Err(self.read_last_error("heal_solid"));
@@ -6377,7 +6406,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .healing
             .heal_face
-            .call(&mut self.store, (id.0, tolerance))?;
+            .call_guest(&mut self.store, (id.0, tolerance))?;
         self.check_error("heal_face")?;
         if result == 0 {
             return Err(self.read_last_error("heal_face"));
@@ -6395,7 +6424,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .healing
             .heal_wire
-            .call(&mut self.store, (id.0, tolerance))?;
+            .call_guest(&mut self.store, (id.0, tolerance))?;
         self.check_error("heal_wire")?;
         if result == 0 {
             return Err(self.read_last_error("heal_wire"));
@@ -6413,7 +6442,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .healing
             .fix_face_orientations
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         self.check_error("fix_face_orientations")?;
         if result == 0 {
             return Err(self.read_last_error("fix_face_orientations"));
@@ -6431,7 +6460,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .healing
             .build_curves3d
-            .call(&mut self.store, (wire_id.0,))?;
+            .call_guest(&mut self.store, (wire_id.0,))?;
         if result < 0 {
             return Err(self.read_last_error("build_curves3d"));
         }
@@ -6453,7 +6482,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .healing
             .fix_wire_on_face
-            .call(&mut self.store, (wire_id.0, face_id.0, tolerance))?;
+            .call_guest(&mut self.store, (wire_id.0, face_id.0, tolerance))?;
         self.check_error("fix_wire_on_face")?;
         if result == 0 {
             return Err(self.read_last_error("fix_wire_on_face"));
@@ -6471,7 +6500,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .healing
             .remove_degenerate_edges
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         self.check_error("remove_degenerate_edges")?;
         if result == 0 {
             return Err(self.read_last_error("remove_degenerate_edges"));
@@ -6486,19 +6515,19 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn import_step(&mut self, data: &str) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(data.len(), 1)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, data.as_bytes())?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .io
                 .import_step
-                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("import_step")?;
-        if result == 0 {
-            return Err(self.read_last_error("import_step"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("import_step")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("import_step"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `importStepBytes` OCCT facade operation.
@@ -6508,18 +6537,18 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn import_step_bytes(&mut self, data: &[u8]) -> OcctResult<StepImport> {
         let guest_lengths = [checked_wasm_len(data.len(), 1)?];
-        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, data)?];
-            Ok(kernel
+            let len = kernel
                 .generated
                 .io
                 .import_step_bytes
-                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("import_step_bytes"));
-        }
-        self.read_step_import_result()
+                .call_guest(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?;
+            if len < 0 {
+                return Err(kernel.read_last_error("import_step_bytes"));
+            }
+            kernel.read_step_import_result()
+        })
     }
 
     /// Call the `exportStep` OCCT facade operation.
@@ -6532,7 +6561,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .io
             .export_step
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("export_step"));
         }
@@ -6546,18 +6575,18 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn export_step_with_unit(&mut self, id: ShapeHandle, unit: &str) -> OcctResult<String> {
         let guest_lengths = [checked_wasm_len(unit.len(), 1)?];
-        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, unit.as_bytes())?];
-            Ok(kernel
+            let len = kernel
                 .generated
                 .io
                 .export_step_with_unit
-                .call(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("export_step_with_unit"));
-        }
-        self.read_string_result()
+                .call_guest(&mut kernel.store, (id.0, guest_ptrs[0], guest_lengths[0]))?;
+            if len < 0 {
+                return Err(kernel.read_last_error("export_step_with_unit"));
+            }
+            kernel.read_string_result()
+        })
     }
 
     /// Call the `exportStepWithOptions` OCCT facade operation.
@@ -6575,12 +6604,12 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(unit.len(), 1)?,
             checked_wasm_len(schema.len(), 1)?,
         ];
-        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(kernel, unit.as_bytes())?,
                 buffers.write(kernel, schema.as_bytes())?,
             ];
-            Ok(kernel.generated.io.export_step_with_options.call(
+            let len = kernel.generated.io.export_step_with_options.call_guest(
                 &mut kernel.store,
                 (
                     id.0,
@@ -6589,12 +6618,12 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[1],
                     guest_lengths[1],
                 ),
-            )?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("export_step_with_options"));
-        }
-        self.read_string_result()
+            )?;
+            if len < 0 {
+                return Err(kernel.read_last_error("export_step_with_options"));
+            }
+            kernel.read_string_result()
+        })
     }
 
     /// Call the `exportStl` OCCT facade operation.
@@ -6612,7 +6641,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .io
             .export_stl
-            .call(&mut self.store, (id.0, linear_deflection, i32::from(ascii)))?;
+            .call_guest(&mut self.store, (id.0, linear_deflection, i32::from(ascii)))?;
         if len < 0 {
             return Err(self.read_last_error("export_stl"));
         }
@@ -6626,19 +6655,19 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn import_stl(&mut self, data: &str) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(data.len(), 1)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, data.as_bytes())?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .io
                 .import_stl
-                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("import_stl")?;
-        if result == 0 {
-            return Err(self.read_last_error("import_stl"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("import_stl")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("import_stl"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `exportStlBinary` OCCT facade operation.
@@ -6655,7 +6684,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .io
             .export_stl_binary
-            .call(&mut self.store, (id.0, linear_deflection))?;
+            .call_guest(&mut self.store, (id.0, linear_deflection))?;
         if len < 0 {
             return Err(self.read_last_error("export_stl_binary"));
         }
@@ -6669,19 +6698,19 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn import_stl_binary(&mut self, data: &[u8]) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(data.len(), 1)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, data)?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .io
                 .import_stl_binary
-                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("import_stl_binary")?;
-        if result == 0 {
-            return Err(self.read_last_error("import_stl_binary"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("import_stl_binary")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("import_stl_binary"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `toBREP` OCCT facade operation.
@@ -6690,7 +6719,11 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn export_brep(&mut self, id: ShapeHandle) -> OcctResult<String> {
-        let len = self.generated.io.to_brep.call(&mut self.store, (id.0,))?;
+        let len = self
+            .generated
+            .io
+            .to_brep
+            .call_guest(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("export_brep"));
         }
@@ -6704,19 +6737,19 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn import_brep(&mut self, data: &str) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(data.len(), 1)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, data.as_bytes())?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .io
                 .from_brep
-                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("import_brep")?;
-        if result == 0 {
-            return Err(self.read_last_error("import_brep"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("import_brep")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("import_brep"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `toBREPBinary` OCCT facade operation.
@@ -6729,7 +6762,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .io
             .to_brep_binary
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("export_brep_binary"));
         }
@@ -6743,19 +6776,19 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn import_brep_binary(&mut self, data: &[u8]) -> OcctResult<ShapeHandle> {
         let guest_lengths = [checked_wasm_len(data.len(), 1)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, data)?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .io
                 .from_brep_binary
-                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("import_brep_binary")?;
-        if result == 0 {
-            return Err(self.read_last_error("import_brep_binary"));
-        }
-        Ok(ShapeHandle(result))
+                .call_guest(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("import_brep_binary")?;
+            if result == 0 {
+                return Err(kernel.read_last_error("import_brep_binary"));
+            }
+            Ok(ShapeHandle(result))
+        })
     }
 
     /// Call the `extrudeWithHistory` OCCT facade operation.
@@ -6773,7 +6806,7 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &input_face_hashes
@@ -6781,7 +6814,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.evolution.extrude_with_history.call(
+            let status = kernel.generated.evolution.extrude_with_history.call_guest(
                 &mut kernel.store,
                 (
                     shape_id.0,
@@ -6792,12 +6825,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[0],
                     hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("extrude_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("extrude_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `revolveWithHistory` OCCT facade operation.
@@ -6810,7 +6843,7 @@ impl crate::kernel::OcctKernel {
         request: requests::RevolveWithHistoryRequest<'_>,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(request.input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &request
@@ -6819,7 +6852,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.evolution.revolve_with_history.call(
+            let status = kernel.generated.evolution.revolve_with_history.call_guest(
                 &mut kernel.store,
                 (
                     request.shape_id.0,
@@ -6834,12 +6867,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[0],
                     request.hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("revolve_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("revolve_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `pipeWithHistory` OCCT facade operation.
@@ -6855,7 +6888,7 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &input_face_hashes
@@ -6863,7 +6896,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.evolution.pipe_with_history.call(
+            let status = kernel.generated.evolution.pipe_with_history.call_guest(
                 &mut kernel.store,
                 (
                     profile_id.0,
@@ -6872,12 +6905,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[0],
                     hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("pipe_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("pipe_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `sweepWithHistory` OCCT facade operation.
@@ -6893,7 +6926,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(request.options.len(), 8)?,
             checked_wasm_len(request.input_face_hashes.len(), 4)?,
         ];
-        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -6912,7 +6945,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.evolution.sweep_with_history.call(
+            let status = kernel.generated.evolution.sweep_with_history.call_guest(
                 &mut kernel.store,
                 (
                     request.profile_id.0,
@@ -6925,12 +6958,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[1],
                     request.hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("sweep_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("sweep_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `loftWithHistory` OCCT facade operation.
@@ -6946,7 +6979,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(request.wire_ids.len(), 4)?,
             checked_wasm_len(request.input_face_hashes.len(), 4)?,
         ];
-        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -6965,7 +6998,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.evolution.loft_with_history.call(
+            let status = kernel.generated.evolution.loft_with_history.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -6978,12 +7011,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[1],
                     request.hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("loft_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("loft_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `unifySameDomainWithHistory` OCCT facade operation.
@@ -6998,7 +7031,7 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &input_face_hashes
@@ -7006,19 +7039,19 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel
+            let status = kernel
                 .generated
                 .evolution
                 .unify_same_domain_with_history
-                .call(
+                .call_guest(
                     &mut kernel.store,
                     (id.0, guest_ptrs[0], guest_lengths[0], hash_upper_bound),
-                )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("unify_same_domain_with_history"));
-        }
-        self.read_evolution_result()
+                )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("unify_same_domain_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `transformWithHistory` OCCT facade operation.
@@ -7037,7 +7070,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(matrix.len(), 8)?,
             checked_wasm_len(input_face_hashes.len(), 4)?,
         ];
-        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -7054,22 +7087,26 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.evolution.transform_with_history.call(
-                &mut kernel.store,
-                (
-                    id.0,
-                    guest_ptrs[0],
-                    guest_lengths[0],
-                    guest_ptrs[1],
-                    guest_lengths[1],
-                    hash_upper_bound,
-                ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("transform_with_history"));
-        }
-        self.read_evolution_result()
+            let status = kernel
+                .generated
+                .evolution
+                .transform_with_history
+                .call_guest(
+                    &mut kernel.store,
+                    (
+                        id.0,
+                        guest_ptrs[0],
+                        guest_lengths[0],
+                        guest_ptrs[1],
+                        guest_lengths[1],
+                        hash_upper_bound,
+                    ),
+                )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("transform_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `translateWithHistory` OCCT facade operation.
@@ -7087,7 +7124,7 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &input_face_hashes
@@ -7095,23 +7132,27 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.evolution.translate_with_history.call(
-                &mut kernel.store,
-                (
-                    id.0,
-                    dx,
-                    dy,
-                    dz,
-                    guest_ptrs[0],
-                    guest_lengths[0],
-                    hash_upper_bound,
-                ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("translate_with_history"));
-        }
-        self.read_evolution_result()
+            let status = kernel
+                .generated
+                .evolution
+                .translate_with_history
+                .call_guest(
+                    &mut kernel.store,
+                    (
+                        id.0,
+                        dx,
+                        dy,
+                        dz,
+                        guest_ptrs[0],
+                        guest_lengths[0],
+                        hash_upper_bound,
+                    ),
+                )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("translate_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `fuseWithHistory` OCCT facade operation.
@@ -7127,7 +7168,7 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &input_face_hashes
@@ -7135,15 +7176,15 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.evolution.fuse_with_history.call(
+            let status = kernel.generated.evolution.fuse_with_history.call_guest(
                 &mut kernel.store,
                 (a.0, b.0, guest_ptrs[0], guest_lengths[0], hash_upper_bound),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("fuse_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("fuse_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `cutWithHistory` OCCT facade operation.
@@ -7159,7 +7200,7 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &input_face_hashes
@@ -7167,15 +7208,15 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.evolution.cut_with_history.call(
+            let status = kernel.generated.evolution.cut_with_history.call_guest(
                 &mut kernel.store,
                 (a.0, b.0, guest_ptrs[0], guest_lengths[0], hash_upper_bound),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("cut_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("cut_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `filletWithHistory` OCCT facade operation.
@@ -7195,7 +7236,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(edge_ids.len(), 4)?,
             checked_wasm_len(input_face_hashes.len(), 4)?,
         ];
-        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -7212,7 +7253,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.evolution.fillet_with_history.call(
+            let status = kernel.generated.evolution.fillet_with_history.call_guest(
                 &mut kernel.store,
                 (
                     solid_id.0,
@@ -7223,12 +7264,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[1],
                     hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("fillet_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("fillet_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `rotateWithHistory` OCCT facade operation.
@@ -7241,7 +7282,7 @@ impl crate::kernel::OcctKernel {
         request: requests::RotateWithHistoryRequest<'_>,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(request.input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &request
@@ -7250,7 +7291,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.evolution.rotate_with_history.call(
+            let status = kernel.generated.evolution.rotate_with_history.call_guest(
                 &mut kernel.store,
                 (
                     request.id.0,
@@ -7265,12 +7306,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[0],
                     request.hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("rotate_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("rotate_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `mirrorWithHistory` OCCT facade operation.
@@ -7283,7 +7324,7 @@ impl crate::kernel::OcctKernel {
         request: requests::MirrorWithHistoryRequest<'_>,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(request.input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &request
@@ -7292,7 +7333,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.evolution.mirror_with_history.call(
+            let status = kernel.generated.evolution.mirror_with_history.call_guest(
                 &mut kernel.store,
                 (
                     request.id.0,
@@ -7306,12 +7347,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[0],
                     request.hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("mirror_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("mirror_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `scaleWithHistory` OCCT facade operation.
@@ -7324,7 +7365,7 @@ impl crate::kernel::OcctKernel {
         request: requests::ScaleWithHistoryRequest<'_>,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(request.input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &request
@@ -7333,7 +7374,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.evolution.scale_with_history.call(
+            let status = kernel.generated.evolution.scale_with_history.call_guest(
                 &mut kernel.store,
                 (
                     request.id.0,
@@ -7345,12 +7386,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[0],
                     request.hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("scale_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("scale_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `intersectWithHistory` OCCT facade operation.
@@ -7366,7 +7407,7 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &input_face_hashes
@@ -7374,15 +7415,19 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.evolution.intersect_with_history.call(
-                &mut kernel.store,
-                (a.0, b.0, guest_ptrs[0], guest_lengths[0], hash_upper_bound),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("intersect_with_history"));
-        }
-        self.read_evolution_result()
+            let status = kernel
+                .generated
+                .evolution
+                .intersect_with_history
+                .call_guest(
+                    &mut kernel.store,
+                    (a.0, b.0, guest_ptrs[0], guest_lengths[0], hash_upper_bound),
+                )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("intersect_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `chamferWithHistory` OCCT facade operation.
@@ -7402,7 +7447,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(edge_ids.len(), 4)?,
             checked_wasm_len(input_face_hashes.len(), 4)?,
         ];
-        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -7419,7 +7464,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.evolution.chamfer_with_history.call(
+            let status = kernel.generated.evolution.chamfer_with_history.call_guest(
                 &mut kernel.store,
                 (
                     solid_id.0,
@@ -7430,12 +7475,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[1],
                     hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("chamfer_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("chamfer_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `filletRadiiWithHistory` OCCT facade operation.
@@ -7458,7 +7503,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(end_radii.len(), 8)?,
             checked_wasm_len(input_face_hashes.len(), 4)?,
         ];
-        let status = self.with_guest_buffers::<4, _>(|kernel, buffers| {
+        self.with_guest_buffers::<4, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -7489,26 +7534,30 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.evolution.fillet_radii_with_history.call(
-                &mut kernel.store,
-                (
-                    solid_id.0,
-                    guest_ptrs[0],
-                    guest_lengths[0],
-                    guest_ptrs[1],
-                    guest_lengths[1],
-                    guest_ptrs[2],
-                    guest_lengths[2],
-                    guest_ptrs[3],
-                    guest_lengths[3],
-                    hash_upper_bound,
-                ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("fillet_radii_with_history"));
-        }
-        self.read_evolution_result()
+            let status = kernel
+                .generated
+                .evolution
+                .fillet_radii_with_history
+                .call_guest(
+                    &mut kernel.store,
+                    (
+                        solid_id.0,
+                        guest_ptrs[0],
+                        guest_lengths[0],
+                        guest_ptrs[1],
+                        guest_lengths[1],
+                        guest_ptrs[2],
+                        guest_lengths[2],
+                        guest_ptrs[3],
+                        guest_lengths[3],
+                        hash_upper_bound,
+                    ),
+                )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("fillet_radii_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `chamferDistancesWithHistory` OCCT facade operation.
@@ -7527,7 +7576,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(request.reference_face_ids.len(), 4)?,
             checked_wasm_len(request.input_face_hashes.len(), 4)?,
         ];
-        let status = self.with_guest_buffers::<5, _>(|kernel, buffers| {
+        self.with_guest_buffers::<5, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -7570,11 +7619,11 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel
+            let status = kernel
                 .generated
                 .evolution
                 .chamfer_distances_with_history
-                .call(
+                .call_guest(
                     &mut kernel.store,
                     (
                         request.solid_id.0,
@@ -7590,12 +7639,12 @@ impl crate::kernel::OcctKernel {
                         guest_lengths[4],
                         request.hash_upper_bound,
                     ),
-                )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("chamfer_distances_with_history"));
-        }
-        self.read_evolution_result()
+                )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("chamfer_distances_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `chamferDistAnglesWithHistory` OCCT facade operation.
@@ -7614,7 +7663,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(request.reference_face_ids.len(), 4)?,
             checked_wasm_len(request.input_face_hashes.len(), 4)?,
         ];
-        let status = self.with_guest_buffers::<5, _>(|kernel, buffers| {
+        self.with_guest_buffers::<5, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -7657,11 +7706,11 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel
+            let status = kernel
                 .generated
                 .evolution
                 .chamfer_dist_angles_with_history
-                .call(
+                .call_guest(
                     &mut kernel.store,
                     (
                         request.solid_id.0,
@@ -7677,12 +7726,12 @@ impl crate::kernel::OcctKernel {
                         guest_lengths[4],
                         request.hash_upper_bound,
                     ),
-                )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("chamfer_dist_angles_with_history"));
-        }
-        self.read_evolution_result()
+                )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("chamfer_dist_angles_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `shellWithHistory` OCCT facade operation.
@@ -7703,7 +7752,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(face_ids.len(), 4)?,
             checked_wasm_len(input_face_hashes.len(), 4)?,
         ];
-        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -7720,7 +7769,7 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel.generated.evolution.shell_with_history.call(
+            let status = kernel.generated.evolution.shell_with_history.call_guest(
                 &mut kernel.store,
                 (
                     solid_id.0,
@@ -7732,12 +7781,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[1],
                     hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("shell_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("shell_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `offsetWithHistory` OCCT facade operation.
@@ -7754,7 +7803,7 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &input_face_hashes
@@ -7762,7 +7811,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.evolution.offset_with_history.call(
+            let status = kernel.generated.evolution.offset_with_history.call_guest(
                 &mut kernel.store,
                 (
                     solid_id.0,
@@ -7772,12 +7821,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[0],
                     hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("offset_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("offset_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `shellWithHistoryAndJoin` OCCT facade operation.
@@ -7793,7 +7842,7 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(request.face_ids.len(), 4)?,
             checked_wasm_len(request.input_face_hashes.len(), 4)?,
         ];
-        let status = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(
                     kernel,
@@ -7812,11 +7861,11 @@ impl crate::kernel::OcctKernel {
                         .collect::<Vec<_>>(),
                 )?,
             ];
-            Ok(kernel
+            let status = kernel
                 .generated
                 .evolution
                 .shell_with_history_and_join
-                .call(
+                .call_guest(
                     &mut kernel.store,
                     (
                         request.solid_id.0,
@@ -7829,12 +7878,12 @@ impl crate::kernel::OcctKernel {
                         request.hash_upper_bound,
                         request.join_type,
                     ),
-                )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("shell_with_history_and_join"));
-        }
-        self.read_evolution_result()
+                )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("shell_with_history_and_join"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `offsetWithHistoryAndJoin` OCCT facade operation.
@@ -7852,7 +7901,7 @@ impl crate::kernel::OcctKernel {
         join_type: i32,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &input_face_hashes
@@ -7860,11 +7909,11 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel
+            let status = kernel
                 .generated
                 .evolution
                 .offset_with_history_and_join
-                .call(
+                .call_guest(
                     &mut kernel.store,
                     (
                         solid_id.0,
@@ -7875,12 +7924,12 @@ impl crate::kernel::OcctKernel {
                         hash_upper_bound,
                         join_type,
                     ),
-                )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("offset_with_history_and_join"));
-        }
-        self.read_evolution_result()
+                )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("offset_with_history_and_join"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `thickenWithHistory` OCCT facade operation.
@@ -7897,7 +7946,7 @@ impl crate::kernel::OcctKernel {
         hash_upper_bound: i32,
     ) -> OcctResult<EvolutionData> {
         let guest_lengths = [checked_wasm_len(input_face_hashes.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &input_face_hashes
@@ -7905,7 +7954,7 @@ impl crate::kernel::OcctKernel {
                     .flat_map(|v| v.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.evolution.thicken_with_history.call(
+            let status = kernel.generated.evolution.thicken_with_history.call_guest(
                 &mut kernel.store,
                 (
                     shape_id.0,
@@ -7915,12 +7964,12 @@ impl crate::kernel::OcctKernel {
                     guest_lengths[0],
                     hash_upper_bound,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("thicken_with_history"));
-        }
-        self.read_evolution_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("thicken_with_history"));
+            }
+            kernel.read_evolution_result()
+        })
     }
 
     /// Call the `tessellate` OCCT facade operation.
@@ -7934,7 +7983,7 @@ impl crate::kernel::OcctKernel {
         linear_deflection: f64,
         angular_deflection: f64,
     ) -> OcctResult<Mesh> {
-        let status = self.generated.tessellate.tessellate.call(
+        let status = self.generated.tessellate.tessellate.call_guest(
             &mut self.store,
             (id.0, linear_deflection, angular_deflection),
         )?;
@@ -7955,7 +8004,7 @@ impl crate::kernel::OcctKernel {
         linear_deflection: f64,
         angular_deflection: f64,
     ) -> OcctResult<Vec<f64>> {
-        let len = self.generated.tessellate.triangles64.call(
+        let len = self.generated.tessellate.triangles64.call_guest(
             &mut self.store,
             (id.0, linear_deflection, angular_deflection),
         )?;
@@ -7976,7 +8025,7 @@ impl crate::kernel::OcctKernel {
         linear_deflection: f64,
         angular_deflection: f64,
     ) -> OcctResult<Mesh> {
-        let status = self.generated.tessellate.relative.call(
+        let status = self.generated.tessellate.relative.call_guest(
             &mut self.store,
             (id.0, linear_deflection, angular_deflection),
         )?;
@@ -7997,7 +8046,7 @@ impl crate::kernel::OcctKernel {
         linear_deflection: f64,
         angular_deflection: f64,
     ) -> OcctResult<Mesh> {
-        let status = self.generated.tessellate.mesh_shape.call(
+        let status = self.generated.tessellate.mesh_shape.call_guest(
             &mut self.store,
             (id.0, linear_deflection, angular_deflection),
         )?;
@@ -8019,14 +8068,14 @@ impl crate::kernel::OcctKernel {
         angular_deflection: f64,
     ) -> OcctResult<MeshBatch> {
         let guest_lengths = [checked_wasm_len(ids.len(), 4)?];
-        let status = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(
                 kernel,
                 &ids.iter()
                     .flat_map(|v| v.0.to_le_bytes())
                     .collect::<Vec<_>>(),
             )?];
-            Ok(kernel.generated.tessellate.mesh_batch.call(
+            let status = kernel.generated.tessellate.mesh_batch.call_guest(
                 &mut kernel.store,
                 (
                     guest_ptrs[0],
@@ -8034,12 +8083,12 @@ impl crate::kernel::OcctKernel {
                     linear_deflection,
                     angular_deflection,
                 ),
-            )?)
-        })?;
-        if status < 0 {
-            return Err(self.read_last_error("mesh_batch"));
-        }
-        self.read_mesh_batch_result()
+            )?;
+            if status < 0 {
+                return Err(kernel.read_last_error("mesh_batch"));
+            }
+            kernel.read_mesh_batch_result()
+        })
     }
 
     /// Call the `wireframe` OCCT facade operation.
@@ -8057,7 +8106,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .tessellate
             .wireframe
-            .call(&mut self.store, (id.0, deflection, source))?;
+            .call_guest(&mut self.store, (id.0, deflection, source))?;
         if status < 0 {
             return Err(self.read_last_error("wireframe"));
         }
@@ -8073,7 +8122,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::ProjectEdgesRequest,
     ) -> OcctResult<ProjectionData> {
-        let status = self.generated.projection.project_edges.call(
+        let status = self.generated.projection.project_edges.call_guest(
             &mut self.store,
             (
                 request.shape_id.0,
@@ -8105,7 +8154,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .kernel
             .release
-            .call(&mut self.store, (id.0,))?;
+            .call_guest(&mut self.store, (id.0,))?;
         if result < 0 {
             return Err(self.read_last_error("release"));
         }
@@ -8122,7 +8171,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .kernel
             .release_all
-            .call(&mut self.store, ())?;
+            .call_guest(&mut self.store, ())?;
         if result < 0 {
             return Err(self.read_last_error("release_all"));
         }
@@ -8135,7 +8184,11 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn checkpoint(&mut self) -> OcctResult<u32> {
-        let result = self.generated.kernel.checkpoint.call(&mut self.store, ())?;
+        let result = self
+            .generated
+            .kernel
+            .checkpoint
+            .call_guest(&mut self.store, ())?;
         self.check_error("checkpoint")?;
         Ok(result)
     }
@@ -8150,7 +8203,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .kernel
             .release_since
-            .call(&mut self.store, (mark,))?;
+            .call_guest(&mut self.store, (mark,))?;
         if result < 0 {
             return Err(self.read_last_error("release_since"));
         }
@@ -8167,7 +8220,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .kernel
             .get_shape_count
-            .call(&mut self.store, ())?;
+            .call_guest(&mut self.store, ())?;
         self.check_error("get_shape_count")?;
         Ok(result)
     }
@@ -8182,7 +8235,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .kernel
             .make_null_shape
-            .call(&mut self.store, ())?;
+            .call_guest(&mut self.store, ())?;
         self.check_error("make_null_shape")?;
         if result == 0 {
             return Err(self.read_last_error("make_null_shape"));
@@ -8196,7 +8249,11 @@ impl crate::kernel::OcctKernel {
     /// Returns an error if the WASM call traps, the operation fails,
     /// or marshalling its arguments or results fails.
     pub fn xcaf_new_document(&mut self) -> OcctResult<DocumentHandle> {
-        let result = self.generated.xcaf.new_document.call(&mut self.store, ())?;
+        let result = self
+            .generated
+            .xcaf
+            .new_document
+            .call_guest(&mut self.store, ())?;
         self.check_error("xcaf_new_document")?;
         Ok(DocumentHandle(result))
     }
@@ -8211,7 +8268,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .xcaf
             .close
-            .call(&mut self.store, (doc_id.0,))?;
+            .call_guest(&mut self.store, (doc_id.0,))?;
         if result < 0 {
             return Err(self.read_last_error("xcaf_close"));
         }
@@ -8232,7 +8289,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .xcaf
             .add_shape
-            .call(&mut self.store, (doc_id.0, shape_id.0))?;
+            .call_guest(&mut self.store, (doc_id.0, shape_id.0))?;
         self.check_error("xcaf_add_shape")?;
         Ok(result)
     }
@@ -8251,7 +8308,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .xcaf
             .add_assembly
-            .call(&mut self.store, (doc_id.0, shape_id.0))?;
+            .call_guest(&mut self.store, (doc_id.0, shape_id.0))?;
         self.check_error("xcaf_add_assembly")?;
         Ok(result)
     }
@@ -8265,7 +8322,7 @@ impl crate::kernel::OcctKernel {
         &mut self,
         request: requests::XcafAddComponentRequest,
     ) -> OcctResult<i32> {
-        let result = self.generated.xcaf.add_component.call(
+        let result = self.generated.xcaf.add_component.call_guest(
             &mut self.store,
             (
                 request.doc_id.0,
@@ -8300,7 +8357,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .xcaf
             .set_color
-            .call(&mut self.store, (doc_id.0, label_id, r, g, b))?;
+            .call_guest(&mut self.store, (doc_id.0, label_id, r, g, b))?;
         if result < 0 {
             return Err(self.read_last_error("xcaf_set_color"));
         }
@@ -8319,17 +8376,17 @@ impl crate::kernel::OcctKernel {
         name: &str,
     ) -> OcctResult<()> {
         let guest_lengths = [checked_wasm_len(name.len(), 1)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, name.as_bytes())?];
-            Ok(kernel.generated.xcaf.set_name.call(
+            let result = kernel.generated.xcaf.set_name.call_guest(
                 &mut kernel.store,
                 (doc_id.0, label_id, guest_ptrs[0], guest_lengths[0]),
-            )?)
-        })?;
-        if result < 0 {
-            return Err(self.read_last_error("xcaf_set_name"));
-        }
-        Ok(())
+            )?;
+            if result < 0 {
+                return Err(kernel.read_last_error("xcaf_set_name"));
+            }
+            Ok(())
+        })
     }
 
     /// Call the `xcafGetLabelInfo` OCCT facade operation.
@@ -8346,7 +8403,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .xcaf
             .get_label_info
-            .call(&mut self.store, (doc_id.0, label_id))?;
+            .call_guest(&mut self.store, (doc_id.0, label_id))?;
         if status < 0 {
             return Err(self.read_last_error("xcaf_get_label_info"));
         }
@@ -8367,7 +8424,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .xcaf
             .get_child_labels
-            .call(&mut self.store, (doc_id.0, parent_label_id))?;
+            .call_guest(&mut self.store, (doc_id.0, parent_label_id))?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_get_child_labels"));
         }
@@ -8384,7 +8441,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .xcaf
             .get_root_labels
-            .call(&mut self.store, (doc_id.0,))?;
+            .call_guest(&mut self.store, (doc_id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_get_root_labels"));
         }
@@ -8405,7 +8462,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .xcaf
             .get_referred_label
-            .call(&mut self.store, (doc_id.0, label_id))?;
+            .call_guest(&mut self.store, (doc_id.0, label_id))?;
         self.check_error("xcaf_get_referred_label")?;
         Ok(result)
     }
@@ -8424,7 +8481,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .xcaf
             .get_label_location
-            .call(&mut self.store, (doc_id.0, label_id))?;
+            .call_guest(&mut self.store, (doc_id.0, label_id))?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_get_label_location"));
         }
@@ -8445,7 +8502,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .xcaf
             .get_sub_shape_labels
-            .call(&mut self.store, (doc_id.0, label_id))?;
+            .call_guest(&mut self.store, (doc_id.0, label_id))?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_get_sub_shape_labels"));
         }
@@ -8467,7 +8524,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .xcaf
             .add_sub_shape
-            .call(&mut self.store, (doc_id.0, label_id, shape_id.0))?;
+            .call_guest(&mut self.store, (doc_id.0, label_id, shape_id.0))?;
         self.check_error("xcaf_add_sub_shape")?;
         Ok(result)
     }
@@ -8482,7 +8539,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .xcaf
             .export_step
-            .call(&mut self.store, (doc_id.0,))?;
+            .call_guest(&mut self.store, (doc_id.0,))?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_export_step"));
         }
@@ -8500,17 +8557,17 @@ impl crate::kernel::OcctKernel {
         unit: &str,
     ) -> OcctResult<String> {
         let guest_lengths = [checked_wasm_len(unit.len(), 1)?];
-        let len = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, unit.as_bytes())?];
-            Ok(kernel.generated.xcaf.export_step_with_unit.call(
+            let len = kernel.generated.xcaf.export_step_with_unit.call_guest(
                 &mut kernel.store,
                 (doc_id.0, guest_ptrs[0], guest_lengths[0]),
-            )?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("xcaf_export_step_with_unit"));
-        }
-        self.read_string_result()
+            )?;
+            if len < 0 {
+                return Err(kernel.read_last_error("xcaf_export_step_with_unit"));
+            }
+            kernel.read_string_result()
+        })
     }
 
     /// Call the `xcafExportSTEPWithOptions` OCCT facade operation.
@@ -8528,12 +8585,12 @@ impl crate::kernel::OcctKernel {
             checked_wasm_len(unit.len(), 1)?,
             checked_wasm_len(schema.len(), 1)?,
         ];
-        let len = self.with_guest_buffers::<2, _>(|kernel, buffers| {
+        self.with_guest_buffers::<2, _>(|kernel, buffers| {
             let guest_ptrs = [
                 buffers.write(kernel, unit.as_bytes())?,
                 buffers.write(kernel, schema.as_bytes())?,
             ];
-            Ok(kernel.generated.xcaf.export_step_with_options.call(
+            let len = kernel.generated.xcaf.export_step_with_options.call_guest(
                 &mut kernel.store,
                 (
                     doc_id.0,
@@ -8542,12 +8599,12 @@ impl crate::kernel::OcctKernel {
                     guest_ptrs[1],
                     guest_lengths[1],
                 ),
-            )?)
-        })?;
-        if len < 0 {
-            return Err(self.read_last_error("xcaf_export_step_with_options"));
-        }
-        self.read_string_result()
+            )?;
+            if len < 0 {
+                return Err(kernel.read_last_error("xcaf_export_step_with_options"));
+            }
+            kernel.read_string_result()
+        })
     }
 
     /// Call the `xcafImportSTEP` OCCT facade operation.
@@ -8557,16 +8614,16 @@ impl crate::kernel::OcctKernel {
     /// or marshalling its arguments or results fails.
     pub fn xcaf_import_step(&mut self, step_data: &str) -> OcctResult<DocumentHandle> {
         let guest_lengths = [checked_wasm_len(step_data.len(), 1)?];
-        let result = self.with_guest_buffers::<1, _>(|kernel, buffers| {
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
             let guest_ptrs = [buffers.write(kernel, step_data.as_bytes())?];
-            Ok(kernel
+            let result = kernel
                 .generated
                 .xcaf
                 .import_step
-                .call(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?)
-        })?;
-        self.check_error("xcaf_import_step")?;
-        Ok(DocumentHandle(result))
+                .call_guest(&mut kernel.store, (guest_ptrs[0], guest_lengths[0]))?;
+            kernel.check_error("xcaf_import_step")?;
+            Ok(DocumentHandle(result))
+        })
     }
 
     /// Call the `xcafExportGLB` OCCT facade operation.
@@ -8584,7 +8641,7 @@ impl crate::kernel::OcctKernel {
             .generated
             .xcaf
             .export_glb
-            .call(&mut self.store, (doc_id.0, lin_deflection, ang_deflection))?;
+            .call_guest(&mut self.store, (doc_id.0, lin_deflection, ang_deflection))?;
         if len < 0 {
             return Err(self.read_last_error("xcaf_export_glb"));
         }
