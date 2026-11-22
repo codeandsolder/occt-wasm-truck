@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   sync:
-    uses: codeandsolder/ci-workflows/.github/workflows/upstream-tracking.yml@fbd680424bb29707ad2b396594aab8f8b3926dae # ci-workflows PR #127
+    uses: codeandsolder/ci-workflows/.github/workflows/upstream-tracking.yml@e3c936399ed6a5a497aa4b07bbc3427bf12c7dc4 # main
     with:
       upstream-repository: andymai/occt-wasm
       upstream-branch: main
