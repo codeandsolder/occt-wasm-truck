@@ -330,12 +330,13 @@ fn emit_rust_method(buf: &mut String, spec: &MethodSpec) {
     let request = request_name(spec);
     let named = request.is_some();
     let rust_ret = rust_return_type(spec.return_type);
-    let rust_params = if let Some(request) = request {
-        let lifetime = if request_borrows(spec) { "<'_>" } else { "" };
-        format!("request: {request}{lifetime}")
-    } else {
-        rust_param_list(spec.params)
-    };
+    let rust_params = request.map_or_else(
+        || rust_param_list(spec.params),
+        |request| {
+            let lifetime = if request_borrows(spec) { "<'_>" } else { "" };
+            format!("request: {request}{lifetime}")
+        },
+    );
 
     let params_str = if rust_params.is_empty() {
         String::from("&mut self")
