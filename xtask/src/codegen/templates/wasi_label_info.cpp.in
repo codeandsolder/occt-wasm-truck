@@ -1,0 +1,11 @@
+// XCAF label info result
+int32_t occt_get_label_info_label_id() { return g_label_info_buf.labelId; }
+const char* occt_get_label_info_name() { return g_label_info_buf.name.c_str(); }
+uint32_t occt_get_label_info_name_len() { return static_cast<uint32_t>(g_label_info_buf.name.size()); }
+int32_t occt_get_label_info_has_color() { return g_label_info_buf.hasColor ? 1 : 0; }
+double occt_get_label_info_r() { return g_label_info_buf.r; }
+double occt_get_label_info_g() { return g_label_info_buf.g; }
+double occt_get_label_info_b() { return g_label_info_buf.b; }
+int32_t occt_get_label_info_is_assembly() { return g_label_info_buf.isAssembly ? 1 : 0; }
+int32_t occt_get_label_info_is_component() { return g_label_info_buf.isComponent ? 1 : 0; }
+uint32_t occt_get_label_info_shape_id() { return g_label_info_buf.shapeId; }

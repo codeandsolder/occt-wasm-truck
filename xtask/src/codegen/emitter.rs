@@ -713,10 +713,213 @@ fn close_embind_chain(buf: &mut String) {
     }
 }
 
+/// Embind representation of a result data type.
+enum DataKind {
+    Class,
+    Value,
+}
+
+enum MemberKind {
+    Function,
+    Property,
+    Field,
+}
+
+struct DataRegistration {
+    name: &'static str,
+    kind: DataKind,
+    members: &'static [(&'static str, MemberKind)],
+}
+
+const DATA_REGISTRATIONS: &[DataRegistration] = &[
+    DataRegistration {
+        name: "MeshData",
+        kind: DataKind::Class,
+        members: &[
+            ("getPositionsPtr", MemberKind::Function),
+            ("getNormalsPtr", MemberKind::Function),
+            ("getUvsPtr", MemberKind::Function),
+            ("getIndicesPtr", MemberKind::Function),
+            ("positionCount", MemberKind::Property),
+            ("uvCount", MemberKind::Property),
+            ("normalCount", MemberKind::Property),
+            ("indexCount", MemberKind::Property),
+            ("getFaceGroupsPtr", MemberKind::Function),
+            ("faceGroupCount", MemberKind::Property),
+        ],
+    },
+    DataRegistration {
+        name: "MeshBatchData",
+        kind: DataKind::Class,
+        members: &[
+            ("getPositionsPtr", MemberKind::Function),
+            ("getNormalsPtr", MemberKind::Function),
+            ("getIndicesPtr", MemberKind::Function),
+            ("getShapeOffsetsPtr", MemberKind::Function),
+            ("positionCount", MemberKind::Property),
+            ("normalCount", MemberKind::Property),
+            ("indexCount", MemberKind::Property),
+            ("shapeCount", MemberKind::Property),
+        ],
+    },
+    DataRegistration {
+        name: "BBoxData",
+        kind: DataKind::Value,
+        members: &[
+            ("xmin", MemberKind::Field),
+            ("ymin", MemberKind::Field),
+            ("zmin", MemberKind::Field),
+            ("xmax", MemberKind::Field),
+            ("ymax", MemberKind::Field),
+            ("zmax", MemberKind::Field),
+        ],
+    },
+    DataRegistration {
+        name: "EdgeData",
+        kind: DataKind::Class,
+        members: &[
+            ("getPointsPtr", MemberKind::Function),
+            ("getEdgeGroupsPtr", MemberKind::Function),
+            ("pointCount", MemberKind::Property),
+            ("edgeGroupCount", MemberKind::Property),
+        ],
+    },
+    DataRegistration {
+        name: "ProjectionData",
+        kind: DataKind::Value,
+        members: &[
+            ("visibleOutline", MemberKind::Field),
+            ("visibleSmooth", MemberKind::Field),
+            ("visibleSharp", MemberKind::Field),
+            ("hiddenOutline", MemberKind::Field),
+            ("hiddenSmooth", MemberKind::Field),
+            ("hiddenSharp", MemberKind::Field),
+        ],
+    },
+    DataRegistration {
+        name: "NurbsCurveData",
+        kind: DataKind::Class,
+        members: &[
+            ("degree", MemberKind::Property),
+            ("rational", MemberKind::Property),
+            ("periodic", MemberKind::Property),
+            ("knots", MemberKind::Property),
+            ("multiplicities", MemberKind::Property),
+            ("poles", MemberKind::Property),
+            ("weights", MemberKind::Property),
+        ],
+    },
+    DataRegistration {
+        name: "NurbsSurfaceData",
+        kind: DataKind::Class,
+        members: &[
+            ("degreeU", MemberKind::Property),
+            ("degreeV", MemberKind::Property),
+            ("nbPolesU", MemberKind::Property),
+            ("nbPolesV", MemberKind::Property),
+            ("periodicU", MemberKind::Property),
+            ("periodicV", MemberKind::Property),
+            ("knotsU", MemberKind::Property),
+            ("knotsV", MemberKind::Property),
+            ("multiplicitiesU", MemberKind::Property),
+            ("multiplicitiesV", MemberKind::Property),
+            ("poles", MemberKind::Property),
+            ("weights", MemberKind::Property),
+        ],
+    },
+    DataRegistration {
+        name: "CurveData",
+        kind: DataKind::Class,
+        members: &[
+            ("kind", MemberKind::Property),
+            ("first", MemberKind::Property),
+            ("last", MemberKind::Property),
+            ("params", MemberKind::Property),
+            ("hasBSpline", MemberKind::Property),
+            ("bspline", MemberKind::Property),
+        ],
+    },
+    DataRegistration {
+        name: "SurfaceData",
+        kind: DataKind::Class,
+        members: &[
+            ("kind", MemberKind::Property),
+            ("isDirect", MemberKind::Property),
+            ("params", MemberKind::Property),
+            ("hasBSpline", MemberKind::Property),
+            ("bspline", MemberKind::Property),
+        ],
+    },
+    DataRegistration {
+        name: "EvolutionData",
+        kind: DataKind::Class,
+        members: &[
+            ("resultId", MemberKind::Property),
+            ("modified", MemberKind::Property),
+            ("generated", MemberKind::Property),
+            ("deleted", MemberKind::Property),
+            ("edgeModified", MemberKind::Property),
+            ("edgeGenerated", MemberKind::Property),
+            ("edgeDeleted", MemberKind::Property),
+            ("firstShape", MemberKind::Property),
+            ("lastShape", MemberKind::Property),
+            ("spineGenerated", MemberKind::Property),
+            ("inputShapes", MemberKind::Property),
+            ("resultCounts", MemberKind::Property),
+            ("modifiedIndexed", MemberKind::Property),
+            ("generatedIndexed", MemberKind::Property),
+            ("deletedIndexed", MemberKind::Property),
+            ("edgeModifiedIndexed", MemberKind::Property),
+            ("edgeGeneratedIndexed", MemberKind::Property),
+            ("edgeDeletedIndexed", MemberKind::Property),
+            ("firstShapeIndexed", MemberKind::Property),
+            ("lastShapeIndexed", MemberKind::Property),
+            ("spineGeneratedIndexed", MemberKind::Property),
+        ],
+    },
+    DataRegistration {
+        name: "XCAFLabelInfo",
+        kind: DataKind::Value,
+        members: &[
+            ("labelId", MemberKind::Field),
+            ("name", MemberKind::Field),
+            ("hasColor", MemberKind::Field),
+            ("r", MemberKind::Field),
+            ("g", MemberKind::Field),
+            ("b", MemberKind::Field),
+            ("isAssembly", MemberKind::Field),
+            ("isComponent", MemberKind::Field),
+            ("shapeId", MemberKind::Field),
+        ],
+    },
+];
+
+/// Register all result structs using the same field/member rules.
+fn emit_data_registrations(buf: &mut String) {
+    for registration in DATA_REGISTRATIONS {
+        let name = registration.name;
+        let kind = match registration.kind {
+            DataKind::Class => "class_",
+            DataKind::Value => "value_object",
+        };
+        let _ = writeln!(buf, "    // {name}");
+        let _ = writeln!(buf, "    {kind}<{name}>(\"{name}\")");
+        for (field, member) in registration.members {
+            let member = match member {
+                MemberKind::Function => "function",
+                MemberKind::Property => "property",
+                MemberKind::Field => "field",
+            };
+            let _ = writeln!(buf, "        .{member}(\"{field}\", &{name}::{field})");
+        }
+        close_embind_chain(buf);
+        buf.push('\n');
+    }
+}
+
 /// Generate the contents of `facade/generated/bindings.cpp`.
 ///
 /// This is a real, compilable file that registers all Embind bindings.
-#[allow(clippy::too_many_lines)]
 pub fn emit_bindings(methods: &[&MethodSpec]) -> String {
     let mut buf = String::with_capacity(4096);
 
@@ -758,217 +961,7 @@ pub fn emit_bindings(methods: &[&MethodSpec]) -> String {
     }
     let _ = writeln!(buf);
 
-    // Struct registrations (static boilerplate)
-    let _ = writeln!(buf, "    // MeshData");
-    let _ = writeln!(buf, "    class_<MeshData>(\"MeshData\")");
-    let _ = writeln!(
-        buf,
-        "        .function(\"getPositionsPtr\", &MeshData::getPositionsPtr)"
-    );
-    let _ = writeln!(
-        buf,
-        "        .function(\"getNormalsPtr\", &MeshData::getNormalsPtr)"
-    );
-    let _ = writeln!(
-        buf,
-        "        .function(\"getUvsPtr\", &MeshData::getUvsPtr)"
-    );
-    let _ = writeln!(
-        buf,
-        "        .function(\"getIndicesPtr\", &MeshData::getIndicesPtr)"
-    );
-    let _ = writeln!(
-        buf,
-        "        .property(\"positionCount\", &MeshData::positionCount)"
-    );
-    let _ = writeln!(buf, "        .property(\"uvCount\", &MeshData::uvCount)");
-    let _ = writeln!(
-        buf,
-        "        .property(\"normalCount\", &MeshData::normalCount)"
-    );
-    let _ = writeln!(
-        buf,
-        "        .property(\"indexCount\", &MeshData::indexCount)"
-    );
-    let _ = writeln!(
-        buf,
-        "        .function(\"getFaceGroupsPtr\", &MeshData::getFaceGroupsPtr)"
-    );
-    let _ = writeln!(
-        buf,
-        "        .property(\"faceGroupCount\", &MeshData::faceGroupCount);"
-    );
-    let _ = writeln!(buf);
-
-    let _ = writeln!(buf, "    // MeshBatchData");
-    let _ = writeln!(buf, "    class_<MeshBatchData>(\"MeshBatchData\")");
-    for field in &[
-        "getPositionsPtr",
-        "getNormalsPtr",
-        "getIndicesPtr",
-        "getShapeOffsetsPtr",
-    ] {
-        let _ = writeln!(
-            buf,
-            "        .function(\"{field}\", &MeshBatchData::{field})"
-        );
-    }
-    for prop in &["positionCount", "normalCount", "indexCount", "shapeCount"] {
-        let _ = writeln!(buf, "        .property(\"{prop}\", &MeshBatchData::{prop})");
-    }
-    // Last one gets semicolon
-    close_embind_chain(&mut buf);
-    let _ = writeln!(buf);
-
-    let _ = writeln!(buf, "    // BBoxData");
-    let _ = writeln!(buf, "    value_object<BBoxData>(\"BBoxData\")");
-    for f in &["xmin", "ymin", "zmin", "xmax", "ymax", "zmax"] {
-        let _ = writeln!(buf, "        .field(\"{f}\", &BBoxData::{f})");
-    }
-    close_embind_chain(&mut buf);
-    let _ = writeln!(buf);
-
-    let _ = writeln!(buf, "    // EdgeData");
-    let _ = writeln!(buf, "    class_<EdgeData>(\"EdgeData\")");
-    let _ = writeln!(
-        buf,
-        "        .function(\"getPointsPtr\", &EdgeData::getPointsPtr)"
-    );
-    let _ = writeln!(
-        buf,
-        "        .function(\"getEdgeGroupsPtr\", &EdgeData::getEdgeGroupsPtr)"
-    );
-    let _ = writeln!(
-        buf,
-        "        .property(\"pointCount\", &EdgeData::pointCount)"
-    );
-    let _ = writeln!(
-        buf,
-        "        .property(\"edgeGroupCount\", &EdgeData::edgeGroupCount);"
-    );
-    let _ = writeln!(buf);
-
-    let _ = writeln!(buf, "    // ProjectionData");
-    let _ = writeln!(buf, "    value_object<ProjectionData>(\"ProjectionData\")");
-    for f in &[
-        "visibleOutline",
-        "visibleSmooth",
-        "visibleSharp",
-        "hiddenOutline",
-        "hiddenSmooth",
-        "hiddenSharp",
-    ] {
-        let _ = writeln!(buf, "        .field(\"{f}\", &ProjectionData::{f})");
-    }
-    close_embind_chain(&mut buf);
-    let _ = writeln!(buf);
-
-    let _ = writeln!(buf, "    // NurbsCurveData");
-    let _ = writeln!(buf, "    class_<NurbsCurveData>(\"NurbsCurveData\")");
-    for prop in &[
-        "degree",
-        "rational",
-        "periodic",
-        "knots",
-        "multiplicities",
-        "poles",
-        "weights",
-    ] {
-        let _ = writeln!(
-            buf,
-            "        .property(\"{prop}\", &NurbsCurveData::{prop})"
-        );
-    }
-    close_embind_chain(&mut buf);
-    let _ = writeln!(buf);
-
-    let _ = writeln!(buf, "    // NurbsSurfaceData");
-    let _ = writeln!(buf, "    class_<NurbsSurfaceData>(\"NurbsSurfaceData\")");
-    for prop in &[
-        "degreeU",
-        "degreeV",
-        "nbPolesU",
-        "nbPolesV",
-        "periodicU",
-        "periodicV",
-        "knotsU",
-        "knotsV",
-        "multiplicitiesU",
-        "multiplicitiesV",
-        "poles",
-        "weights",
-    ] {
-        let _ = writeln!(
-            buf,
-            "        .property(\"{prop}\", &NurbsSurfaceData::{prop})"
-        );
-    }
-    close_embind_chain(&mut buf);
-    let _ = writeln!(buf);
-
-    let _ = writeln!(buf, "    // CurveData");
-    let _ = writeln!(buf, "    class_<CurveData>(\"CurveData\")");
-    for prop in &["kind", "first", "last", "params", "hasBSpline", "bspline"] {
-        let _ = writeln!(buf, "        .property(\"{prop}\", &CurveData::{prop})");
-    }
-    close_embind_chain(&mut buf);
-    let _ = writeln!(buf);
-
-    let _ = writeln!(buf, "    // SurfaceData");
-    let _ = writeln!(buf, "    class_<SurfaceData>(\"SurfaceData\")");
-    for prop in &["kind", "isDirect", "params", "hasBSpline", "bspline"] {
-        let _ = writeln!(buf, "        .property(\"{prop}\", &SurfaceData::{prop})");
-    }
-    close_embind_chain(&mut buf);
-    let _ = writeln!(buf);
-
-    let _ = writeln!(buf, "    // EvolutionData");
-    let _ = writeln!(buf, "    class_<EvolutionData>(\"EvolutionData\")");
-    for prop in &[
-        "resultId",
-        "modified",
-        "generated",
-        "deleted",
-        "edgeModified",
-        "edgeGenerated",
-        "edgeDeleted",
-        "firstShape",
-        "lastShape",
-        "spineGenerated",
-        "inputShapes",
-        "resultCounts",
-        "modifiedIndexed",
-        "generatedIndexed",
-        "deletedIndexed",
-        "edgeModifiedIndexed",
-        "edgeGeneratedIndexed",
-        "edgeDeletedIndexed",
-        "firstShapeIndexed",
-        "lastShapeIndexed",
-        "spineGeneratedIndexed",
-    ] {
-        let _ = writeln!(buf, "        .property(\"{prop}\", &EvolutionData::{prop})");
-    }
-    close_embind_chain(&mut buf);
-    let _ = writeln!(buf);
-
-    let _ = writeln!(buf, "    // XCAFLabelInfo");
-    let _ = writeln!(buf, "    value_object<XCAFLabelInfo>(\"XCAFLabelInfo\")");
-    for f in &[
-        "labelId",
-        "name",
-        "hasColor",
-        "r",
-        "g",
-        "b",
-        "isAssembly",
-        "isComponent",
-        "shapeId",
-    ] {
-        let _ = writeln!(buf, "        .field(\"{f}\", &XCAFLabelInfo::{f})");
-    }
-    close_embind_chain(&mut buf);
-    let _ = writeln!(buf);
+    emit_data_registrations(&mut buf);
 
     // OcctKernel method bindings — auto-generated from specs
     let _ = writeln!(buf, "    // OcctKernel");

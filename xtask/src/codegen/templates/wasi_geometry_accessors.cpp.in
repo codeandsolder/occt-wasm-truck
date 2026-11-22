@@ -1,0 +1,55 @@
+// Mesh result
+const float* occt_get_mesh_positions() { return g_mesh_buf.positions; }
+int32_t occt_get_mesh_positions_len() { return g_mesh_buf.positionCount; }
+const float* occt_get_mesh_normals() { return g_mesh_buf.normals; }
+int32_t occt_get_mesh_normals_len() { return g_mesh_buf.normalCount; }
+const uint32_t* occt_get_mesh_indices() { return g_mesh_buf.indices; }
+int32_t occt_get_mesh_indices_len() { return g_mesh_buf.indexCount; }
+const int32_t* occt_get_mesh_face_groups() { return g_mesh_buf.faceGroups; }
+int32_t occt_get_mesh_face_groups_len() { return g_mesh_buf.faceGroupCount; }
+
+// MeshBatch result
+const float* occt_get_mesh_batch_positions() { return g_mesh_batch_buf.positions; }
+int32_t occt_get_mesh_batch_positions_len() { return g_mesh_batch_buf.positionCount; }
+const float* occt_get_mesh_batch_normals() { return g_mesh_batch_buf.normals; }
+int32_t occt_get_mesh_batch_normals_len() { return g_mesh_batch_buf.normalCount; }
+const uint32_t* occt_get_mesh_batch_indices() { return g_mesh_batch_buf.indices; }
+int32_t occt_get_mesh_batch_indices_len() { return g_mesh_batch_buf.indexCount; }
+const int32_t* occt_get_mesh_batch_shape_offsets() { return g_mesh_batch_buf.shapeOffsets; }
+int32_t occt_get_mesh_batch_shape_count() { return g_mesh_batch_buf.shapeCount; }
+
+// Edge result
+const float* occt_get_edge_points() { return g_edge_buf.points; }
+int32_t occt_get_edge_points_len() { return g_edge_buf.pointCount; }
+const int32_t* occt_get_edge_groups() { return g_edge_buf.edgeGroups; }
+int32_t occt_get_edge_groups_len() { return g_edge_buf.edgeGroupCount; }
+
+// NURBS result
+int32_t occt_get_nurbs_degree() { return g_nurbs_buf.degree; }
+int32_t occt_get_nurbs_rational() { return g_nurbs_buf.rational ? 1 : 0; }
+int32_t occt_get_nurbs_periodic() { return g_nurbs_buf.periodic ? 1 : 0; }
+const double* occt_get_nurbs_knots() { return g_nurbs_buf.knots.data(); }
+uint32_t occt_get_nurbs_knots_len() { return static_cast<uint32_t>(g_nurbs_buf.knots.size()); }
+const int32_t* occt_get_nurbs_multiplicities() { return reinterpret_cast<const int32_t*>(g_nurbs_buf.multiplicities.data()); }
+uint32_t occt_get_nurbs_multiplicities_len() { return static_cast<uint32_t>(g_nurbs_buf.multiplicities.size()); }
+const double* occt_get_nurbs_poles() { return g_nurbs_buf.poles.data(); }
+uint32_t occt_get_nurbs_poles_len() { return static_cast<uint32_t>(g_nurbs_buf.poles.size()); }
+const double* occt_get_nurbs_weights() { return g_nurbs_buf.weights.data(); }
+uint32_t occt_get_nurbs_weights_len() { return static_cast<uint32_t>(g_nurbs_buf.weights.size()); }
+
+// Curve geometry result
+const char* occt_get_curve_kind() { return g_curve_buf.kind.data(); }
+uint32_t occt_get_curve_kind_len() { return static_cast<uint32_t>(g_curve_buf.kind.size()); }
+double occt_get_curve_first() { return g_curve_buf.first; }
+double occt_get_curve_last() { return g_curve_buf.last; }
+const double* occt_get_curve_params() { return g_curve_buf.params.data(); }
+uint32_t occt_get_curve_params_len() { return static_cast<uint32_t>(g_curve_buf.params.size()); }
+int32_t occt_get_curve_has_bspline() { return g_curve_buf.hasBSpline ? 1 : 0; }
+
+// Surface geometry result
+const char* occt_get_surface_kind() { return g_surface_buf.kind.data(); }
+uint32_t occt_get_surface_kind_len() { return static_cast<uint32_t>(g_surface_buf.kind.size()); }
+int32_t occt_get_surface_is_direct() { return g_surface_buf.isDirect ? 1 : 0; }
+const double* occt_get_surface_params() { return g_surface_buf.params.data(); }
+uint32_t occt_get_surface_params_len() { return static_cast<uint32_t>(g_surface_buf.params.size()); }
+int32_t occt_get_surface_has_bspline() { return g_surface_buf.hasBSpline ? 1 : 0; }
