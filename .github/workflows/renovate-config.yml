@@ -16,4 +16,4 @@ concurrency:
 
 jobs:
   renovate-config:
-    uses: codeandsolder/ci-workflows/.github/workflows/renovate-config.yml@6461397f9c7b2e283677906fdf2fe2b573001789 # main
+    uses: codeandsolder/ci-workflows/.github/workflows/renovate-config.yml@8ab6060d47a3c56bb406aff41189fbfcf7aa9acc # main

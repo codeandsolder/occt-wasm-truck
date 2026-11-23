@@ -51,7 +51,7 @@ jobs:
 
       - name: Resolve fleet compiler
         id: compiler
-        uses: codeandsolder/ci-workflows/.github/actions/resolve-rust-toolchain@6461397f9c7b2e283677906fdf2fe2b573001789 # main
+        uses: codeandsolder/ci-workflows/.github/actions/resolve-rust-toolchain@8ab6060d47a3c56bb406aff41189fbfcf7aa9acc # main
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
@@ -59,7 +59,7 @@ jobs:
           toolchain: ${{ steps.compiler.outputs.channel }}
 
       - name: Setup canonical sccache
-        uses: codeandsolder/ci-workflows/.github/actions/setup-sccache@6461397f9c7b2e283677906fdf2fe2b573001789 # main
+        uses: codeandsolder/ci-workflows/.github/actions/setup-sccache@8ab6060d47a3c56bb406aff41189fbfcf7aa9acc # main
         with:
           rust-toolchain: ${{ steps.compiler.outputs.channel }}
 
@@ -113,4 +113,4 @@ jobs:
 
       - name: Finalize canonical sccache
         if: always()
-        uses: codeandsolder/ci-workflows/.github/actions/finalize-sccache@6461397f9c7b2e283677906fdf2fe2b573001789 # main
+        uses: codeandsolder/ci-workflows/.github/actions/finalize-sccache@8ab6060d47a3c56bb406aff41189fbfcf7aa9acc # main
