@@ -1,21 +1,25 @@
 #!/usr/bin/env bash
 # Rebuild the facade and embedded module in the pinned native builder image.
 set -euo pipefail
-if [[ $(git rev-parse HEAD:Dockerfile.builder) != 0441ede58532884ba88c00a8b98f01726221d6ab || $(git rev-parse HEAD:scripts/fetch-rapidjson.sh) != 6ae38c36c61da3b9a412281529f0f940b73eed6e ]]; then
+if [[ $(git rev-parse HEAD:Dockerfile.builder) != 7b93a81bc841fda9e7c62f91f0c7e36aaca9bc30 || $(git rev-parse HEAD:scripts/fetch-rapidjson.sh) != 6ae38c36c61da3b9a412281529f0f940b73eed6e ]]; then
     echo 'OCCT native builder recipe changed: review the builder image digest and build prerequisites.' >&2
     exit 1
 fi
-ln -s /workspace/3rdparty 3rdparty
-if [[ $(git rev-parse HEAD:occt) == c7f60ffe85f28c67358d1771454044f0521f2fdd ]]; then
-    # Leave the tracked gitlink as a directory, not a symlink.
-    mkdir -p occt
-    ln -s /workspace/occt/build occt/build
-else
-    # A new native OCCT commit can use the same reviewed toolchain recipe.
-    # Never link static libraries built from a different native revision.
-    git submodule update --init --depth 1 occt
-    cargo run --locked --package xtask -- build-occt
+# The immutable builder includes native source patches that are not in the
+# unmodified gitlink. A changed native revision must be rebuilt and repinned
+# explicitly; compiling it here would silently discard those patches.
+expected_native=$(cat patches/occt/gitlink)
+if [[ $(git rev-parse HEAD:occt) != "$expected_native" ]]; then
+    echo 'OCCT native revision changed: reconstruct/review source overlays, rebuild and repin the native image.' >&2
+    exit 1
 fi
+# The image's actual patched source must match the checked-in source manifest.
+root=$(pwd)
+(cd /workspace/occt && sha256sum --check "$root/patches/occt/source.sha256")
+ln -s /workspace/3rdparty 3rdparty
+# Leave the tracked gitlink as a directory, not a symlink.
+mkdir -p occt
+ln -s /workspace/occt/build occt/build
 test -d occt/build/include/opencascade
 cargo run --locked --package xtask -- codegen
 cargo fmt --all

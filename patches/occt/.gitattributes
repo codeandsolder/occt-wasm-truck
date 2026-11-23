@@ -1,0 +1,2 @@
+# These patch files encode byte-exact upstream C++ lines, including spaces on blank lines.
+*.patch whitespace=-blank-at-eol,-blank-at-eof

@@ -23,6 +23,13 @@ RUN bash scripts/fetch-rapidjson.sh
 
 # OCCT source + build (~50 min, cached in image layer)
 COPY occt/ occt/
+# The pinned native builder also contains three reviewed OCCT C++ patches.
+# Track their exact source here rather than depending on opaque OCI layers.
+# The source manifest rejects accidental patch loss or upstream drift.
+COPY patches/occt/ /workspace/occt-patches/
+RUN cd occt && git apply --check /workspace/occt-patches/*.patch \
+    && git apply /workspace/occt-patches/*.patch \
+    && sha256sum --check /workspace/occt-patches/source.sha256
 RUN mkdir -p occt/build && cd occt/build \
     && emcmake cmake .. \
         -G Ninja \

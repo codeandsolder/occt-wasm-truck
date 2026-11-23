@@ -2,6 +2,7 @@
 dist/
 build/
 occt/build/
+occt/.git
 target/
 node_modules/
 ts/node_modules/
