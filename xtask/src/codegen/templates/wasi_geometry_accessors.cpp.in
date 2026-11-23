@@ -1,27 +1,27 @@
 // Mesh result
-const float* occt_get_mesh_positions() { return g_mesh_buf.positions; }
+const float* occt_get_mesh_positions() { return g_mesh_buf.positions.get(); }
 int32_t occt_get_mesh_positions_len() { return g_mesh_buf.positionCount; }
-const float* occt_get_mesh_normals() { return g_mesh_buf.normals; }
+const float* occt_get_mesh_normals() { return g_mesh_buf.normals.get(); }
 int32_t occt_get_mesh_normals_len() { return g_mesh_buf.normalCount; }
-const uint32_t* occt_get_mesh_indices() { return g_mesh_buf.indices; }
+const uint32_t* occt_get_mesh_indices() { return g_mesh_buf.indices.get(); }
 int32_t occt_get_mesh_indices_len() { return g_mesh_buf.indexCount; }
-const int32_t* occt_get_mesh_face_groups() { return g_mesh_buf.faceGroups; }
+const int32_t* occt_get_mesh_face_groups() { return g_mesh_buf.faceGroups.get(); }
 int32_t occt_get_mesh_face_groups_len() { return g_mesh_buf.faceGroupCount; }
 
 // MeshBatch result
-const float* occt_get_mesh_batch_positions() { return g_mesh_batch_buf.positions; }
+const float* occt_get_mesh_batch_positions() { return g_mesh_batch_buf.positions.get(); }
 int32_t occt_get_mesh_batch_positions_len() { return g_mesh_batch_buf.positionCount; }
-const float* occt_get_mesh_batch_normals() { return g_mesh_batch_buf.normals; }
+const float* occt_get_mesh_batch_normals() { return g_mesh_batch_buf.normals.get(); }
 int32_t occt_get_mesh_batch_normals_len() { return g_mesh_batch_buf.normalCount; }
-const uint32_t* occt_get_mesh_batch_indices() { return g_mesh_batch_buf.indices; }
+const uint32_t* occt_get_mesh_batch_indices() { return g_mesh_batch_buf.indices.get(); }
 int32_t occt_get_mesh_batch_indices_len() { return g_mesh_batch_buf.indexCount; }
-const int32_t* occt_get_mesh_batch_shape_offsets() { return g_mesh_batch_buf.shapeOffsets; }
+const int32_t* occt_get_mesh_batch_shape_offsets() { return g_mesh_batch_buf.shapeOffsets.get(); }
 int32_t occt_get_mesh_batch_shape_count() { return g_mesh_batch_buf.shapeCount; }
 
 // Edge result
-const float* occt_get_edge_points() { return g_edge_buf.points; }
+const float* occt_get_edge_points() { return g_edge_buf.points.get(); }
 int32_t occt_get_edge_points_len() { return g_edge_buf.pointCount; }
-const int32_t* occt_get_edge_groups() { return g_edge_buf.edgeGroups; }
+const int32_t* occt_get_edge_groups() { return g_edge_buf.edgeGroups.get(); }
 int32_t occt_get_edge_groups_len() { return g_edge_buf.edgeGroupCount; }
 
 // NURBS result

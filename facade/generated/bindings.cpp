@@ -407,12 +407,12 @@ EMSCRIPTEN_BINDINGS(occt_wasm) {
         .function("thickenWithHistory", &OcctKernel::thickenWithHistory)
 
         // tessellate
-        .function("tessellate", &OcctKernel::tessellate)
+        .function("tessellate", &OcctKernel::tessellate, return_value_policy::take_ownership())
         .function("tessellateTriangles64", &OcctKernel::tessellateTriangles64)
-        .function("tessellateRelative", &OcctKernel::tessellateRelative)
-        .function("meshShape", &OcctKernel::meshShape)
-        .function("meshBatch", &OcctKernel::meshBatch)
-        .function("wireframe", &OcctKernel::wireframe)
+        .function("tessellateRelative", &OcctKernel::tessellateRelative, return_value_policy::take_ownership())
+        .function("meshShape", &OcctKernel::meshShape, return_value_policy::take_ownership())
+        .function("meshBatch", &OcctKernel::meshBatch, return_value_policy::take_ownership())
+        .function("wireframe", &OcctKernel::wireframe, return_value_policy::take_ownership())
 
         // projection
         .function("projectEdges", &OcctKernel::projectEdges)
