@@ -17,7 +17,7 @@ jobs:
     name: WASM Build & Test
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/andymai/occt-wasm-builder@sha256:8fd87a3e12ef671b9196d5891b2dfcccd416ed36f55b6f2130ee74edcd2fc89a
+      image: ghcr.io/andymai/occt-wasm-builder@sha256:8ef7042f3dcf88ae4cda139e0988624c811d5d3f859c8e8a7c325bbf3c9c7d49
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
