@@ -8,19 +8,47 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use wasmtime::{Caller, Extern, Linker, Memory, ResourceLimiter};
+use wasmtime::{
+    Caller, Extern, Linker, Memory, ResourceLimiter, Store, TypedFunc, WasmParams, WasmResults,
+};
 
-use crate::error::{MemoryLimitExceeded, OcctResult};
+use crate::error::{MemoryLimitExceeded, OcctError, OcctResult};
 
 /// The data a kernel's `Store` carries. wasmtime asks the limiter before every
 /// memory or table growth, and can only reach one stored here.
 pub struct HostState {
     limiter: Box<dyn ResourceLimiter + Sync>,
+    poisoned: bool,
 }
 
 impl HostState {
     pub fn new(limiter: Box<dyn ResourceLimiter + Sync>) -> Self {
-        Self { limiter }
+        Self {
+            limiter,
+            poisoned: false,
+        }
+    }
+
+    pub const fn is_poisoned(&self) -> bool {
+        self.poisoned
+    }
+}
+
+/// Every call into a live guest must pass through this boundary. A trapped
+/// call may have left native OCCT state inconsistent.
+pub trait GuestCall<P, R> {
+    fn call_guest(&self, store: &mut Store<HostState>, params: P) -> OcctResult<R>;
+}
+
+impl<P: WasmParams, R: WasmResults> GuestCall<P, R> for TypedFunc<P, R> {
+    fn call_guest(&self, store: &mut Store<HostState>, params: P) -> OcctResult<R> {
+        if store.data().is_poisoned() {
+            return Err(OcctError::Invalidated);
+        }
+        self.call(&mut *store, params).map_err(|error| {
+            store.data_mut().poisoned = true;
+            error.into()
+        })
     }
 }
 
@@ -92,10 +120,50 @@ fn memory(caller: &mut Caller<'_, HostState>) -> wasmtime::Result<Memory> {
         .ok_or_else(|| wasmtime::Error::msg("module has no memory export"))
 }
 
-fn read_u32(memory: Memory, caller: &Caller<'_, HostState>, ptr: u32) -> wasmtime::Result<u32> {
-    let mut buf = [0u8; 4];
-    memory.read(caller, ptr as usize, &mut buf)?;
-    Ok(u32::from_le_bytes(buf))
+/// Get an address range without allowing any arithmetic to wrap.
+fn guest_region(data: &[u8], address: u32, length: usize) -> Option<&[u8]> {
+    let start = address as usize;
+    data.get(start..start.checked_add(length)?)
+}
+
+const ERRNO_FAULT: i32 = 21;
+const ERRNO_OVERFLOW: i32 = 61;
+
+/// Discard stdout/stderr but validate the exact WASI ciovec layout and all
+/// referenced ranges, returning the count only if the whole write is valid.
+fn discard_iovecs(data: &mut [u8], iovs: u32, count: u32, written: u32) -> i32 {
+    let Some(table_size) = (count as usize).checked_mul(8) else {
+        return ERRNO_OVERFLOW;
+    };
+    let Some(table) = guest_region(data, iovs, table_size) else {
+        return ERRNO_FAULT;
+    };
+    let (descriptors, []) = table.as_chunks::<8>() else {
+        return ERRNO_FAULT;
+    };
+    let mut total = 0u32;
+    for descriptor in descriptors {
+        let ([address, length], []) = descriptor.as_chunks::<4>() else {
+            return ERRNO_FAULT;
+        };
+        let length = u32::from_le_bytes(*length);
+        if guest_region(data, u32::from_le_bytes(*address), length as usize).is_none() {
+            return ERRNO_FAULT;
+        }
+        let Some(sum) = total.checked_add(length) else {
+            return ERRNO_OVERFLOW;
+        };
+        total = sum;
+    }
+    let start = written as usize;
+    let Some(end) = start.checked_add(4) else {
+        return ERRNO_FAULT;
+    };
+    let Some(destination) = data.get_mut(start..end) else {
+        return ERRNO_FAULT;
+    };
+    destination.copy_from_slice(&total.to_le_bytes());
+    ERRNO_SUCCESS
 }
 
 fn write_bytes(
@@ -127,21 +195,20 @@ fn define_wasi(linker: &mut Linker<HostState>) -> OcctResult<()> {
         "fd_write",
         |mut caller: Caller<'_, HostState>,
          fd: i32,
-         iovs: i32,
-         iovs_len: i32,
-         nwritten: i32|
+         iovs: u32,
+         iovs_len: u32,
+         nwritten: u32|
          -> wasmtime::Result<i32> {
             if fd != STDOUT && fd != STDERR {
                 return Ok(ERRNO_BADF);
             }
             let memory = memory(&mut caller)?;
-            let mut total = 0u32;
-            for i in 0..iovs_len.cast_unsigned() {
-                let iov = iovs.cast_unsigned() + i * 8;
-                total = total.wrapping_add(read_u32(memory, &caller, iov + 4)?);
-            }
-            write_bytes(memory, &mut caller, nwritten, &total.to_le_bytes())?;
-            Ok(ERRNO_SUCCESS)
+            Ok(discard_iovecs(
+                memory.data_mut(&mut caller),
+                iovs,
+                iovs_len,
+                nwritten,
+            ))
         },
     )?;
     linker.func_wrap(WASI, "fd_read", |_: i32, _: i32, _: i32, _: i32| ERRNO_BADF)?;
@@ -210,4 +277,77 @@ fn define_env(linker: &mut Linker<HostState>) -> OcctResult<()> {
     })?;
     linker.func_wrap("env", "__syscall_rmdir", |_: i32| -ERRNO_NOSYS)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ERRNO_FAULT, ERRNO_OVERFLOW, ERRNO_SUCCESS, GuestCall, HostState, discard_iovecs};
+    use crate::{OcctError, OcctResult};
+    use wasmtime::{Engine, Instance, Module, Store, StoreLimits, Val};
+
+    fn descriptor(data: &mut [u8], index: usize, address: u32, length: u32) {
+        let entry = &mut data[index * 8..][..8];
+        entry[..4].copy_from_slice(&address.to_le_bytes());
+        entry[4..].copy_from_slice(&length.to_le_bytes());
+    }
+
+    #[test]
+    fn discarded_output_checks_table_buffers_and_destination() {
+        let mut data = [0_u8; 64];
+        descriptor(&mut data, 0, 32, 7);
+        descriptor(&mut data, 1, 63, 1);
+        assert_eq!(discard_iovecs(&mut data, 0, 2, 24), ERRNO_SUCCESS);
+        assert_eq!(&data[24..28], &8_u32.to_le_bytes());
+        descriptor(&mut data, 1, 63, 2);
+        assert_eq!(discard_iovecs(&mut data, 0, 2, 24), ERRNO_FAULT);
+        assert_eq!(&data[24..28], &8_u32.to_le_bytes());
+        assert_eq!(discard_iovecs(&mut data, u32::MAX - 3, 2, 24), ERRNO_FAULT);
+        assert_ne!(discard_iovecs(&mut data, 0, u32::MAX, 24), ERRNO_SUCCESS);
+        assert_eq!(discard_iovecs(&mut data, 0, 1, 62), ERRNO_FAULT);
+        assert_eq!(discard_iovecs(&mut data, 64, 0, 24), ERRNO_SUCCESS);
+        assert_eq!(&data[24..28], &0_u32.to_le_bytes());
+    }
+
+    #[test]
+    fn discarded_output_rejects_total_length_overflow() {
+        let count = 65_536_u32;
+        let mut data = vec![0_u8; count as usize * 8 + 4];
+        for index in 0..count as usize {
+            descriptor(&mut data, index, 0, count);
+        }
+        assert_eq!(
+            discard_iovecs(&mut data, 0, count, count * 8),
+            ERRNO_OVERFLOW
+        );
+    }
+
+    #[test]
+    fn guest_trap_prevents_subsequent_execution() -> OcctResult<()> {
+        let engine = Engine::default();
+        let mut store = Store::new(&engine, HostState::new(Box::new(StoreLimits::default())));
+        let module = Module::new(
+            &engine,
+            r#"(module
+          (global (export "counter") (mut i32) (i32.const 0))
+          (func (export "fail") global.get 0 i32.const 1 i32.add global.set 0 unreachable)
+          (func (export "next") global.get 0 i32.const 1 i32.add global.set 0)
+        )"#,
+        )?;
+        let instance = Instance::new(&mut store, &module, &[])?;
+        let fail = instance.get_typed_func::<(), ()>(&mut store, "fail")?;
+        let next = instance.get_typed_func::<(), ()>(&mut store, "next")?;
+        assert!(matches!(
+            fail.call_guest(&mut store, ()),
+            Err(OcctError::Runtime(_))
+        ));
+        assert!(matches!(
+            next.call_guest(&mut store, ()),
+            Err(OcctError::Invalidated)
+        ));
+        let counter = instance
+            .get_global(&mut store, "counter")
+            .ok_or_else(|| OcctError::Memory("missing test global".to_owned()))?;
+        assert!(matches!(counter.get(&mut store), Val::I32(1)));
+        Ok(())
+    }
 }

@@ -18,7 +18,7 @@ pub enum OcctError {
     /// refused to grow linear memory.
     ///
     /// The call that needed the memory stopped partway through, so the
-    /// kernel's state is undefined: drop it and instantiate a new one.
+    /// kernel is invalidated: further operations fail without executing guest\n    /// code. Drop it and instantiate a new one.
     #[error("memory limit: growing linear memory from {current} to {requested} bytes was refused")]
     MemoryLimit {
         /// Linear memory size before the refused growth, in bytes.
@@ -34,6 +34,22 @@ pub enum OcctError {
     /// instantiate a new one.
     #[error("WASM runtime error: {0}")]
     Runtime(#[source] wasmtime::Error),
+
+    /// An earlier guest trap made this kernel unusable. No further guest
+    /// code was executed; instantiate a fresh kernel to continue.
+    #[error("kernel invalidated by an earlier WASM runtime error")]
+    Invalidated,
+
+    /// An operation failed and releasing its input allocations also trapped.
+    /// Both errors are retained; the kernel must be discarded.
+    #[error("{operation}; guest cleanup failed: {cleanup}")]
+    Cleanup {
+        /// Original operation or marshalling error.
+        operation: Box<Self>,
+        /// Error that invalidated the kernel during cleanup.
+        #[source]
+        cleanup: Box<Self>,
+    },
 
     /// A memory access or data conversion error.
     #[error("memory error: {0}")]

@@ -124,6 +124,14 @@ fn memory_limit_stops_the_call_that_exceeds_it() {
         Err(e) => panic!("expected a memory limit error, got {e:?}"),
         Ok(mesh) => panic!("{} triangles fit under the cap", mesh.indices.len() / 3),
     }
+    assert!(matches!(
+        kernel.make_box(1.0, 1.0, 1.0),
+        Err(OcctError::Invalidated)
+    ));
+    assert!(matches!(
+        kernel.import_step("invalid STEP"),
+        Err(OcctError::Invalidated)
+    ));
 }
 
 #[test]

@@ -378,26 +378,40 @@ fn emit_rust_method(buf: &mut String, spec: &MethodSpec) {
         .count();
 
     let (name, check, expression) = result_binding(spec.return_type);
-    if heap_count == 0 {
-        let _ = writeln!(
-            buf,
-            "        let {name} = self.{fn_field}.call(&mut self.store, {call_tuple})?;"
-        );
+    let receiver = if heap_count == 0 {
+        "self"
     } else {
         let _ = writeln!(
             buf,
-            "        let {name} = self.with_guest_buffers::<{heap_count}, _>(|kernel, buffers| {{"
+            "        self.with_guest_buffers::<{heap_count}, _>(|kernel, buffers| {{"
         );
         emit_wasm_call_allocations(buf, spec.params, named);
-        let _ = writeln!(
-            buf,
-            "            Ok(kernel.{fn_field}.call(&mut kernel.store, {call_tuple})?)"
-        );
-        let _ = writeln!(buf, "        }})?;");
+        "kernel"
+    };
+    let _ = writeln!(
+        buf,
+        "        let {name} = {receiver}.{fn_field}.call_guest(&mut {receiver}.store, {call_tuple})?;"
+    );
+    emit_result_check(buf, name, &check, &snake_name, receiver);
+    let expression = expression.replace("self.", &format!("{receiver}."));
+    let _ = writeln!(buf, "        {expression}");
+    if heap_count != 0 {
+        let _ = writeln!(buf, "        }})");
     }
+    let _ = writeln!(buf, "    }}");
+}
 
+/// Check the guest's result before freeing input buffers, preserving the
+/// original operation error and avoiding further calls after a trap.
+fn emit_result_check(
+    buf: &mut String,
+    name: &str,
+    check: &ResultCheck,
+    operation: &str,
+    receiver: &str,
+) {
     if matches!(check, ResultCheck::Flag | ResultCheck::Handle) {
-        let _ = writeln!(buf, "        self.check_error(\"{snake_name}\")?;");
+        let _ = writeln!(buf, "        {receiver}.check_error(\"{operation}\")?;");
     }
     if let Some(condition) = match check {
         ResultCheck::Flag => None,
@@ -407,13 +421,10 @@ fn emit_rust_method(buf: &mut String, spec: &MethodSpec) {
         let _ = writeln!(buf, "        if {condition} {{");
         let _ = writeln!(
             buf,
-            "            return Err(self.read_last_error(\"{snake_name}\"));"
+            "            return Err({receiver}.read_last_error(\"{operation}\"));"
         );
         let _ = writeln!(buf, "        }}");
     }
-    let _ = writeln!(buf, "        {expression}");
-
-    let _ = writeln!(buf, "    }}");
 }
 
 /// Convert a generated snake-case identifier to a Rust type name.
@@ -590,6 +601,7 @@ pub fn emit_rust_host(methods: &[&MethodSpec]) -> String {
 use wasmtime::TypedFunc;
 
 use crate::error::OcctResult;
+use crate::host::GuestCall;
 use crate::kernel::checked_wasm_len;
 use crate::types::{
     AdaptiveVolume, BRepProperties, BoundingBox, CurveData, EdgeData, EvolutionData, LabelInfo, Mesh, MeshBatch,
@@ -722,7 +734,7 @@ mod tests {
         ));
         assert!(output.contains("/// Call the `makeBox` OCCT facade operation."));
         assert!(output.contains("/// # Errors"));
-        assert!(output.contains("generated.primitives.make_box"));
+        assert!(output.contains("generated.primitives.make_box.call_guest("));
         assert!(output.contains("ShapeHandle(result)"));
     }
 
@@ -766,6 +778,7 @@ mod tests {
         assert!(output.contains("data: &str"));
         assert!(output.contains("buffers.write(kernel, data.as_bytes())"));
         assert!(output.contains("self.with_guest_buffers::<1, _>"));
+        assert!(output.contains("kernel.check_error("));
     }
 
     static EXPORT_BYTES: MethodSpec = MethodSpec {
@@ -804,6 +817,7 @@ mod tests {
         assert!(!output.contains("data.len() as u32"));
         assert!(!output.contains("data_ptr as i32"));
         assert!(output.contains("self.with_guest_buffers::<1, _>"));
+        assert!(output.contains("kernel.check_error("));
         assert!(output.contains("import_stl_binary: TypedFunc<(u32, u32), u32>"));
     }
 
