@@ -983,6 +983,14 @@ pub fn emit_bindings(methods: &[&MethodSpec]) -> String {
             let name = spec.name;
             if spec.return_type == ReturnType::Bytes {
                 emit_bytes_binding(&mut buf, spec);
+            } else if matches!(
+                spec.return_type,
+                ReturnType::MeshData | ReturnType::MeshBatchData | ReturnType::EdgeData
+            ) {
+                let _ = writeln!(
+                    buf,
+                    "        .function(\"{name}\", &OcctKernel::{name}, return_value_policy::take_ownership())"
+                );
             } else {
                 let _ = writeln!(buf, "        .function(\"{name}\", &OcctKernel::{name})");
             }

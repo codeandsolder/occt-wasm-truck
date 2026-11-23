@@ -46,6 +46,17 @@ jobs:
       - name: ESLint
         run: cd ts && npx eslint src/
 
+  native-mesh-results:
+    name: Native mesh result ownership
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Test move ownership and checked counts under sanitizers
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer \
+            -I facade/include facade/tests/mesh_results.cpp -o "$RUNNER_TEMP/mesh-results-test"
+          "$RUNNER_TEMP/mesh-results-test"
+
   codegen:
     name: Generated-code consistency
     uses: codeandsolder/ci-workflows/.github/workflows/rust-sccache.yml@6461397f9c7b2e283677906fdf2fe2b573001789 # main

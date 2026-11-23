@@ -6449,6 +6449,7 @@ struct FaceCache {
 struct ShapeMesh {
     int posStart, posCount, idxStart, idxCount;
 };
+const int shapeCount = addMeshElements<4>(0, ids.size());
 std::vector<ShapeMesh> shapeMeshes;
 shapeMeshes.reserve(ids.size());
 std::vector<FaceCache> faceCache;
@@ -6470,13 +6471,13 @@ for (size_t si = 0; si < ids.size(); si++) {
         auto tri = BRep_Tool::Triangulation(face, loc);
         if (tri.IsNull())
             continue;
-        shapeNodes += tri->NbNodes();
-        shapeTris += tri->NbTriangles();
+        shapeNodes = addMeshElements<3>(shapeNodes, tri->NbNodes());
+        shapeTris = addMeshElements<3>(shapeTris, tri->NbTriangles());
         faceCache.push_back({tri, loc.Transformation(), face, si});
     }
     shapeMeshes.push_back({totalNodes * 3, shapeNodes * 3, totalTris * 3, shapeTris * 3});
-    totalNodes += shapeNodes;
-    totalTris += shapeTris;
+    totalNodes = addMeshElements<3>(totalNodes, shapeNodes);
+    totalTris = addMeshElements<3>(totalTris, shapeTris);
 }
 
 // Allocate
@@ -6484,20 +6485,13 @@ MeshBatchData result;
 result.positionCount = totalNodes * 3;
 result.normalCount = totalNodes * 3;
 result.indexCount = totalTris * 3;
-result.shapeCount = static_cast<int>(ids.size());
+result.shapeCount = shapeCount;
 
-result.positions = static_cast<float*>(std::malloc(result.positionCount * sizeof(float)));
-result.normals = static_cast<float*>(std::malloc(result.normalCount * sizeof(float)));
-result.indices = static_cast<uint32_t*>(std::malloc(result.indexCount * sizeof(uint32_t)));
+result.positions = allocateMeshBuffer<float>(result.positionCount);
+result.normals = allocateMeshBuffer<float>(result.normalCount);
+result.indices = allocateMeshBuffer<uint32_t>(result.indexCount);
 result.shapeOffsets =
-    static_cast<int32_t*>(std::malloc(result.shapeCount * 4 * sizeof(int32_t)));
-
-if ((!result.positions && result.positionCount > 0) ||
-    (!result.normals && result.normalCount > 0) ||
-    (!result.indices && result.indexCount > 0) ||
-    (!result.shapeOffsets && result.shapeCount > 0)) {
-    throw std::runtime_error(\"meshBatch: memory allocation failed\");
-}
+    allocateMeshBuffer<int32_t>(result.shapeCount * 4);
 
 // Second pass: extract geometry from cached face data
 int vertexOffset = 0;
@@ -6676,21 +6670,16 @@ for (int ei = 1; ei <= edgeMap.Extent(); ei++) {
         continue;
     }
     es.hash = static_cast<int>(TopTools_ShapeMapHasher{}(edge) % 2147483647);
-    totalPoints += static_cast<int>(es.pts.size());
+    totalPoints = addMeshElements<3>(totalPoints, es.pts.size());
     edgeSamples.push_back(std::move(es));
 }
 
 EdgeData result;
 result.pointCount = totalPoints * 3;
-result.points = static_cast<float*>(std::malloc(result.pointCount * sizeof(float)));
-int numEdges = static_cast<int>(edgeSamples.size());
-result.edgeGroupCount = numEdges * 3;
+result.points = allocateMeshBuffer<float>(result.pointCount);
+result.edgeGroupCount = meshScalarCount<3>(edgeSamples.size());
 result.edgeGroups =
-    static_cast<int32_t*>(std::malloc(result.edgeGroupCount * sizeof(int32_t)));
-if (!result.points && result.pointCount > 0) {
-    throw std::runtime_error(\"wireframe: allocation failed\");
-}
-
+    allocateMeshBuffer<int32_t>(result.edgeGroupCount);
 int offset = 0;
 int edgeIdx = 0;
 for (const auto& es : edgeSamples) {
@@ -6701,11 +6690,9 @@ for (const auto& es : edgeSamples) {
         result.points[offset + 2] = static_cast<float>(p.Z());
         offset += 3;
     }
-    if (result.edgeGroups) {
-        result.edgeGroups[edgeIdx * 3] = edgeStart;
-        result.edgeGroups[edgeIdx * 3 + 1] = offset - edgeStart;
-        result.edgeGroups[edgeIdx * 3 + 2] = es.hash;
-    }
+    result.edgeGroups[edgeIdx * 3] = edgeStart;
+    result.edgeGroups[edgeIdx * 3 + 1] = offset - edgeStart;
+    result.edgeGroups[edgeIdx * 3 + 2] = es.hash;
     edgeIdx++;
 }
 

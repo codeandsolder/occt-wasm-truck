@@ -1196,49 +1196,6 @@ int OcctKernel::registerLabel(XCAFDocRecord& record, const TDF_Label& label) {
     return facadeId;
 }
 
-// --- MeshData implementation ---
-
-MeshData::~MeshData() {
-    std::free(positions);
-    std::free(normals);
-    std::free(uvs);
-    std::free(indices);
-    std::free(faceGroups);
-}
-
-MeshData::MeshData(const MeshData& other)
-    : positions(other.positions), normals(other.normals), uvs(other.uvs), indices(other.indices),
-      faceGroups(other.faceGroups), positionCount(other.positionCount),
-      normalCount(other.normalCount), uvCount(other.uvCount), indexCount(other.indexCount),
-      faceGroupCount(other.faceGroupCount) {
-    auto& mut = const_cast<MeshData&>(other);
-    mut.positions = nullptr;
-    mut.normals = nullptr;
-    mut.uvs = nullptr;
-    mut.indices = nullptr;
-    mut.faceGroups = nullptr;
-}
-
-uint32_t MeshData::getPositionsPtr() const {
-    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(positions));
-}
-
-uint32_t MeshData::getNormalsPtr() const {
-    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(normals));
-}
-
-uint32_t MeshData::getUvsPtr() const {
-    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(uvs));
-}
-
-uint32_t MeshData::getIndicesPtr() const {
-    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(indices));
-}
-
-uint32_t MeshData::getFaceGroupsPtr() const {
-    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(faceGroups));
-}
-
 // --- OcctKernel implementation ---
 
 OcctKernel::OcctKernel() {
@@ -1348,11 +1305,10 @@ MeshData OcctKernel::buildMeshData(const TopoDS_Shape& shape, double linearDefle
         auto tri = BRep_Tool::Triangulation(face, loc);
         if (tri.IsNull())
             continue;
-        totalNodes += tri->NbNodes();
-        totalTris += tri->NbTriangles();
+        totalNodes = addMeshElements<3>(totalNodes, tri->NbNodes());
+        totalTris = addMeshElements<3>(totalTris, tri->NbTriangles());
         faces.push_back({tri, loc, face});
     }
-    int totalFaces = static_cast<int>(faces.size());
 
     MeshData result;
     result.positionCount = totalNodes * 3;
@@ -1360,19 +1316,12 @@ MeshData OcctKernel::buildMeshData(const TopoDS_Shape& shape, double linearDefle
     result.uvCount = totalNodes * 2;
     result.indexCount = totalTris * 3;
 
-    result.positions = static_cast<float*>(std::malloc(result.positionCount * sizeof(float)));
-    result.normals = static_cast<float*>(std::malloc(result.normalCount * sizeof(float)));
-    result.uvs = static_cast<float*>(std::malloc(result.uvCount * sizeof(float)));
-    result.indices = static_cast<uint32_t*>(std::malloc(result.indexCount * sizeof(uint32_t)));
-    result.faceGroupCount = totalFaces * 3;
-    result.faceGroups = static_cast<int32_t*>(std::malloc(result.faceGroupCount * sizeof(int32_t)));
-
-    if ((!result.positions && result.positionCount > 0) ||
-        (!result.normals && result.normalCount > 0) || (!result.uvs && result.uvCount > 0) ||
-        (!result.indices && result.indexCount > 0) ||
-        (!result.faceGroups && result.faceGroupCount > 0)) {
-        throw std::runtime_error("tessellate: memory allocation failed");
-    }
+    result.positions = allocateMeshBuffer<float>(result.positionCount);
+    result.normals = allocateMeshBuffer<float>(result.normalCount);
+    result.uvs = allocateMeshBuffer<float>(result.uvCount);
+    result.indices = allocateMeshBuffer<uint32_t>(result.indexCount);
+    result.faceGroupCount = meshScalarCount<3>(faces.size());
+    result.faceGroups = allocateMeshBuffer<int32_t>(result.faceGroupCount);
 
     int vertexOffset = 0;
     int triOffset = 0;
@@ -1477,65 +1426,6 @@ MeshData OcctKernel::buildMeshData(const TopoDS_Shape& shape, double linearDefle
     }
 
     return result;
-}
-
-// --- MeshBatchData implementation ---
-
-MeshBatchData::~MeshBatchData() {
-    std::free(positions);
-    std::free(normals);
-    std::free(indices);
-    std::free(shapeOffsets);
-}
-
-MeshBatchData::MeshBatchData(const MeshBatchData& other)
-    : positions(other.positions), normals(other.normals), indices(other.indices),
-      shapeOffsets(other.shapeOffsets), positionCount(other.positionCount),
-      normalCount(other.normalCount), indexCount(other.indexCount), shapeCount(other.shapeCount) {
-    auto& mut = const_cast<MeshBatchData&>(other);
-    mut.positions = nullptr;
-    mut.normals = nullptr;
-    mut.indices = nullptr;
-    mut.shapeOffsets = nullptr;
-}
-
-uint32_t MeshBatchData::getPositionsPtr() const {
-    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(positions));
-}
-
-uint32_t MeshBatchData::getNormalsPtr() const {
-    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(normals));
-}
-
-uint32_t MeshBatchData::getIndicesPtr() const {
-    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(indices));
-}
-
-uint32_t MeshBatchData::getShapeOffsetsPtr() const {
-    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(shapeOffsets));
-}
-
-// --- EdgeData implementation ---
-
-EdgeData::~EdgeData() {
-    std::free(points);
-    std::free(edgeGroups);
-}
-
-EdgeData::EdgeData(const EdgeData& other)
-    : points(other.points), edgeGroups(other.edgeGroups), pointCount(other.pointCount),
-      edgeGroupCount(other.edgeGroupCount) {
-    auto& mut = const_cast<EdgeData&>(other);
-    mut.points = nullptr;
-    mut.edgeGroups = nullptr;
-}
-
-uint32_t EdgeData::getPointsPtr() const {
-    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(points));
-}
-
-uint32_t EdgeData::getEdgeGroupsPtr() const {
-    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(edgeGroups));
 }
 
 // Independent CAD validation needs topological occurrences, not the unique

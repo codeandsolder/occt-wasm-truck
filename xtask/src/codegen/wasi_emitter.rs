@@ -132,17 +132,11 @@ enum ResultTransfer {
     Void,
     SizedBuffer(&'static str),
     AssignedBuffer(&'static str),
-    ReconstructedBuffer {
-        name: &'static str,
-        ty: &'static str,
-    },
     Curve,
 }
 
 const fn result_transfer(rt: ReturnType) -> ResultTransfer {
-    use ResultTransfer::{
-        AssignedBuffer, Boolean, Curve, Direct, ReconstructedBuffer, SizedBuffer, Void,
-    };
+    use ResultTransfer::{AssignedBuffer, Boolean, Curve, Direct, SizedBuffer, Void};
     match rt {
         ReturnType::ShapeId
         | ReturnType::DocId
@@ -161,18 +155,9 @@ const fn result_transfer(rt: ReturnType) -> ResultTransfer {
         }
         ReturnType::VectorInt => SizedBuffer("g_vec_i32_buf"),
         ReturnType::BBoxData => AssignedBuffer("g_bbox_buf"),
-        ReturnType::MeshData => ReconstructedBuffer {
-            name: "g_mesh_buf",
-            ty: "MeshData",
-        },
-        ReturnType::MeshBatchData => ReconstructedBuffer {
-            name: "g_mesh_batch_buf",
-            ty: "MeshBatchData",
-        },
-        ReturnType::EdgeData => ReconstructedBuffer {
-            name: "g_edge_buf",
-            ty: "EdgeData",
-        },
+        ReturnType::MeshData => AssignedBuffer("g_mesh_buf"),
+        ReturnType::MeshBatchData => AssignedBuffer("g_mesh_batch_buf"),
+        ReturnType::EdgeData => AssignedBuffer("g_edge_buf"),
         ReturnType::NurbsCurveData => AssignedBuffer("g_nurbs_buf"),
         ReturnType::CurveData => Curve,
         ReturnType::SurfaceData => AssignedBuffer("g_surface_buf"),
@@ -211,11 +196,6 @@ fn emit_wasi_method(buf: &mut String, spec: &MethodSpec) {
         }
         ResultTransfer::AssignedBuffer(name) => {
             let _ = writeln!(buf, "        {name} = {call};");
-            let _ = writeln!(buf, "        return 0;");
-        }
-        ResultTransfer::ReconstructedBuffer { name, ty } => {
-            let _ = writeln!(buf, "        {name}.~{ty}();");
-            let _ = writeln!(buf, "        new (&{name}) {ty}({call});");
             let _ = writeln!(buf, "        return 0;");
         }
         ResultTransfer::Curve => {
