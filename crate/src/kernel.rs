@@ -8,7 +8,7 @@ use wasmtime::{
 };
 
 use crate::error::{OcctError, OcctResult};
-use crate::host::HostState;
+use crate::host::{GuestCall, HostState};
 use crate::kernel_generated::GeneratedFuncs;
 use crate::types::{
     AdaptiveVolume, BRepProperties, BoundingBox, CurveData, CurveGeometry, EdgeData, EvolutionData,
@@ -50,8 +50,8 @@ impl<C: wasmtime::WasmResults + TryInto<u32>> BufferExport<C> {
     }
 
     fn query(&self, store: &mut Store<HostState>) -> OcctResult<(u32, u32)> {
-        let address = self.address.call(&mut *store, ())?;
-        let count = checked_count(self.count.call(&mut *store, ())?)?;
+        let address = self.address.call_guest(&mut *store, ())?;
+        let count = checked_count(self.count.call_guest(&mut *store, ())?)?;
         Ok((address, count))
     }
 }
@@ -132,7 +132,7 @@ impl<const N: usize> GuestBuffers<N> {
         let ptr = kernel
             .runtime
             .alloc
-            .call(&mut kernel.store, checked_wasm_len(data.len(), 1)?)?;
+            .call_guest(&mut kernel.store, checked_wasm_len(data.len(), 1)?)?;
         if ptr == 0 {
             core::hint::cold_path();
             return Err(OcctError::Memory("allocation failed".to_owned()));
@@ -149,6 +149,31 @@ impl<const N: usize> GuestBuffers<N> {
             .ok_or_else(|| OcctError::Memory("write out of bounds".to_owned()))?;
         destination.copy_from_slice(data);
         Ok(ptr)
+    }
+
+    /// Consume the scope and release each registered pointer, stopping on the
+    /// first trap. Keep both errors if cleanup fails after an ordinary error.
+    fn finish<T>(
+        self,
+        store: &mut Store<HostState>,
+        free: &TypedFunc<u32, ()>,
+        result: OcctResult<T>,
+    ) -> OcctResult<T> {
+        if store.data().is_poisoned() {
+            return result;
+        }
+        for ptr in self.pointers.into_iter().take(self.used) {
+            if let Err(cleanup) = free.call_guest(store, ptr) {
+                return Err(match result {
+                    Ok(_) => cleanup,
+                    Err(operation) => OcctError::Cleanup {
+                        operation: Box::new(operation),
+                        cleanup: Box::new(cleanup),
+                    },
+                });
+            }
+        }
+        result
     }
 }
 
@@ -170,7 +195,6 @@ impl<const N: usize> GuestBuffers<N> {
 /// ```
 pub struct OcctKernel {
     pub(crate) store: Store<HostState>,
-    instance: Instance,
     memory: Memory,
 
     runtime: RuntimeExports,
@@ -348,7 +372,7 @@ impl OcctKernel {
     ///
     /// A refused memory growth traps the call that needed it, which returns
     /// [`OcctError::MemoryLimit`]. After that error the kernel's state is
-    /// undefined: drop it, and instantiate a new one from the same module.
+    /// invalidated: further calls fail without executing guest code. Drop it\n    /// and instantiate a new one from the same module.
     ///
     /// # Example
     ///
@@ -395,7 +419,6 @@ impl OcctKernel {
 
         Ok(Self {
             memory,
-            instance,
 
             runtime: RuntimeExports::resolve(&instance, &mut store)?,
 
@@ -506,15 +529,7 @@ impl OcctKernel {
             used: 0,
         };
         let result = call(self, &mut buffers);
-        if !matches!(
-            &result,
-            Err(OcctError::Runtime(_) | OcctError::MemoryLimit { .. })
-        ) {
-            for ptr in buffers.pointers.into_iter().take(buffers.used) {
-                self.runtime.free.call(&mut self.store, ptr)?;
-            }
-        }
-        result
+        buffers.finish(&mut self.store, &self.runtime.free, result)
     }
 
     /// Read an owned byte slice from WASM memory.
@@ -526,7 +541,7 @@ impl OcctKernel {
 
     /// Check if the WASM module has a pending error and return it.
     pub(crate) fn check_error(&mut self, operation: &str) -> OcctResult<()> {
-        let has_error = self.runtime.has_error.call(&mut self.store, ())?;
+        let has_error = self.runtime.has_error.call_guest(&mut self.store, ())?;
         if has_error != 0 {
             // Errors are the exception, not the norm — this branch runs after
             // every facade call. Hint to LLVM that it's cold so the happy path
@@ -540,14 +555,17 @@ impl OcctKernel {
     /// Read the last error message from the WASM module.
     #[cold]
     pub(crate) fn read_last_error(&mut self, operation: &str) -> OcctError {
-        let (ptr, len) = self.runtime.error.query(&mut self.store).unwrap_or((0, 0));
-        let message = if ptr != 0 && len > 0 {
-            self.read_bytes(ptr, len)
-                .ok()
-                .and_then(|b| String::from_utf8(b).ok())
-                .unwrap_or_else(|| "unknown error".to_owned())
-        } else {
+        let (ptr, len) = match self.runtime.error.query(&mut self.store) {
+            Ok(buffer) => buffer,
+            Err(error) => return error,
+        };
+        let message = if len == 0 {
             "unknown error".to_owned()
+        } else {
+            match self.read_bytes(ptr, len) {
+                Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
+                Err(error) => return error,
+            }
         };
         OcctError::Operation {
             operation: operation.to_owned(),
@@ -700,14 +718,14 @@ impl OcctKernel {
     pub(crate) fn read_bbox_result(&mut self) -> OcctResult<BoundingBox> {
         Ok(BoundingBox {
             min: Vec3 {
-                x: self.fn_get_bbox_xmin.call(&mut self.store, ())?,
-                y: self.fn_get_bbox_ymin.call(&mut self.store, ())?,
-                z: self.fn_get_bbox_zmin.call(&mut self.store, ())?,
+                x: self.fn_get_bbox_xmin.call_guest(&mut self.store, ())?,
+                y: self.fn_get_bbox_ymin.call_guest(&mut self.store, ())?,
+                z: self.fn_get_bbox_zmin.call_guest(&mut self.store, ())?,
             },
             max: Vec3 {
-                x: self.fn_get_bbox_xmax.call(&mut self.store, ())?,
-                y: self.fn_get_bbox_ymax.call(&mut self.store, ())?,
-                z: self.fn_get_bbox_zmax.call(&mut self.store, ())?,
+                x: self.fn_get_bbox_xmax.call_guest(&mut self.store, ())?,
+                y: self.fn_get_bbox_ymax.call_guest(&mut self.store, ())?,
+                z: self.fn_get_bbox_zmax.call_guest(&mut self.store, ())?,
             },
         })
     }
@@ -768,9 +786,17 @@ impl OcctKernel {
             memory: self.memory,
             store: &mut self.store,
         };
-        let degree = self.fn_get_nurbs_degree.call(&mut *reader.store, ())?;
-        let rational = self.fn_get_nurbs_rational.call(&mut *reader.store, ())? != 0;
-        let periodic = self.fn_get_nurbs_periodic.call(&mut *reader.store, ())? != 0;
+        let degree = self
+            .fn_get_nurbs_degree
+            .call_guest(&mut *reader.store, ())?;
+        let rational = self
+            .fn_get_nurbs_rational
+            .call_guest(&mut *reader.store, ())?
+            != 0;
+        let periodic = self
+            .fn_get_nurbs_periodic
+            .call_guest(&mut *reader.store, ())?
+            != 0;
 
         Ok(NurbsCurveData {
             degree,
@@ -794,10 +820,13 @@ impl OcctKernel {
             read_slice(reader.memory, reader.store, kind_ptr, kind_len).map(<[u8]>::to_vec)?,
         )
         .map_err(|e| OcctError::Memory(e.to_string()))?;
-        let first = self.fn_get_curve_first.call(&mut *reader.store, ())?;
-        let last = self.fn_get_curve_last.call(&mut *reader.store, ())?;
+        let first = self.fn_get_curve_first.call_guest(&mut *reader.store, ())?;
+        let last = self.fn_get_curve_last.call_guest(&mut *reader.store, ())?;
         let params = reader.read(&self.buffer_curve_params)?;
-        let has_bspline = self.fn_get_curve_has_bspline.call(&mut *reader.store, ())? != 0;
+        let has_bspline = self
+            .fn_get_curve_has_bspline
+            .call_guest(&mut *reader.store, ())?
+            != 0;
         let bspline = if has_bspline {
             Some(self.read_nurbs_result()?)
         } else {
@@ -821,11 +850,14 @@ impl OcctKernel {
             read_slice(reader.memory, reader.store, kind_ptr, kind_len).map(<[u8]>::to_vec)?,
         )
         .map_err(|e| OcctError::Memory(e.to_string()))?;
-        let is_direct = self.fn_get_surface_is_direct.call(&mut *reader.store, ())? != 0;
+        let is_direct = self
+            .fn_get_surface_is_direct
+            .call_guest(&mut *reader.store, ())?
+            != 0;
         let params = reader.read(&self.buffer_surface_params)?;
         let has_bspline = self
             .fn_get_surface_has_bspline
-            .call(&mut *reader.store, ())?
+            .call_guest(&mut *reader.store, ())?
             != 0;
         let bspline = if has_bspline {
             Some(self.read_nurbs_surface()?)
@@ -841,21 +873,25 @@ impl OcctKernel {
             store: &mut self.store,
         };
         Ok(NurbsSurfaceData {
-            degree_u: self.fn_get_surface_degree_u.call(&mut *reader.store, ())?,
-            degree_v: self.fn_get_surface_degree_v.call(&mut *reader.store, ())?,
+            degree_u: self
+                .fn_get_surface_degree_u
+                .call_guest(&mut *reader.store, ())?,
+            degree_v: self
+                .fn_get_surface_degree_v
+                .call_guest(&mut *reader.store, ())?,
             nb_poles_u: self
                 .fn_get_surface_nb_poles_u
-                .call(&mut *reader.store, ())?,
+                .call_guest(&mut *reader.store, ())?,
             nb_poles_v: self
                 .fn_get_surface_nb_poles_v
-                .call(&mut *reader.store, ())?,
+                .call_guest(&mut *reader.store, ())?,
             periodic_u: self
                 .fn_get_surface_periodic_u
-                .call(&mut *reader.store, ())?
+                .call_guest(&mut *reader.store, ())?
                 != 0,
             periodic_v: self
                 .fn_get_surface_periodic_v
-                .call(&mut *reader.store, ())?
+                .call_guest(&mut *reader.store, ())?
                 != 0,
             knots_u: reader.read(&self.buffer_surface_knots_u)?,
             knots_v: reader.read(&self.buffer_surface_knots_v)?,
@@ -872,7 +908,9 @@ impl OcctKernel {
             memory: self.memory,
             store: &mut self.store,
         };
-        let result_id = self.fn_get_evo_result_id.call(&mut *reader.store, ())?;
+        let result_id = self
+            .fn_get_evo_result_id
+            .call_guest(&mut *reader.store, ())?;
 
         Ok(EvolutionData {
             result_id,
@@ -892,19 +930,37 @@ impl OcctKernel {
     pub(crate) fn read_projection_result(&mut self) -> OcctResult<ProjectionData> {
         Ok(ProjectionData {
             visible_outline: ShapeHandle(
-                self.fn_get_proj_visible_outline.call(&mut self.store, ())?,
+                self.fn_get_proj_visible_outline
+                    .call_guest(&mut self.store, ())?,
             ),
-            visible_smooth: ShapeHandle(self.fn_get_proj_visible_smooth.call(&mut self.store, ())?),
-            visible_sharp: ShapeHandle(self.fn_get_proj_visible_sharp.call(&mut self.store, ())?),
-            hidden_outline: ShapeHandle(self.fn_get_proj_hidden_outline.call(&mut self.store, ())?),
-            hidden_smooth: ShapeHandle(self.fn_get_proj_hidden_smooth.call(&mut self.store, ())?),
-            hidden_sharp: ShapeHandle(self.fn_get_proj_hidden_sharp.call(&mut self.store, ())?),
+            visible_smooth: ShapeHandle(
+                self.fn_get_proj_visible_smooth
+                    .call_guest(&mut self.store, ())?,
+            ),
+            visible_sharp: ShapeHandle(
+                self.fn_get_proj_visible_sharp
+                    .call_guest(&mut self.store, ())?,
+            ),
+            hidden_outline: ShapeHandle(
+                self.fn_get_proj_hidden_outline
+                    .call_guest(&mut self.store, ())?,
+            ),
+            hidden_smooth: ShapeHandle(
+                self.fn_get_proj_hidden_smooth
+                    .call_guest(&mut self.store, ())?,
+            ),
+            hidden_sharp: ShapeHandle(
+                self.fn_get_proj_hidden_sharp
+                    .call_guest(&mut self.store, ())?,
+            ),
         })
     }
 
     /// Read a label info result.
     pub(crate) fn read_label_info_result(&mut self) -> OcctResult<LabelInfo> {
-        let label_id = self.fn_get_label_info_label_id.call(&mut self.store, ())?;
+        let label_id = self
+            .fn_get_label_info_label_id
+            .call_guest(&mut self.store, ())?;
         let (name_ptr, name_len) = self.buffer_label_info_name.query(&mut self.store)?;
         let name_bytes = self.read_bytes(name_ptr, name_len)?;
         let name = String::from_utf8(name_bytes).map_err(|e| OcctError::Memory(e.to_string()))?;
@@ -912,34 +968,30 @@ impl OcctKernel {
         Ok(LabelInfo {
             label_id,
             name,
-            has_color: self.fn_get_label_info_has_color.call(&mut self.store, ())? != 0,
-            r: self.fn_get_label_info_r.call(&mut self.store, ())?,
-            g: self.fn_get_label_info_g.call(&mut self.store, ())?,
-            b: self.fn_get_label_info_b.call(&mut self.store, ())?,
+            has_color: self
+                .fn_get_label_info_has_color
+                .call_guest(&mut self.store, ())?
+                != 0,
+            r: self.fn_get_label_info_r.call_guest(&mut self.store, ())?,
+            g: self.fn_get_label_info_g.call_guest(&mut self.store, ())?,
+            b: self.fn_get_label_info_b.call_guest(&mut self.store, ())?,
             is_assembly: self
                 .fn_get_label_info_is_assembly
-                .call(&mut self.store, ())?
+                .call_guest(&mut self.store, ())?
                 != 0,
             is_component: self
                 .fn_get_label_info_is_component
-                .call(&mut self.store, ())?
+                .call_guest(&mut self.store, ())?
                 != 0,
-            shape_id: self.fn_get_label_info_shape_id.call(&mut self.store, ())?,
+            shape_id: self
+                .fn_get_label_info_shape_id
+                .call_guest(&mut self.store, ())?,
         })
     }
 }
 
-impl Drop for OcctKernel {
-    fn drop(&mut self) {
-        // Best-effort cleanup
-        if let Ok(destroy) = self
-            .instance
-            .get_typed_func::<(), ()>(&mut self.store, "occt_destroy")
-        {
-            let _ = destroy.call(&mut self.store, ());
-        }
-    }
-}
+// The Store owns all guest resources, including the OCCT arena. Dropping it
+// reclaims them without entering a potentially trapped or inconsistent guest.
 
 /// Borrow a byte slice from WASM memory after validating its full range.
 fn read_slice(memory: Memory, store: &Store<HostState>, ptr: u32, len: u32) -> OcctResult<&[u8]> {
@@ -993,11 +1045,11 @@ fn instantiate(
     // the host must call before any other export. Skipping it leaves globals
     // such as `std::cout` unconstructed, and OCCT's STEP code traps without them.
     let initialize: TypedFunc<(), ()> = instance.get_typed_func(&mut store, "_initialize")?;
-    initialize.call(&mut store, ())?;
+    initialize.call_guest(&mut store, ())?;
 
     // Call occt_init
     let init: TypedFunc<(), i32> = instance.get_typed_func(&mut store, "occt_init")?;
-    let result = init.call(&mut store, ())?;
+    let result = init.call_guest(&mut store, ())?;
     if result != 0 {
         return Err(OcctError::Memory("occt_init failed".to_owned()));
     }
@@ -1176,6 +1228,96 @@ fn checked_count(count: impl TryInto<u32>) -> OcctResult<u32> {
 mod memory_tests {
     use super::{checked_count, checked_wasm_len, checked_wasm_product};
     use crate::OcctResult;
+
+    use super::{GuestBuffers, GuestCall, HostState};
+    use crate::OcctError;
+    use wasmtime::{Engine, Instance, Module, Store, StoreLimits, TypedFunc, Val};
+
+    fn cleanup_fixture() -> OcctResult<(Store<HostState>, Instance, TypedFunc<u32, ()>)> {
+        let engine = Engine::default();
+        let mut store = Store::new(&engine, HostState::new(Box::new(StoreLimits::default())));
+        let module = Module::new(
+            &engine,
+            r#"(module
+          (global (export "freed") (mut i32) (i32.const 0))
+          (func (export "free") (param i32)
+            global.get 0 i32.const 1 i32.add global.set 0
+            local.get 0 i32.const 2 i32.eq if unreachable end)
+        )"#,
+        )?;
+        let instance = Instance::new(&mut store, &module, &[])?;
+        let free = instance.get_typed_func::<u32, ()>(&mut store, "free")?;
+        Ok((store, instance, free))
+    }
+
+    fn freed_count(store: &mut Store<HostState>, instance: Instance) -> OcctResult<i32> {
+        let freed = instance
+            .get_global(&mut *store, "freed")
+            .ok_or_else(|| OcctError::Memory("missing test global".to_owned()))?;
+        match freed.get(store) {
+            Val::I32(value) => Ok(value),
+            _ => Err(OcctError::Memory("unexpected test global type".to_owned())),
+        }
+    }
+
+    fn operation_error() -> OcctError {
+        OcctError::Operation {
+            operation: "test".to_owned(),
+            message: "operation".to_owned(),
+        }
+    }
+
+    #[test]
+    fn guest_buffers_release_all_on_ordinary_error() -> OcctResult<()> {
+        let (mut store, instance, free) = cleanup_fixture()?;
+        let buffers = GuestBuffers {
+            pointers: [1, 3, 4, 0],
+            used: 3,
+        };
+        assert!(matches!(
+            buffers.finish::<()>(&mut store, &free, Err(operation_error())),
+            Err(OcctError::Operation { .. })
+        ));
+        assert_eq!(freed_count(&mut store, instance)?, 3);
+        assert!(!store.data().is_poisoned());
+        Ok(())
+    }
+
+    #[test]
+    fn guest_buffers_retain_both_errors_and_stop_on_cleanup_trap() -> OcctResult<()> {
+        let (mut store, instance, free) = cleanup_fixture()?;
+        let buffers = GuestBuffers {
+            pointers: [1, 2, 3],
+            used: 3,
+        };
+        let outcome = buffers.finish::<()>(&mut store, &free, Err(operation_error()));
+        match outcome {
+            Err(OcctError::Cleanup { operation, cleanup }) => {
+                assert!(matches!(*operation, OcctError::Operation { .. }));
+                assert!(matches!(*cleanup, OcctError::Runtime(_)));
+            }
+            other => panic!("expected both errors, got {other:?}"),
+        }
+        assert_eq!(freed_count(&mut store, instance)?, 2);
+        assert!(store.data().is_poisoned());
+        Ok(())
+    }
+
+    #[test]
+    fn guest_buffers_do_not_enter_an_already_trapped_guest() -> OcctResult<()> {
+        let (mut store, instance, free) = cleanup_fixture()?;
+        let result = free.call_guest(&mut store, 2);
+        let buffers = GuestBuffers {
+            pointers: [1, 3],
+            used: 2,
+        };
+        assert!(matches!(
+            buffers.finish(&mut store, &free, result),
+            Err(OcctError::Runtime(_))
+        ));
+        assert_eq!(freed_count(&mut store, instance)?, 1);
+        Ok(())
+    }
 
     #[test]
     fn rejects_out_of_range_buffer_counts() -> OcctResult<()> {
