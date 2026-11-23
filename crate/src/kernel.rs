@@ -11,9 +11,9 @@ use crate::error::{OcctError, OcctResult};
 use crate::host::HostState;
 use crate::kernel_generated::GeneratedFuncs;
 use crate::types::{
-    BRepProperties, BoundingBox, CurveData, CurveGeometry, EdgeData, EvolutionData, LabelInfo,
-    Mesh, MeshBatch, NurbsCurveData, NurbsSurfaceData, ProjectionData, ShapeHandle, StepImport,
-    SurfaceData, SurfaceFrame, Vec3,
+    AdaptiveVolume, BRepProperties, BoundingBox, CurveData, CurveGeometry, EdgeData, EvolutionData,
+    LabelInfo, Mesh, MeshBatch, NurbsCurveData, NurbsSurfaceData, ProjectionData, ShapeHandle,
+    StepEntityImport, StepImport, SurfaceData, SurfaceFrame, Vec3,
 };
 
 /// Brotli-compressed WASM binary, embedded at compile time.
@@ -602,6 +602,42 @@ impl OcctKernel {
             shape: ShapeHandle(*shape),
             roots: *roots,
             transferred: *transferred,
+        })
+    }
+
+    /// Decode an exact entity-transfer handle and one-based model rank.
+    pub(crate) fn read_step_entity_import_result(&mut self) -> OcctResult<StepEntityImport> {
+        let values = self.read_vec_u32_result()?;
+        let [shape, rank] = values.as_slice() else {
+            return Err(OcctError::Memory(
+                "invalid STEP entity import result length".into(),
+            ));
+        };
+        if *shape == 0 || *rank == 0 {
+            return Err(OcctError::Memory(
+                "invalid STEP entity import result".into(),
+            ));
+        }
+        Ok(StepEntityImport {
+            shape: ShapeHandle(*shape),
+            rank: *rank,
+        })
+    }
+
+    /// Decode signed whole-shape volume and its estimated relative error.
+    pub(crate) fn read_adaptive_volume_result(&mut self) -> OcctResult<AdaptiveVolume> {
+        let values = self.read_vec_f64_result()?;
+        let [volume, relative_error] = values.as_slice() else {
+            return Err(OcctError::Memory(
+                "invalid adaptive volume result length".into(),
+            ));
+        };
+        if !volume.is_finite() || !relative_error.is_finite() || *relative_error < 0.0 {
+            return Err(OcctError::Memory("invalid adaptive volume result".into()));
+        }
+        Ok(AdaptiveVolume {
+            volume: *volume,
+            relative_error: *relative_error,
         })
     }
 

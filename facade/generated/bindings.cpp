@@ -281,6 +281,7 @@ EMSCRIPTEN_BINDINGS(occt_wasm) {
         .function("getSignedFaceVolumeIntegrals", &OcctKernel::getSignedFaceVolumeIntegrals)
         .function("classifySolidPoint", &OcctKernel::classifySolidPoint)
         .function("getBRepProperties", &OcctKernel::getBRepProperties)
+        .function("getAdaptiveVolume", &OcctKernel::getAdaptiveVolume)
         .function("getVolume", &OcctKernel::getVolume)
         .function("getSurfaceArea", &OcctKernel::getSurfaceArea)
         .function("getLength", &OcctKernel::getLength)
@@ -352,6 +353,7 @@ EMSCRIPTEN_BINDINGS(occt_wasm) {
         // io
         .function("importStep", &OcctKernel::importStep)
         .function("importStepBytes", &OcctKernel::importStepBytes)
+        .function("importStepEntityBytes", &OcctKernel::importStepEntityBytes)
         .function("exportStep", &OcctKernel::exportStep)
         .function("exportStepWithUnit", &OcctKernel::exportStepWithUnit)
         .function("exportStepWithOptions", &OcctKernel::exportStepWithOptions)

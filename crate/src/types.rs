@@ -29,6 +29,24 @@ pub struct StepImport {
     pub transferred: u32,
 }
 
+/// Exact transfer of one textual STEP entity identifier.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StepEntityImport {
+    /// Arena handle to the transferred shape.
+    pub shape: ShapeHandle,
+    /// One-based model rank corresponding to the requested Part 21 label.
+    pub rank: u32,
+}
+
+/// Signed whole-shape volume integrated by native Gauss–Kronrod quadrature.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AdaptiveVolume {
+    /// Signed volume in cubic millimetres.
+    pub volume: f64,
+    /// OCCT's estimate of relative integration error, not an absolute bound.
+    pub relative_error: f64,
+}
+
 /// Native `BRepGProp` properties using OCCT's default integration routines.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BRepProperties {

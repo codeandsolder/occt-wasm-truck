@@ -3976,6 +3976,24 @@ std::vector<double> OcctKernel::getBRepProperties(uint32_t id) {
     }
 }
 
+std::vector<double> OcctKernel::getAdaptiveVolume(uint32_t id, double epsilon, bool onlyClosed, bool useSpan) {
+    try {
+        if (!std::isfinite(epsilon) || epsilon <= 0.0 || epsilon >= 1.0) {
+            throw std::runtime_error("getAdaptiveVolume: epsilon must be finite and in (0, 1)");
+        }
+        const auto& shape = get(id);
+        GProp_GProps properties;
+        const double error = BRepGProp::VolumePropertiesGK(shape, properties, epsilon, onlyClosed, useSpan, false, false, false);
+        const double volume = properties.Mass();
+        if (!std::isfinite(error) || error < 0.0 || !std::isfinite(volume)) {
+            throw std::runtime_error("getAdaptiveVolume: adaptive integration failed");
+        }
+        return {volume, error};
+    } catch (const Standard_Failure& e) {
+        throw std::runtime_error(std::string("getAdaptiveVolume: ") + e.what());
+    }
+}
+
 double OcctKernel::getVolume(uint32_t id) {
     try {
         const auto& shape = get(id);
@@ -5238,6 +5256,17 @@ std::vector<uint32_t> OcctKernel::importStepBytes(const std::string& data) {
         return result;
     } catch (const Standard_Failure& e) {
         throw std::runtime_error(std::string("importStepBytes: ") + e.what());
+    }
+}
+
+std::vector<uint32_t> OcctKernel::importStepEntityBytes(const std::string& data, uint32_t entityId) {
+    try {
+        const auto imported = readStepEntity(data, entityId);
+        std::vector<uint32_t> result{0, imported.rank};
+        result[0] = store(imported.shape);
+        return result;
+    } catch (const Standard_Failure& e) {
+        throw std::runtime_error(std::string("importStepEntityBytes: ") + e.what());
     }
 }
 

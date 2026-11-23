@@ -3286,6 +3286,33 @@ return {volume.Mass(), surface.Mass(), linear.Mass(),
         return_type: ReturnType::BRepProperties,
     },
     MethodSpec {
+        name: "getAdaptiveVolume",
+        kind: MethodKind::CustomBody,
+        params: &[
+            FacadeParam::ShapeId("id"),
+            FacadeParam::Double("epsilon"),
+            FacadeParam::Bool("onlyClosed"),
+            FacadeParam::Bool("useSpan"),
+        ],
+        occt_class: "",
+        ctor_args: "",
+        setup_code: "\
+if (!std::isfinite(epsilon) || epsilon <= 0.0 || epsilon >= 1.0) {
+    throw std::runtime_error(\"getAdaptiveVolume: epsilon must be finite and in (0, 1)\");
+}
+const auto& shape = get(id);
+GProp_GProps properties;
+const double error = BRepGProp::VolumePropertiesGK(shape, properties, epsilon, onlyClosed, useSpan, false, false, false);
+const double volume = properties.Mass();
+if (!std::isfinite(error) || error < 0.0 || !std::isfinite(volume)) {
+    throw std::runtime_error(\"getAdaptiveVolume: adaptive integration failed\");
+}
+return {volume, error};",
+        includes: &["BRepGProp.hxx", "GProp_GProps.hxx", "cmath"],
+        category: "query",
+        return_type: ReturnType::AdaptiveVolume,
+    },
+    MethodSpec {
         name: "getVolume",
         kind: MethodKind::CustomBody,
         params: &[FacadeParam::ShapeId("id")],
@@ -5190,6 +5217,21 @@ return result;",
         includes: &[],
         category: "io",
         return_type: ReturnType::StepImport,
+    },
+    MethodSpec {
+        name: "importStepEntityBytes",
+        kind: MethodKind::CustomBody,
+        params: &[FacadeParam::Bytes("data"), FacadeParam::Uint32("entityId")],
+        occt_class: "",
+        ctor_args: "",
+        setup_code: "\
+const auto imported = readStepEntity(data, entityId);
+std::vector<uint32_t> result{0, imported.rank};
+result[0] = store(imported.shape);
+return result;",
+        includes: &[],
+        category: "io",
+        return_type: ReturnType::StepEntityImport,
     },
     MethodSpec {
         name: "exportStep",
