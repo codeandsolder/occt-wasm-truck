@@ -140,8 +140,12 @@ pub enum ReturnType {
     VectorDouble,
     /// STEP import handle and root/transfer counts packed as u32 values.
     StepImport,
+    /// STEP entity transfer handle and resolved model rank.
+    StepEntityImport,
     /// Native OCCT mass/inertia properties packed as f64 values.
     BRepProperties,
+    /// Signed adaptive volume and achieved relative error.
+    AdaptiveVolume,
     /// `double` return.
     Double,
     /// `std::string` return.
@@ -179,6 +183,46 @@ pub enum ReturnType {
     XCAFLabelInfo,
 }
 
+/// Scalar representation of a return value at the WASM boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WasmReturn {
+    U32,
+    F64,
+    I32,
+}
+
+impl ReturnType {
+    /// Every return type declares its ABI representation exactly once.
+    pub const fn wasm_return(self) -> WasmReturn {
+        match self {
+            Self::ShapeId | Self::DocId | Self::Uint32 => WasmReturn::U32,
+            Self::Double => WasmReturn::F64,
+            Self::Bool
+            | Self::Void
+            | Self::Int
+            | Self::String
+            | Self::Bytes
+            | Self::VectorUint32
+            | Self::StepImport
+            | Self::StepEntityImport
+            | Self::BRepProperties
+            | Self::AdaptiveVolume
+            | Self::VectorShapeIds
+            | Self::VectorDouble
+            | Self::VectorInt
+            | Self::BBoxData
+            | Self::NurbsCurveData
+            | Self::CurveData
+            | Self::SurfaceData
+            | Self::EvolutionData
+            | Self::MeshData
+            | Self::MeshBatchData
+            | Self::EdgeData
+            | Self::ProjectionData
+            | Self::XCAFLabelInfo => WasmReturn::I32,
+        }
+    }
+}
 /// A complete facade method specification.
 ///
 /// Each spec declaratively describes one method of `OcctKernel` so the

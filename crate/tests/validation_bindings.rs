@@ -151,3 +151,121 @@ fn validation_native_mass_property_record() -> Result<(), Box<dyn std::error::Er
     }
     Ok(())
 }
+
+fn entity_id(step: &str, kind: &str) -> Result<u32, Box<dyn std::error::Error>> {
+    for record in step.split(';') {
+        if let Some((label, body)) = record.trim().split_once('=')
+            && body.trim_start().starts_with(kind)
+            && let Some(label) = label.trim().strip_prefix('#')
+        {
+            return Ok(label.parse()?);
+        }
+    }
+    Err(format!("missing exported STEP entity {kind}").into())
+}
+
+// This test helper rewrites the box export's known ASCII records, not arbitrary
+// input STEP. The production code resolves labels from OCCT's parsed model.
+fn relabel_and_reverse_box_step(step: &str) -> Result<String, Box<dyn std::error::Error>> {
+    use std::fmt::Write;
+    let (header, data) = step.split_once("DATA;").ok_or("missing DATA")?;
+    let (records, footer) = data.split_once("ENDSEC;").ok_or("missing ENDSEC")?;
+    let mut relabeled = String::new();
+    let mut chunks = records.split('#');
+    relabeled.push_str(chunks.next().ok_or("missing DATA records")?);
+    for chunk in chunks {
+        let len = chunk
+            .find(|ch: char| !ch.is_ascii_digit())
+            .unwrap_or(chunk.len());
+        let id = chunk[..len].parse::<u32>()?;
+        write!(relabeled, "#{}{}", 10000 + 3 * id, &chunk[len..])?;
+    }
+    let mut records: Vec<_> = relabeled
+        .split_terminator(';')
+        .map(str::trim)
+        .filter(|record| !record.is_empty())
+        .collect();
+    assert!(records.iter().all(|record| record.starts_with('#')));
+    records.reverse();
+    let body = records.join(";\n");
+    Ok(format!("{header}DATA;\n{body};\nENDSEC;{footer}"))
+}
+
+#[test]
+fn validation_step_entity_import_uses_textual_labels_not_rank()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut kernel = kernel()?;
+    let shape = kernel.make_box(2., 3., 4.)?;
+    let step = kernel.export_step(shape)?;
+    let id = entity_id(&step, "MANIFOLD_SOLID_BREP(")?;
+    let original = kernel.import_step_entity_bytes(step.as_bytes(), id)?;
+    assert!((kernel.get_b_rep_properties(original.shape)?.volume - 24.).abs() < 1e-10);
+
+    let reordered = relabel_and_reverse_box_step(&step)?;
+    let renamed = 10000 + 3 * id;
+    let imported = kernel.import_step_entity_bytes(reordered.as_bytes(), renamed)?;
+    assert_ne!(imported.rank, renamed);
+    assert_ne!(imported.rank, original.rank);
+    assert_eq!(
+        kernel.sub_shape_occurrence_count(imported.shape, "solid")?,
+        1
+    );
+    assert!((kernel.get_b_rep_properties(imported.shape)?.volume - 24.).abs() < 1e-10);
+    for invalid in [0, id, u32::MAX] {
+        assert!(
+            kernel
+                .import_step_entity_bytes(reordered.as_bytes(), invalid)
+                .is_err()
+        );
+    }
+    let not_shape = entity_id(&reordered, "APPLICATION_PROTOCOL_DEFINITION(")?;
+    assert!(
+        kernel
+            .import_step_entity_bytes(reordered.as_bytes(), not_shape)
+            .is_err()
+    );
+
+    // Reusing the same textual label for two different entity records is
+    // malformed; it must not silently resolve to whichever record came last.
+    let duplicate = reordered
+        .split(';')
+        .find(|record| record.trim_start().starts_with(&format!("#{renamed} ")))
+        .ok_or("missing relabeled solid record")?;
+    let (header, data) = reordered.split_once("DATA;").ok_or("missing DATA")?;
+    let malformed = format!("{header}DATA;\n{duplicate};{data}");
+    assert!(
+        kernel
+            .import_step_entity_bytes(malformed.as_bytes(), renamed)
+            .is_err()
+    );
+    Ok(())
+}
+
+#[test]
+fn validation_adaptive_volume_reports_signed_integral_and_error()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut kernel = kernel()?;
+    let shape = kernel.make_box(2., 3., 4.)?;
+    let moved = kernel.translate(shape, 1000., -2000., 3000.)?;
+    let outer = kernel.make_box(3., 3., 3.)?;
+    let cavity = kernel.make_box_from_corners(1., 1., 1., 2., 2., 2.)?;
+    let hollow = kernel.cut(outer, cavity)?;
+    for (solid, expected) in [(shape, 24.0), (moved, 24.0), (hollow, 26.0)] {
+        for epsilon in [1e-8, 1e-12] {
+            for spans in [false, true] {
+                let measured = kernel.get_adaptive_volume(solid, epsilon, true, spans)?;
+                assert!((measured.volume - expected).abs() < 1e-9);
+                assert!(measured.relative_error.is_finite());
+                assert!(measured.relative_error >= 0.0);
+            }
+        }
+    }
+    for invalid in [0.0, -1e-8, 1.0, f64::INFINITY, f64::NAN] {
+        assert!(
+            kernel
+                .get_adaptive_volume(shape, invalid, true, true)
+                .is_err()
+        );
+    }
+    Ok(())
+}

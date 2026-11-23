@@ -7,8 +7,9 @@ use crate::error::OcctResult;
 use crate::host::GuestCall;
 use crate::kernel::checked_wasm_len;
 use crate::types::{
-    BRepProperties, BoundingBox, CurveData, DocumentHandle, EdgeData, EvolutionData, LabelInfo,
-    Mesh, MeshBatch, NurbsCurveData, ProjectionData, ShapeHandle, StepImport, SurfaceData,
+    AdaptiveVolume, BRepProperties, BoundingBox, CurveData, DocumentHandle, EdgeData,
+    EvolutionData, LabelInfo, Mesh, MeshBatch, NurbsCurveData, ProjectionData, ShapeHandle,
+    StepEntityImport, StepImport, SurfaceData,
 };
 
 /// Named argument types for wide facade operations.
@@ -1281,6 +1282,7 @@ struct QueryExports {
     get_signed_face_volume_integrals: TypedFunc<(u32, f64, f64, f64, f64), i32>,
     classify_solid_point: TypedFunc<(u32, f64, f64, f64, f64), i32>,
     get_b_rep_properties: TypedFunc<(u32,), i32>,
+    get_adaptive_volume: TypedFunc<(u32, f64, i32, i32), i32>,
     get_volume: TypedFunc<(u32,), f64>,
     get_surface_area: TypedFunc<(u32,), f64>,
     get_length: TypedFunc<(u32,), f64>,
@@ -1320,6 +1322,8 @@ impl QueryExports {
                 .get_typed_func(&mut *store, "occt_classify_solid_point")?,
             get_b_rep_properties: instance
                 .get_typed_func(&mut *store, "occt_get_b_rep_properties")?,
+            get_adaptive_volume: instance
+                .get_typed_func(&mut *store, "occt_get_adaptive_volume")?,
             get_volume: instance.get_typed_func(&mut *store, "occt_get_volume")?,
             get_surface_area: instance.get_typed_func(&mut *store, "occt_get_surface_area")?,
             get_length: instance.get_typed_func(&mut *store, "occt_get_length")?,
@@ -1473,6 +1477,7 @@ impl HealingExports {
 struct IoExports {
     import_step: TypedFunc<(u32, u32), u32>,
     import_step_bytes: TypedFunc<(u32, u32), i32>,
+    import_step_entity_bytes: TypedFunc<(u32, u32, u32), i32>,
     export_step: TypedFunc<(u32,), i32>,
     export_step_with_unit: TypedFunc<(u32, u32, u32), i32>,
     export_step_with_options: TypedFunc<(u32, u32, u32, u32, u32), i32>,
@@ -1493,6 +1498,8 @@ impl IoExports {
         Ok(Self {
             import_step: instance.get_typed_func(&mut *store, "occt_import_step")?,
             import_step_bytes: instance.get_typed_func(&mut *store, "occt_import_step_bytes")?,
+            import_step_entity_bytes: instance
+                .get_typed_func(&mut *store, "occt_import_step_entity_bytes")?,
             export_step: instance.get_typed_func(&mut *store, "occt_export_step")?,
             export_step_with_unit: instance
                 .get_typed_func(&mut *store, "occt_export_step_with_unit")?,
@@ -5167,6 +5174,28 @@ impl crate::kernel::OcctKernel {
         self.read_brep_properties_result()
     }
 
+    /// Call the `getAdaptiveVolume` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
+    pub fn get_adaptive_volume(
+        &mut self,
+        id: ShapeHandle,
+        epsilon: f64,
+        only_closed: bool,
+        use_span: bool,
+    ) -> OcctResult<AdaptiveVolume> {
+        let len = self.generated.query.get_adaptive_volume.call_guest(
+            &mut self.store,
+            (id.0, epsilon, i32::from(only_closed), i32::from(use_span)),
+        )?;
+        if len < 0 {
+            return Err(self.read_last_error("get_adaptive_volume"));
+        }
+        self.read_adaptive_volume_result()
+    }
+
     /// Call the `getVolume` OCCT facade operation.
     ///
     /// # Errors
@@ -6548,6 +6577,30 @@ impl crate::kernel::OcctKernel {
                 return Err(kernel.read_last_error("import_step_bytes"));
             }
             kernel.read_step_import_result()
+        })
+    }
+
+    /// Call the `importStepEntityBytes` OCCT facade operation.
+    ///
+    /// # Errors
+    /// Returns an error if the WASM call traps, the operation fails,
+    /// or marshalling its arguments or results fails.
+    pub fn import_step_entity_bytes(
+        &mut self,
+        data: &[u8],
+        entity_id: u32,
+    ) -> OcctResult<StepEntityImport> {
+        let guest_lengths = [checked_wasm_len(data.len(), 1)?];
+        self.with_guest_buffers::<1, _>(|kernel, buffers| {
+            let guest_ptrs = [buffers.write(kernel, data)?];
+            let len = kernel.generated.io.import_step_entity_bytes.call_guest(
+                &mut kernel.store,
+                (guest_ptrs[0], guest_lengths[0], entity_id),
+            )?;
+            if len < 0 {
+                return Err(kernel.read_last_error("import_step_entity_bytes"));
+            }
+            kernel.read_step_entity_import_result()
         })
     }
 
