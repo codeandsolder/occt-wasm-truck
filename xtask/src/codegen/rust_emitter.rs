@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 use super::emitter::group_by_category;
-use super::types::{FacadeParam, MethodSpec, ReturnType};
+use super::types::{FacadeParam, MethodSpec, ReturnType, WasmReturn};
 use super::wasi_emitter::camel_to_snake;
 
 /// Rust API representation of a facade parameter.
@@ -137,7 +137,9 @@ const fn rust_return_type(rt: ReturnType) -> &'static str {
         ReturnType::Bytes => "OcctResult<Vec<u8>>",
         ReturnType::VectorUint32 => "OcctResult<Vec<u32>>",
         ReturnType::StepImport => "OcctResult<StepImport>",
+        ReturnType::StepEntityImport => "OcctResult<StepEntityImport>",
         ReturnType::BRepProperties => "OcctResult<BRepProperties>",
+        ReturnType::AdaptiveVolume => "OcctResult<AdaptiveVolume>",
         ReturnType::VectorShapeIds => "OcctResult<Vec<ShapeHandle>>",
         ReturnType::VectorDouble => "OcctResult<Vec<f64>>",
         ReturnType::VectorInt => "OcctResult<Vec<i32>>",
@@ -264,32 +266,10 @@ fn wasm_typed_func_type(spec: &MethodSpec) -> String {
         })
         .collect();
 
-    // All non-scalar returns cross the WASM boundary as an `i32` status/length;
-    // the match is exhaustive so a new `ReturnType` is a compile error.
-    let ret_type = match spec.return_type {
-        ReturnType::ShapeId | ReturnType::DocId | ReturnType::Uint32 => "u32",
-        ReturnType::Double => "f64",
-        ReturnType::Bool
-        | ReturnType::Void
-        | ReturnType::Int
-        | ReturnType::String
-        | ReturnType::Bytes
-        | ReturnType::VectorUint32
-        | ReturnType::StepImport
-        | ReturnType::BRepProperties
-        | ReturnType::VectorShapeIds
-        | ReturnType::VectorDouble
-        | ReturnType::VectorInt
-        | ReturnType::BBoxData
-        | ReturnType::NurbsCurveData
-        | ReturnType::CurveData
-        | ReturnType::SurfaceData
-        | ReturnType::EvolutionData
-        | ReturnType::MeshData
-        | ReturnType::MeshBatchData
-        | ReturnType::EdgeData
-        | ReturnType::ProjectionData
-        | ReturnType::XCAFLabelInfo => "i32",
+    let ret_type = match spec.return_type.wasm_return() {
+        WasmReturn::U32 => "u32",
+        WasmReturn::F64 => "f64",
+        WasmReturn::I32 => "i32",
     };
 
     if param_count == 0 {
@@ -321,7 +301,9 @@ const fn result_binding(rt: ReturnType) -> (&'static str, ResultCheck, &'static 
         ReturnType::Bytes => ("len", Status, "self.read_bytes_result()"),
         ReturnType::VectorUint32 => ("len", Status, "self.read_vec_u32_result()"),
         ReturnType::StepImport => ("len", Status, "self.read_step_import_result()"),
+        ReturnType::StepEntityImport => ("len", Status, "self.read_step_entity_import_result()"),
         ReturnType::BRepProperties => ("len", Status, "self.read_brep_properties_result()"),
+        ReturnType::AdaptiveVolume => ("len", Status, "self.read_adaptive_volume_result()"),
         ReturnType::VectorShapeIds => ("len", Status, "self.read_vec_shape_result()"),
         ReturnType::VectorDouble => ("len", Status, "self.read_vec_f64_result()"),
         ReturnType::VectorInt => ("len", Status, "self.read_vec_i32_result()"),
@@ -610,8 +592,8 @@ use wasmtime::TypedFunc;
 use crate::error::OcctResult;
 use crate::kernel::checked_wasm_len;
 use crate::types::{
-    BRepProperties, BoundingBox, CurveData, EdgeData, EvolutionData, LabelInfo, Mesh, MeshBatch,
-    DocumentHandle, NurbsCurveData, ProjectionData, ShapeHandle, StepImport, SurfaceData,
+    AdaptiveVolume, BRepProperties, BoundingBox, CurveData, EdgeData, EvolutionData, LabelInfo, Mesh, MeshBatch,
+    DocumentHandle, NurbsCurveData, ProjectionData, ShapeHandle, StepEntityImport, StepImport, SurfaceData,
 };
 
 ",

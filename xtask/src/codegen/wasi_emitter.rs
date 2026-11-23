@@ -11,7 +11,7 @@
 
 use std::fmt::Write as _;
 
-use super::types::{FacadeParam, MethodSpec, ReturnType};
+use super::types::{FacadeParam, MethodSpec, ReturnType, WasmReturn};
 
 /// Convert `camelCase` to `snake_case`.
 pub fn camel_to_snake(s: &str) -> String {
@@ -107,70 +107,21 @@ fn call_args(params: &[FacadeParam]) -> String {
         .join(", ")
 }
 
-/// The C return type for a given `ReturnType`.
-///
-/// All non-scalar returns (strings, vectors, structs) cross the C ABI as an
-/// `int32_t` status/length, with the payload read back out of band. The match
-/// is exhaustive so a newly added `ReturnType` is a compile error rather than
-/// silently falling through to `int32_t`.
+/// The C return type for a method.
 const fn c_return_type(rt: ReturnType) -> &'static str {
-    match rt {
-        ReturnType::ShapeId | ReturnType::DocId | ReturnType::Uint32 => "uint32_t",
-        ReturnType::Double => "double",
-        ReturnType::Bool
-        | ReturnType::Void
-        | ReturnType::Int
-        | ReturnType::String
-        | ReturnType::Bytes
-        | ReturnType::VectorUint32
-        | ReturnType::StepImport
-        | ReturnType::BRepProperties
-        | ReturnType::VectorShapeIds
-        | ReturnType::VectorDouble
-        | ReturnType::VectorInt
-        | ReturnType::BBoxData
-        | ReturnType::NurbsCurveData
-        | ReturnType::CurveData
-        | ReturnType::SurfaceData
-        | ReturnType::EvolutionData
-        | ReturnType::MeshData
-        | ReturnType::MeshBatchData
-        | ReturnType::EdgeData
-        | ReturnType::ProjectionData
-        | ReturnType::XCAFLabelInfo => "int32_t",
+    match rt.wasm_return() {
+        WasmReturn::U32 => "uint32_t",
+        WasmReturn::F64 => "double",
+        WasmReturn::I32 => "int32_t",
     }
 }
 
-/// The error sentinel value for a return type.
-///
-/// Exhaustive for the same reason as [`c_return_type`]: the `int32_t`-returning
-/// variants share the `-1` sentinel, but each is listed so adding a variant
-/// forces a deliberate choice.
+/// The error sentinel value for the ABI representation.
 const fn error_sentinel(rt: ReturnType) -> &'static str {
-    match rt {
-        ReturnType::ShapeId | ReturnType::DocId | ReturnType::Uint32 => "0",
-        ReturnType::Double => "std::numeric_limits<double>::quiet_NaN()",
-        ReturnType::Bool
-        | ReturnType::Void
-        | ReturnType::Int
-        | ReturnType::String
-        | ReturnType::Bytes
-        | ReturnType::VectorUint32
-        | ReturnType::StepImport
-        | ReturnType::BRepProperties
-        | ReturnType::VectorShapeIds
-        | ReturnType::VectorDouble
-        | ReturnType::VectorInt
-        | ReturnType::BBoxData
-        | ReturnType::NurbsCurveData
-        | ReturnType::CurveData
-        | ReturnType::SurfaceData
-        | ReturnType::EvolutionData
-        | ReturnType::MeshData
-        | ReturnType::MeshBatchData
-        | ReturnType::EdgeData
-        | ReturnType::ProjectionData
-        | ReturnType::XCAFLabelInfo => "-1",
+    match rt.wasm_return() {
+        WasmReturn::U32 => "0",
+        WasmReturn::F64 => "std::numeric_limits<double>::quiet_NaN()",
+        WasmReturn::I32 => "-1",
     }
 }
 
@@ -201,10 +152,13 @@ const fn result_transfer(rt: ReturnType) -> ResultTransfer {
         ReturnType::Bool => Boolean,
         ReturnType::Void => Void,
         ReturnType::String | ReturnType::Bytes => SizedBuffer("g_string_buf"),
-        ReturnType::VectorUint32 | ReturnType::VectorShapeIds | ReturnType::StepImport => {
-            SizedBuffer("g_vec_u32_buf")
+        ReturnType::VectorUint32
+        | ReturnType::VectorShapeIds
+        | ReturnType::StepImport
+        | ReturnType::StepEntityImport => SizedBuffer("g_vec_u32_buf"),
+        ReturnType::VectorDouble | ReturnType::BRepProperties | ReturnType::AdaptiveVolume => {
+            SizedBuffer("g_vec_f64_buf")
         }
-        ReturnType::VectorDouble | ReturnType::BRepProperties => SizedBuffer("g_vec_f64_buf"),
         ReturnType::VectorInt => SizedBuffer("g_vec_i32_buf"),
         ReturnType::BBoxData => AssignedBuffer("g_bbox_buf"),
         ReturnType::MeshData => ReconstructedBuffer {

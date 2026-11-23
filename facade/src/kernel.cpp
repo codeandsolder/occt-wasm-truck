@@ -39,6 +39,7 @@
 #include <Geom_Surface.hxx>
 #include <IFSelect_ReturnStatus.hxx>
 #include <STEPControl_Reader.hxx>
+#include <StepData_StepModel.hxx>
 #include <Message_ProgressRange.hxx>
 #include <NCollection_Array1.hxx>
 #include <NCollection_Array2.hxx>
@@ -1655,16 +1656,54 @@ std::vector<double> tessellateTriangleCoordinates(const TopoDS_Shape& shape,
 }
 
 // STEP Part 21 streams are byte sequences, not necessarily UTF-8.
-StepReadData readStepShape(const std::string& data) {
-    STEPControl_Reader reader;
+namespace {
+void readStepStream(STEPControl_Reader& reader, const std::string& data) {
     std::istringstream stream(data, std::ios::binary);
     if (reader.ReadStream("import.step", stream) != IFSelect_RetDone) {
         throw std::runtime_error("importStep: failed to read STEP data");
     }
+}
+}
+
+StepReadData readStepShape(const std::string& data) {
+    STEPControl_Reader reader;
+    readStepStream(reader, data);
     const int roots = reader.NbRootsForTransfer();
     const int transferred = reader.TransferRoots();
     if (reader.NbShapes() == 0 || roots < 0 || transferred < 0 || transferred > roots) {
         throw std::runtime_error("importStep: no shapes found in STEP data");
     }
     return {reader.OneShape(), static_cast<uint32_t>(roots), static_cast<uint32_t>(transferred)};
+}
+
+StepEntityReadData readStepEntity(const std::string& data, uint32_t id) {
+    if (id == 0 || id > static_cast<uint32_t>(std::numeric_limits<int>::max())) {
+        throw std::runtime_error("importStepEntityBytes: entity ID outside OCCT range");
+    }
+    STEPControl_Reader reader;
+    readStepStream(reader, data);
+    const auto model = reader.StepModel();
+    if (model.IsNull()) {
+        throw std::runtime_error("importStepEntityBytes: missing STEP model");
+    }
+    const int label = static_cast<int>(id);
+    int rank = 0;
+    const int count = model->NbEntities();
+    for (int index = 0; index < count; ++index) {
+        const int current = index + 1;
+        if (model->IdentLabel(model->Value(current)) == label) {
+            if (rank != 0) {
+                throw std::runtime_error("importStepEntityBytes: ambiguous STEP entity ID");
+            }
+            rank = current;
+        }
+    }
+    if (rank == 0) {
+        throw std::runtime_error("importStepEntityBytes: no STEP entity with requested ID");
+    }
+    // TransferOne takes a model rank, not the Part 21 textual #identifier.
+    if (!reader.TransferOne(rank) || reader.NbShapes() != 1 || reader.Shape(1).IsNull()) {
+        throw std::runtime_error("importStepEntityBytes: entity did not transfer to one shape");
+    }
+    return {reader.Shape(1), static_cast<uint32_t>(rank)};
 }
