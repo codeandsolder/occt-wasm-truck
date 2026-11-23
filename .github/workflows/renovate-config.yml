@@ -1,0 +1,19 @@
+name: Validate Renovate configuration
+
+on:
+  pull_request:
+    paths:
+      - renovate.json
+      - .github/workflows/renovate-config.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  renovate-config:
+    uses: codeandsolder/ci-workflows/.github/workflows/renovate-config.yml@6461397f9c7b2e283677906fdf2fe2b573001789 # main
