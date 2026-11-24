@@ -25,7 +25,7 @@ concurrency:
 jobs:
   test:
     name: Crate integration tests (release)
-    uses: codeandsolder/ci-workflows/.github/workflows/rust-sccache.yml@8ab6060d47a3c56bb406aff41189fbfcf7aa9acc # main
+    uses: codeandsolder/ci-workflows/.github/workflows/rust-sccache.yml@83ceff49d93d152cd95a1c9d6addb5cf03169477 # main
     with:
       command: |
         cargo test --locked --release -p occt-wasm --lib --tests -- --test-threads=4
