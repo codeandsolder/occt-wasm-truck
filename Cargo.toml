@@ -19,3 +19,14 @@ nursery = { level = "warn", priority = -1 }
 panic = "deny"
 pedantic = { level = "warn", priority = -1 }
 unwrap_used = "deny"
+
+
+# LLVM cannot see the embedded kernel or other compile-time non-Rust inputs.
+# Explicit input rules ensure a changed kernel selects the integration scope.
+[[workspace.metadata.affected.rule]]
+globs = ["crate/src/occt-wasm.wasm.br"]
+filterset = "package(occt-wasm)"
+
+[[workspace.metadata.affected.rule]]
+globs = ["crate/README.md"]
+filterset = "package(occt-wasm)"

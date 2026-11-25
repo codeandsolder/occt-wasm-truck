@@ -59,11 +59,11 @@ jobs:
 
   codegen:
     name: Generated-code consistency
-    uses: codeandsolder/ci-workflows/.github/workflows/rust-sccache.yml@83ceff49d93d152cd95a1c9d6addb5cf03169477 # main
+    uses: codeandsolder/ci-workflows/.github/workflows/rust-sccache.yml@5cfc1a720a1499c3c2cfe733ef235a6953f9ad3e # draft unified CI; repin after upstream acceptance
     with:
       rust-components: rustfmt
+      test-suites: '[{"name":"xtask","cargo":["--locked","-p","xtask"]}]'
       command: |
-        cargo test --locked -p xtask
         cargo xtask codegen
         cargo fmt --all
         git diff --exit-code -- facade/generated/ crate/src/kernel_generated.rs

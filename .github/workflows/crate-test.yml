@@ -25,8 +25,13 @@ concurrency:
 jobs:
   test:
     name: Crate integration tests (release)
-    uses: codeandsolder/ci-workflows/.github/workflows/rust-sccache.yml@83ceff49d93d152cd95a1c9d6addb5cf03169477 # main
+    uses: codeandsolder/ci-workflows/.github/workflows/rust-sccache.yml@5cfc1a720a1499c3c2cfe733ef235a6953f9ad3e # draft unified CI; repin after upstream acceptance
     with:
-      command: |
-        cargo test --locked --release -p occt-wasm --lib --tests -- --test-threads=4
-        cargo test --locked --release -p occt-wasm --doc
+      command: ":"
+      test-suites: |
+        [{
+          "name": "occt-release",
+          "cargo": ["--locked", "--release", "-p", "occt-wasm", "--lib", "--tests"],
+          "nextest": ["--test-threads", "4"],
+          "doctests": ["--locked", "--release", "-p", "occt-wasm"]
+        }]
