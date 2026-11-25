@@ -1,6 +1,6 @@
 {
   "source": "andymai/occt-wasm:main:releases:crate-v",
-  "lastAttempt": 1795618741206,
+  "lastAttempt": 1795618748765,
   "observations": [
     {
       "sha": "1f4ed0c3145c9ce42199f5baf11acc6d19b2e255",
@@ -16,6 +16,11 @@
       "sha": "0649d4fa139e44aeca6becfc87815daaa90d58c8",
       "firstObserved": 1795533551393,
       "releaseTag": "crate-v7.3.3"
+    },
+    {
+      "sha": "5d7f35f13203cde3c54a7ffd60845dcd6804cf3b",
+      "firstObserved": 1795618748765,
+      "releaseTag": "crate-v7.3.5"
     }
   ]
 }
