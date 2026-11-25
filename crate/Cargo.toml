@@ -44,6 +44,11 @@ wasmtime = { version = "48.0.6", default-features = false, features = [
 brotli = "9"
 thiserror = "2"
 
+[dev-dependencies]
+# Only test builds need cross-process Wasmtime compilation caching.
+anyhow = "1"
+wasmtime = { version = "48.0.6", default-features = false, features = ["cache"] }
+
 [package.metadata.rust-skills2]
 allow-test-panics = true
 allow-test-panics-reason = "CAD integration tests use fail-fast assertions on kernel construction and geometry operations; production remains strict"

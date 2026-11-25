@@ -6,20 +6,16 @@
 //!
 //! To run: `cargo test --release -p occt-wasm --test integration`
 
-use std::sync::OnceLock;
+mod common;
 
 use occt_wasm::wasmtime::{Engine, Module, StoreLimitsBuilder};
 use occt_wasm::{
     CurveGeometry, DocumentHandle, OcctError, OcctKernel, ShapeHandle, SurfaceData, Vec3,
 };
 
-/// Compile once per integration-test process; every kernel has its own store.
+/// Each test process holds its own module; compiled code is cached across processes.
 fn shared_module() -> &'static Module {
-    static MODULE: OnceLock<Module> = OnceLock::new();
-    MODULE.get_or_init(|| {
-        let engine = Engine::new(&OcctKernel::engine_config()).expect("create WASM engine");
-        OcctKernel::compile(&engine).expect("compile embedded OCCT module")
-    })
+    common::shared_module().expect("compile embedded OCCT module")
 }
 
 fn kernel() -> OcctKernel {

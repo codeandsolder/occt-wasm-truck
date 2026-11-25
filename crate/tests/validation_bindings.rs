@@ -1,19 +1,10 @@
 //! Strict regressions for the validation facade. No placeholder/debug skips.
-use occt_wasm::{
-    OcctKernel, ShapeHandle,
-    wasmtime::{Engine, Module},
-};
-use std::sync::OnceLock;
+mod common;
+
+use occt_wasm::{OcctKernel, ShapeHandle};
 
 fn kernel() -> Result<OcctKernel, Box<dyn std::error::Error>> {
-    static MODULE: OnceLock<Result<Module, String>> = OnceLock::new();
-    let module = MODULE.get_or_init(|| {
-        let engine = Engine::new(&OcctKernel::engine_config()).map_err(|e| e.to_string())?;
-        OcctKernel::compile(&engine).map_err(|e| e.to_string())
-    });
-    Ok(OcctKernel::from_module(
-        module.as_ref().map_err(String::as_str)?,
-    )?)
+    Ok(OcctKernel::from_module(common::shared_module()?)?)
 }
 
 fn volume_at(
