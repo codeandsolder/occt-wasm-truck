@@ -11,12 +11,11 @@ permissions:
 
 jobs:
   sync:
-    uses: codeandsolder/ci-workflows/.github/workflows/upstream-tracking.yml@7df510a2053e220c010c331b5daef81a593a19bb # main
+    uses: codeandsolder/ci-workflows/.github/workflows/upstream-tracking.yml@c9cff3b64df2fb2295270a09e8e38dbf18e31daf # main
     with:
       upstream-repository: andymai/occt-wasm
       upstream-branch: main
       target-branch: main
-      strategy: merge
       workflow-policy: preserve
       upstream-release-prefix: crate-v
       generation-container: ghcr.io/andymai/occt-wasm-builder@sha256:8ef7042f3dcf88ae4cda139e0988624c811d5d3f859c8e8a7c325bbf3c9c7d49
