@@ -2,7 +2,7 @@
 # Pre-built OCCT static libs for CI. Push to ghcr.io/andymai/occt-wasm-builder.
 # Rebuild only when OCCT submodule, emsdk version, or cmake flags change.
 
-FROM emscripten/emsdk:5.0.3
+FROM emscripten/emsdk:5.0.7
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake ninja-build \

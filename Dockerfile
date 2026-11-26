@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM emscripten/emsdk:5.0.3
+FROM emscripten/emsdk:5.0.7
 
 # --- Layer 1: System packages (rarely changes) ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
