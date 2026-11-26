@@ -54,7 +54,7 @@ jobs:
     name: WASI build + stale-check
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/andymai/occt-wasm-builder@sha256:8ef7042f3dcf88ae4cda139e0988624c811d5d3f859c8e8a7c325bbf3c9c7d49
+      image: ghcr.io/andymai/occt-wasm-builder@sha256:4016445cb9d45a076685cd162094eb13693c8a4bce2d212316a47ec962f56d83
     defaults:
       run:
         shell: bash
