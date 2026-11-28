@@ -59,7 +59,7 @@ jobs:
 
   codegen:
     name: Generated-code consistency
-    uses: codeandsolder/ci-workflows/.github/workflows/rust-sccache.yml@2bf1fa8216c6b09836ea837d663ca616d0ec6427 # main
+    uses: codeandsolder/ci-workflows/.github/workflows/rust-sccache.yml@4dc75c98d3f12d3b5417e1cf9656e5f239a53c35 # main
     with:
       rust-components: rustfmt
       command: |
